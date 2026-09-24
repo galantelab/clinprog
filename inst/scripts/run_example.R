@@ -1,6 +1,6 @@
 ##### PREPARE R ENV #####
 # Installs clinprog R package
-# install.packages("../clinprog_0.1.0.tar.gz", repos = NULL, type = "source")
+# install.packages("../clinprog_0.2.0.tar.gz", repos = NULL, type = "source")
 
 # Loads clinprog R package
 library(clinprog)

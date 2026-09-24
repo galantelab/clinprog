@@ -17,7 +17,7 @@ subparsers <- parser$add_subparsers(
 parser$add_argument(
   '-v', '--version',
   action = 'version',
-  version = 'clinprog 0.1.0'
+  version = 'clinprog 0.2.0'
 )
 
 ########## create the parser for the "REGRESSION" command ##########

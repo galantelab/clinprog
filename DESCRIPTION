@@ -1,7 +1,7 @@
 Package: clinprog
 Title: Bootstrap-Based Multivariate LASSO Cox Regression for Survival
        Signature Discovery
-Version: 0.1.0
+Version: 0.2.0
 Authors@R: c(
     person("Filipe", "Ferreira dos Santos", email = "fferreira@mochsl.org.br", role = c("aut", "cre")),
     person("Felipe", "Rodolfo Camargo dos Santos", email = "fefelrcs@gmail.com", role = "aut"),
