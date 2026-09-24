@@ -50,7 +50,7 @@ These can also be generated later using \code{plot_histogram()} and \code{plot_l
 
 \item{table}{Logical. If \code{TRUE}, writes signature table to disk (Default: \code{FALSE}).
 
-This can also be done later using \code{write_clinprog_signature()} for the signature file.}
+This can also be done later using \code{write_signature()} for the signature file.}
 
 \item{saveJSON}{Logical. If \code{TRUE}, saves to disk the metadata in a JSON file (Default: \code{FALSE}).
 
@@ -186,5 +186,5 @@ Documentation and tutorials: \url{https://galantelab.github.io/clinprog/} \cr
 
 Other functions: \code{\link{plot_histogram}}, \code{\link{plot_lollipop}}, \code{\link{read_table}},
 \code{\link{read_rds}}, \code{\link{write_rds}}, \code{\link{write_metadata}},
-\code{\link{write_clinprog_signature}}, and \code{\link{write_report}}
+\code{\link{write_signature}}, and \code{\link{write_report}}
 }

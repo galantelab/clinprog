@@ -18,7 +18,7 @@
 #'   These can also be generated later using \code{plot_histogram()} and \code{plot_lollipop()}.
 #' @param table Logical. If \code{TRUE}, writes signature table to disk (Default: \code{FALSE}).
 #'
-#'   This can also be done later using \code{write_clinprog_signature()} for the signature file.
+#'   This can also be done later using \code{write_signature()} for the signature file.
 #' @param saveJSON Logical. If \code{TRUE}, saves to disk the metadata in a JSON file (Default: \code{FALSE}).
 #'
 #'   This can also be done later using \code{write_metadata()} for a JSON with metadata.
@@ -90,7 +90,7 @@
 #'
 #' Other functions: \code{\link{plot_histogram}}, \code{\link{plot_lollipop}}, \code{\link{read_table}},
 #' \code{\link{read_rds}}, \code{\link{write_rds}}, \code{\link{write_metadata}},
-#' \code{\link{write_clinprog_signature}}, and \code{\link{write_report}}
+#' \code{\link{write_signature}}, and \code{\link{write_report}}
 #'
 #' @examples
 #' \dontrun{
@@ -376,7 +376,7 @@ run_regression <- function(data,
   if (table)
   {
     log_message("Writing signature table...")
-    write_clinprog_signature(signature, paste0(outprefix, "_signature.txt"))
+    write_signature(signature, paste0(outprefix, "_signature.txt"))
     log_message("Done.")
   }
 
@@ -500,7 +500,7 @@ run_regression <- function(data,
 #'   If bootstrap is performed, an extra summary barplot can also be generated using \code{plot_barplot()}.
 #' @param table Logical. If \code{TRUE}, writes output tables to disk (Default: \code{FALSE}).
 #'
-#'   These can also be done later using \code{write_clinprog_signature()} for an updated signature file,
+#'   These can also be done later using \code{write_signature()} for an updated signature file,
 #'   \code{write_score()} for a table showing the calculated clinprog scores, \code{write_univariate()}
 #'   for a file containing the univariate survival results, and \code{write_multivariate()}
 #'   for a file containing the multivariate survival results.
@@ -579,7 +579,7 @@ run_regression <- function(data,
 #'
 #' Other functions: \code{\link{plot_km}}, \code{\link{plot_ph}}, \code{\link{plot_roc}},
 #' \code{\link{plot_forest}}, \code{\link{plot_barplot}}, \code{\link{read_table}},
-#' \code{\link{read_rds}}, \code{\link{write_rds}}, \code{\link{write_clinprog_signature}},
+#' \code{\link{read_rds}}, \code{\link{write_rds}}, \code{\link{write_signature}},
 #' \code{\link{write_score}}, \code{write_metadata()}, \code{\link{write_univariate}},
 #' \code{\link{write_multivariate}}, and \code{\link{write_report}}
 #'
@@ -635,7 +635,7 @@ run_regression <- function(data,
 #'                outprefix = "my_analysis_bar")
 #'
 #' # Export signature manually
-#' write_clinprog_signature(result, "my_analysis_signature_updated.tsv")
+#' write_signature(result, "my_analysis_signature_updated.tsv")
 #'
 #' # Export scores manually
 #' write_score(result, "my_analysis_scoreCont.tsv") # for univariate mode only
@@ -746,7 +746,7 @@ run_survival <- function(data,
   if (table)
   {
     log_message("Writing updated signature table...")
-    write_clinprog_signature(raw_sig_df, paste0(outprefix, "_signature_updated.tsv"))
+    write_signature(raw_sig_df, paste0(outprefix, "_signature_updated.tsv"))
     log_message("Done.")
   }
 

@@ -66,7 +66,7 @@ plot_histogram(result_complete$regression$signature , "extra_toy_testComplete")
 plot_lollipop(result_complete$regression$signature, "extra_toy_testComplete")
 
 # Exports signature manually
-write_clinprog_signature(result_complete$regression, "extra_toy_testComplete_signature.txt")
+write_signature(result_complete$regression, "extra_toy_testComplete_signature.txt")
 
 ### MODULE II - SURVIVAL
 
@@ -78,7 +78,7 @@ plot_ph(x = result_complete$survival$ph_result, is_multi = TRUE, outprefix = "ex
 plot_forest(model_object = result_complete$survival$survival$multivariate$model, outprefix = "extra_toy_testComplete")
 
 # Exports updated signature manually
-write_clinprog_signature(result_complete$survival, "extra_toy_testComplete_signature_updated.tsv")
+write_signature(result_complete$survival, "extra_toy_testComplete_signature_updated.tsv")
 
 # Exports scores (with or without clinical data) manually
 write_score(result_complete$survival, "extra_toy_testComplete_scoreCont.tsv")

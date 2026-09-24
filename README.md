@@ -301,7 +301,7 @@ read_rds()
 ### Writing
 
 ```r
-write_clinprog_signature()
+write_signature()
 write_score()
 write_univariate()
 write_multivariate()

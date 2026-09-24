@@ -106,7 +106,7 @@ write_rds <- function(object, file, compress = "xz") {
 #'
 #' @return Invisibly returns the input object.
 #' @export
-write_clinprog_signature <- function(x, file, sep = "\t", row.names = FALSE, quote = FALSE, ...) {
+write_signature <- function(x, file, sep = "\t", row.names = FALSE, quote = FALSE, ...) {
   # Extracts signature table according to input type
   if (inherits(x, c("clinprog_signature", "clinprog_survival")))
   {

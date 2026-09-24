@@ -63,7 +63,7 @@ If bootstrap is performed, an extra summary barplot can also be generated using 
 
 \item{table}{Logical. If \code{TRUE}, writes output tables to disk (Default: \code{FALSE}).
 
-These can also be done later using \code{write_clinprog_signature()} for an updated signature file,
+These can also be done later using \code{write_signature()} for an updated signature file,
 \code{write_score()} for a table showing the calculated clinprog scores, \code{write_univariate()}
 for a file containing the univariate survival results, and \code{write_multivariate()}
 for a file containing the multivariate survival results.}
@@ -195,7 +195,7 @@ plot_barplot(plot_df = result$survival$multivariate$bootstrap.table,
                outprefix = "my_analysis_bar")
 
 # Export signature manually
-write_clinprog_signature(result, "my_analysis_signature_updated.tsv")
+write_signature(result, "my_analysis_signature_updated.tsv")
 
 # Export scores manually
 write_score(result, "my_analysis_scoreCont.tsv") # for univariate mode only
@@ -224,7 +224,7 @@ Documentation and tutorials: \url{https://galantelab.github.io/clinprog/} \cr
 
 Other functions: \code{\link{plot_km}}, \code{\link{plot_ph}}, \code{\link{plot_roc}},
 \code{\link{plot_forest}}, \code{\link{plot_barplot}}, \code{\link{read_table}},
-\code{\link{read_rds}}, \code{\link{write_rds}}, \code{\link{write_clinprog_signature}},
+\code{\link{read_rds}}, \code{\link{write_rds}}, \code{\link{write_signature}},
 \code{\link{write_score}}, \code{write_metadata()}, \code{\link{write_univariate}},
 \code{\link{write_multivariate}}, and \code{\link{write_report}}
 }
