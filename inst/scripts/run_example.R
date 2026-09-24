@@ -1,0 +1,112 @@
+##### PREPARE R ENV #####
+# Installs clinprog R package
+# install.packages("../clinprog_0.1.0.tar.gz", repos = NULL, type = "source")
+
+# Loads clinprog R package
+library(clinprog)
+#########################
+
+##### LOADS TOY DATASETS #####
+# Loads internal dataset
+# Alternatively, users can run read_table() --> see vignette (end of code) for details
+data("toy_expression")
+data("toy_clinics")
+
+# Users have the option to load previous results saved in RDS
+# result_complete <- read_rds(file = "extra_toy_testComplete.rds")
+##############################
+
+##### EXECUTES clinprog #####
+# Runs clinprog complete workflow --> modules I (regression) + II (survival)
+result_complete <- run_complete(
+  data = toy_expression,
+  outprefix = "toy_testComplete",
+  bootstrap = 10,
+  groupsize = 10,
+  percentagefilter = 0.3,
+  variancefilter = 0.01,
+  followup = NULL,
+  type = "transcript",
+  multivariate = T,
+  clindata = toy_clinics,
+  roc = T,
+  p.cutoff = 0.2,
+  force = T,
+  plots = T,
+  table = T,
+  saveJSON = T,
+  saveRDS = T,
+  report = T,
+  log = T
+)
+###########################
+
+##### INSPECT OBJECTS #####
+# Explores the "clinprog_complete" S3 object
+result_complete$regression  # "clinprog_signature" S3 object
+result_complete$survival  # "clinprog_survival" S3 object
+result_complete$params
+result_complete$metadata
+result_complete$call
+
+# Tests S3 methods
+print(result_complete)
+print(summary(result_complete))
+summary(result_complete)
+coef(result_complete)
+plot(result_complete)
+###########################
+
+##### FIGURES & TABLES #####
+
+### MODULE I - REGRESSION
+
+# Exports plots manually
+plot_histogram(result_complete$regression$signature , "extra_toy_testComplete")
+plot_lollipop(result_complete$regression$signature, "extra_toy_testComplete")
+
+# Exports signature manually
+write_clinprog_signature(result_complete$regression, "extra_toy_testComplete_signature.txt")
+
+### MODULE II - SURVIVAL
+
+# Exports main plots manually
+plot_roc(x = result_complete$survival$roc_result, outprefix = "extra_toy_testComplete")
+plot_km(data = result_complete$survival$expression_data, cutoff = result_complete$survival$score_cutoff,
+          pval = result_complete$survival$survival$univariate$table$log.rank.pvalue, outprefix = "extra_toy_testComplete")
+plot_ph(x = result_complete$survival$ph_result, is_multi = TRUE, outprefix = "extra_toy_testComplete")
+plot_forest(model_object = result_complete$survival$survival$multivariate$model, outprefix = "extra_toy_testComplete")
+
+# Exports updated signature manually
+write_clinprog_signature(result_complete$survival, "extra_toy_testComplete_signature_updated.tsv")
+
+# Exports scores (with or without clinical data) manually
+write_score(result_complete$survival, "extra_toy_testComplete_scoreCont.tsv")
+write_score(result_complete$survival, "extra_toy_testComplete_scoreCat.tsv", clinics = TRUE)
+
+# Exports uni and multivariate survival results manually
+write_univariate(result_complete$survival, "extra_toy_testComplete_uniCox.txt")
+write_multivariate(result_complete$survival, "extra_toy_testComplete_multiCox.txt")
+
+### EXTRA
+
+# Exports metadata manually for reproducibility
+write_metadata(module = "run_complete", outprefix = "extra_toy_testComplete", command = "none",
+                      parameters = list(data = "data.frame", clindata = "data.frame", signature = "data.frame",
+                                        outprefix = "extra_toy_testComplete", multivariate = T, roc = T, groupsize = 10,
+                                        percentagefilter = 0.3, variancefilter = 0.01, followup = NULL, p.cutoff = 0.2,
+                                        bootstrap = 10, type = "transcript", force = T, plots = T,
+                                        table = T, saveJSON = T, saveRDS = T, report = T, log = T))
+
+# Saves result in RDS for flexibility
+write_rds(object = result_complete, file = "extra_toy_testComplete.rds")
+
+# Generates final report for collaborators
+write_report(object = result_complete, format = "PDF", file = "extra_toy_testComplete_report_complete.pdf")
+############################
+
+##### VIGNETTE #####
+# Explores the clinprog tutorial
+browseVignettes("clinprog")
+vignette("clinprog-tutorial", package = "clinprog")
+####################
