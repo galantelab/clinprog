@@ -7,6 +7,7 @@
 run_regression(
   data,
   outprefix = "clinprog",
+  norm_exp = FALSE,
   bootstrap = 1,
   groupsize = 10,
   percentagefilter = 0.3,
@@ -29,6 +30,10 @@ run_regression(
 (e.g., OS, OS.time) and expression values (genes or transcripts).}
 
 \item{outprefix}{Character. Output prefix used for generated files (Default: \code{"clinprog"}).}
+
+\item{norm_exp}{Logical. If \code{TRUE}, applies a log2(expression + 1)
+transformation to expression data before downstream filtering and regression
+(Default: \code{FALSE}).}
 
 \item{bootstrap}{Integer. Number of bootstrap iterations (Default: \code{1}).}
 

@@ -232,3 +232,21 @@ test_that("run_complete runs on toy data", {
   expect_true(!is.null(result$metadata$package_version))
 })
 #######################################################################################################################
+
+test_that("run_regression validates norm_exp", {
+  expect_error(
+    run_regression(
+      data = toy_expression,
+      norm_exp = "TRUE"
+    ),
+    "Argument 'norm_exp' must be a boolean"
+  )
+
+  expect_error(
+    run_regression(
+      data = toy_expression,
+      norm_exp = 1
+    ),
+    "Argument 'norm_exp' must be a boolean"
+  )
+})

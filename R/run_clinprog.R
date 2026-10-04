@@ -6,6 +6,9 @@
 #' @param data Data.frame. A data.frame containing survival data
 #' (e.g., OS, OS.time) and expression values (genes or transcripts).
 #' @param outprefix Character. Output prefix used for generated files (Default: \code{"clinprog"}).
+#' @param norm_exp Logical. If \code{TRUE}, applies a log2(expression + 1)
+#'   transformation to expression data before downstream filtering and regression
+#'   (Default: \code{FALSE}).
 #' @param bootstrap Integer. Number of bootstrap iterations (Default: \code{1}).
 #' @param groupsize Integer. Number of genes/transcripts sampled per iteration (Default: \code{10}).
 #' @param percentagefilter Numeric. Correlation filter threshold (0–1; Default: \code{0.3}).
@@ -149,6 +152,7 @@
 #' @export
 run_regression <- function(data,
                            outprefix = "clinprog",
+                           norm_exp = FALSE,
                            bootstrap = 1,
                            groupsize = 10,
                            percentagefilter = 0.3,
@@ -196,6 +200,9 @@ run_regression <- function(data,
   # Validates input parameters
   if (!log) {log_message("clinprog regression log started")}
   log_message("Validating parameters...")
+  if (!is.logical(norm_exp) || length(norm_exp) != 1) {
+    log_stop("Argument 'norm_exp' must be a boolean [TRUE or FALSE]")
+  }
   if (!type %in% c("gene", "transcript")) {log_stop("Argument 'type' must be either 'gene' or 'transcript'")}
   if (!is.numeric(bootstrap) || length(bootstrap) != 1 || bootstrap < 0 || bootstrap %% 1 != 0)
   {
@@ -275,6 +282,15 @@ run_regression <- function(data,
   log_message("Renaming first two (survival) columns to 'OS' and 'OS.time'...")
   colnames(full_data)[1:2] <- c("OS", "OS.time")
   log_message("Done.")
+
+  # Log2(Expression + 1) transformation if requested
+  if (norm_exp)
+  {
+    log_message("Transforming expression data with formula log2(expression + 1)...")
+    gene_cols <- 3:ncol(full_data)
+    full_data[, gene_cols] <- log2(full_data[, gene_cols] + 1)
+    log_message("Done.")
+  }
 
   # Validates input file
   log_message("Validating input...")
@@ -386,6 +402,7 @@ run_regression <- function(data,
     signature = signature,
     plots = plot_list,
     params = list(
+      norm_exp = norm_exp,
       bootstrap = bootstrap,
       groupsize = groupsize,
       percentagefilter = percentagefilter,
@@ -414,6 +431,7 @@ run_regression <- function(data,
       parameters = list(
         data = "data.frame",
         outprefix = outprefix,
+        norm_exp = norm_exp,
         bootstrap = bootstrap,
         groupsize = groupsize,
         percentagefilter = percentagefilter,
