@@ -903,6 +903,298 @@ clinprog_uniCox_model <- function(data)
   })
 }
 
+#' Identify a minimum prognostic signature
+#'
+#' @description
+#' Tests progressively larger subsets of a molecular signature to identify
+#' the smallest subset associated with patient survival. Features are ranked
+#' by decreasing absolute coefficient, and each candidate signature is
+#' evaluated using a univariate Cox regression after categorizing the
+#' resulting molecular score.
+#'
+#' @param signature Data.frame containing at least \code{feature} and
+#'   \code{coefficient} columns.
+#' @param data Data.frame containing \code{OS}, \code{OS.time}, and all
+#'   features included in \code{signature}.
+#' @param min_size Integer. Minimum number of features to test.
+#' @param score_cutoff Character. Strategy used to categorize the molecular
+#'   score. Accepted values are \code{"median"}, \code{"mean"},
+#'   \code{"signal"}, and \code{"roc"}.
+#'
+#' @return
+#' A list containing:
+#' \itemize{
+#'   \item \code{signature}: selected minimum signature.
+#'   \item \code{size}: number of features in the selected signature.
+#'   \item \code{pvalue}: log-rank p-value for the selected signature.
+#'   \item \code{tested}: data.frame containing the results for each tested
+#'     signature size.
+#' }
+#'
+#' @keywords internal
+clinprog_min_signature <- function(
+    signature,
+    data,
+    min_size,
+    score_cutoff = "median"
+)
+{
+  # Validate signature
+  if (!is.data.frame(signature)) {
+    log_stop("Argument 'signature' must be a data.frame")
+  }
+
+  required_signature_cols <- c("feature", "coefficient")
+  missing_signature_cols <- setdiff(
+    required_signature_cols,
+    colnames(signature)
+  )
+
+  if (length(missing_signature_cols) > 0) {
+    log_stop(
+      "Signature is missing required columns: ",
+      paste(missing_signature_cols, collapse = ", ")
+    )
+  }
+
+  # Validate data
+  if (!is.data.frame(data)) {
+    log_stop("Argument 'data' must be a data.frame")
+  }
+
+  required_data_cols <- c("OS", "OS.time")
+  missing_data_cols <- setdiff(required_data_cols, colnames(data))
+
+  if (length(missing_data_cols) > 0) {
+    log_stop(
+      "Data is missing required columns: ",
+      paste(missing_data_cols, collapse = ", ")
+    )
+  }
+
+  # Validate min_size
+  if (!is.numeric(min_size) ||
+      length(min_size) != 1 ||
+      is.na(min_size) ||
+      min_size < 1 ||
+      min_size != as.integer(min_size)) {
+    log_stop(
+      "Argument 'min_size' must be a positive integer"
+    )
+  }
+
+  min_size <- as.integer(min_size)
+
+  # Validate score cutoff strategy
+  valid_cutoffs <- c("median", "mean", "signal", "roc")
+
+  if (!is.character(score_cutoff) ||
+      length(score_cutoff) != 1 ||
+      is.na(score_cutoff) ||
+      !score_cutoff %in% valid_cutoffs) {
+    log_stop(
+      "Argument 'score_cutoff' must be one of: ",
+      paste(valid_cutoffs, collapse = ", ")
+    )
+  }
+
+  # Work on a copy of the signature
+  signature <- signature[, required_signature_cols, drop = FALSE]
+
+  # Convert public feature names to internal data-column names
+  signature$feature <- gsub("-", "__", signature$feature)
+
+  # Rank features by absolute coefficient
+  signature <- signature[
+    order(abs(signature$coefficient), decreasing = TRUE),
+    ,
+    drop = FALSE
+  ]
+
+  n_total <- nrow(signature)
+
+  # If the requested minimum is larger than the signature,
+  # retain the complete signature without testing intermediate sizes.
+  if (min_size > n_total) {
+    signature$feature <- gsub("__", "-", signature$feature)
+
+    return(list(
+      signature = signature,
+      size = n_total,
+      pvalue = NA_real_,
+      tested = data.frame(
+        size = integer(0),
+        pvalue = numeric(0)
+      )
+    ))
+  }
+
+  # Check that all signature features are present in the data
+  missing_features <- setdiff(signature$feature, colnames(data))
+
+  if (length(missing_features) > 0) {
+    log_stop(
+      "Signature features not found in data: ",
+      paste(gsub("__", "-", missing_features), collapse = ", ")
+    )
+  }
+
+  # Store results for each tested signature size
+  tested <- data.frame(
+    size = integer(0),
+    pvalue = numeric(0)
+  )
+
+  selected_size <- n_total
+  selected_pvalue <- NA_real_
+
+  # Test progressively larger signatures
+  for (k in seq.int(min_size, n_total))
+  {
+    sub_signature <- signature[
+      seq_len(k),
+      ,
+      drop = FALSE
+    ]
+
+    # Extract expression matrix
+    expression <- as.matrix(
+      data[, sub_signature$feature, drop = FALSE]
+    )
+
+    # Match coefficients explicitly to expression columns
+    coefficients <- sub_signature$coefficient[
+      match(
+        colnames(expression),
+        sub_signature$feature
+      )
+    ]
+
+    # Calculate molecular score
+    score <- as.numeric(expression %*% coefficients)
+
+    # Build survival data
+    temp_data <- data.frame(
+      OS = data$OS,
+      OS.time = data$OS.time,
+      score = score
+    )
+
+    # Determine score cutoff
+    if (score_cutoff == "median") {
+      cut_value <- stats::median(score, na.rm = TRUE)
+
+    } else if (score_cutoff == "mean") {
+      cut_value <- mean(score, na.rm = TRUE)
+
+    } else if (score_cutoff == "signal") {
+      cut_value <- 0
+
+    } else if (score_cutoff == "roc") {
+
+      roc_result <- tryCatch(
+        clinprog_cutoff_roc(temp_data),
+        error = function(e) {
+          log_warning(
+            "ROC cutoff failed for signature size ",
+            k,
+            ". Falling back to median cutoff."
+          )
+          NULL
+        }
+      )
+
+      if (is.null(roc_result)) {
+        cut_value <- stats::median(score, na.rm = TRUE)
+      } else {
+        cut_value <- roc_result$cutoff
+      }
+    }
+
+    # Categorize molecular score
+    temp_data$score_group <- ifelse(
+      temp_data$score > cut_value,
+      "high",
+      "low"
+    )
+
+    temp_data$score_group <- factor(
+      temp_data$score_group,
+      levels = c("high", "low")
+    )
+
+    # Skip candidate signatures that produce only one group
+    if (length(unique(temp_data$score_group)) < 2) {
+      next
+    }
+
+    # Run univariate survival analysis
+    survival_result <- clinprog_uniCox_model(temp_data)
+
+    if (is.null(survival_result)) {
+      next
+    }
+
+    pvalue <- survival_result$table$log.rank.pvalue
+
+    # Record tested signature
+    tested <- rbind(
+      tested,
+      data.frame(
+        size = k,
+        pvalue = pvalue
+      )
+    )
+
+    # Select first statistically significant signature
+    if (!is.na(pvalue) && pvalue < 0.05) {
+      selected_size <- k
+      selected_pvalue <- pvalue
+      break
+    }
+
+    # Keep track of the p-value for the full signature
+    if (k == n_total) {
+      selected_pvalue <- pvalue
+    }
+  }
+
+  # Select final signature
+  selected_signature <- signature[
+    seq_len(selected_size),
+    ,
+    drop = FALSE
+  ]
+
+  # Convert internal feature names back to public names
+  selected_signature$feature <- gsub(
+    "__",
+    "-",
+    selected_signature$feature
+  )
+
+  rownames(selected_signature) <- NULL
+
+  # Warn if no smaller signature was significant
+  if (selected_size == n_total &&
+      n_total >= min_size &&
+      (nrow(tested) == 0 ||
+       is.na(selected_pvalue) ||
+       !any(tested$pvalue < 0.05, na.rm = TRUE))) {
+    log_warning(
+      "No minimum signature smaller than the complete signature ",
+      "reached the significance threshold. Returning the full signature."
+    )
+  }
+
+  return(list(
+    signature = selected_signature,
+    size = selected_size,
+    pvalue = selected_pvalue,
+    tested = tested
+  ))
+}
+
 #' Run multiple univariate Cox regressions for clinical covariates
 #'
 #' @description Fits independent univariate Cox proportional hazards models for each provided clinical covariate.
