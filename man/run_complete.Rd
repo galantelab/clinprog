@@ -13,6 +13,8 @@ run_complete(
   variancefilter = 0.01,
   followup = NULL,
   type = "gene",
+  min_signature_size = NULL,
+  min_signature_cutoff = NULL,
   multivariate = FALSE,
   clindata = NULL,
   roc = FALSE,
@@ -46,6 +48,16 @@ and \code{run_survival()} modules (Default: \code{0.01}).}
 \item{followup}{Numeric. Maximum followup time.}
 
 \item{type}{Character. Feature type: either \code{"gene"} (default) or \code{"transcript"} used in \code{run_regression()}.}
+
+\item{min_signature_size}{Integer or NULL. Minimum number of features to
+retain when searching for a smaller prognostic signature. If \code{NULL},
+no minimum-signature search is performed (Default: \code{NULL}).}
+
+\item{min_signature_cutoff}{Character or NULL. Score cutoff strategy used
+during the minimum-signature search. Must be one of \code{"median"},
+\code{"mean"}, \code{"signal"}, or \code{"roc"}. If
+\code{min_signature_size} is provided and this argument is \code{NULL},
+\code{"median"} is used (Default: \code{NULL}).}
 
 \item{multivariate}{Logical. If \code{TRUE}, performs multivariate survival analysis
 in \code{run_survival()} (Default: \code{FALSE}).}

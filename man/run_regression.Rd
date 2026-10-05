@@ -14,6 +14,8 @@ run_regression(
   variancefilter = 0.01,
   followup = NULL,
   type = "gene",
+  min_signature_size = NULL,
+  min_signature_cutoff = NULL,
   force = FALSE,
   plots = FALSE,
   table = FALSE,
@@ -46,6 +48,16 @@ transformation to expression data before downstream filtering and regression
 \item{followup}{Numeric. Maximum followup time (Default: \code{NULL}).}
 
 \item{type}{Character. Feature type: either \code{"gene"} (default) or \code{"transcript"}.}
+
+\item{min_signature_size}{Integer or NULL. Minimum number of features to
+retain when searching for a smaller prognostic signature. If \code{NULL},
+no minimum-signature search is performed (Default: \code{NULL}).}
+
+\item{min_signature_cutoff}{Character or NULL. Score cutoff strategy used
+during the minimum-signature search. Must be one of \code{"median"},
+\code{"mean"}, \code{"signal"}, or \code{"roc"}. If
+\code{min_signature_size} is provided and this argument is \code{NULL},
+\code{"median"} is used (Default: \code{NULL}).}
 
 \item{force}{Logical. If \code{TRUE}, overrides filtering steps related to survival assumptions (Default: \code{FALSE}).}
 

@@ -363,3 +363,30 @@ test_that("clinprog_min_signature ranks features by absolute coefficient", {
     "GENE-B"
   )
 })
+
+test_that("run_regression validates minimum signature parameters", {
+
+  expect_error(
+    run_regression(
+      data = toy_expression,
+      min_signature_size = 0
+    ),
+    "min_signature_size"
+  )
+
+  expect_error(
+    run_regression(
+      data = toy_expression,
+      min_signature_size = 1.5
+    ),
+    "min_signature_size"
+  )
+
+  expect_error(
+    run_regression(
+      data = toy_expression,
+      min_signature_cutoff = "invalid"
+    ),
+    "min_signature_cutoff"
+  )
+})

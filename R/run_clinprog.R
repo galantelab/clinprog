@@ -15,6 +15,14 @@
 #' @param variancefilter Numeric. Variance filter threshold (0–1; Default: \code{0.01}).
 #' @param followup Numeric. Maximum followup time (Default: \code{NULL}).
 #' @param type Character. Feature type: either \code{"gene"} (default) or \code{"transcript"}.
+#' @param min_signature_size Integer or NULL. Minimum number of features to
+#'   retain when searching for a smaller prognostic signature. If \code{NULL},
+#'   no minimum-signature search is performed (Default: \code{NULL}).
+#' @param min_signature_cutoff Character or NULL. Score cutoff strategy used
+#'   during the minimum-signature search. Must be one of \code{"median"},
+#'   \code{"mean"}, \code{"signal"}, or \code{"roc"}. If
+#'   \code{min_signature_size} is provided and this argument is \code{NULL},
+#'   \code{"median"} is used (Default: \code{NULL}).
 #' @param force Logical. If \code{TRUE}, overrides filtering steps related to survival assumptions (Default: \code{FALSE}).
 #' @param plots Logical. If \code{TRUE}, generates histogram and lollipop plots (Default: \code{FALSE}).
 #'
@@ -159,6 +167,8 @@ run_regression <- function(data,
                            variancefilter = 0.01,
                            followup = NULL,
                            type = "gene",
+                           min_signature_size = NULL,
+                           min_signature_cutoff = NULL,
                            force = FALSE,
                            plots = FALSE,
                            table = FALSE,
@@ -204,6 +214,41 @@ run_regression <- function(data,
     log_stop("Argument 'norm_exp' must be a boolean [TRUE or FALSE]")
   }
   if (!type %in% c("gene", "transcript")) {log_stop("Argument 'type' must be either 'gene' or 'transcript'")}
+  if (!is.null(min_signature_size) &&
+      (!is.numeric(min_signature_size) ||
+       length(min_signature_size) != 1 ||
+       is.na(min_signature_size) ||
+       min_signature_size < 1 ||
+       min_signature_size != as.integer(min_signature_size))) {
+    log_stop(
+      "Argument 'min_signature_size' must be NULL or a single positive integer"
+    )
+  }
+  if (!is.null(min_signature_size)) {
+    min_signature_size <- as.integer(min_signature_size)
+  }
+  if (!is.null(min_signature_cutoff) &&
+      (!is.character(min_signature_cutoff) ||
+       length(min_signature_cutoff) != 1 ||
+       is.na(min_signature_cutoff) ||
+       !tolower(min_signature_cutoff) %in%
+         c("median", "mean", "signal", "roc"))) {
+    log_stop(
+      "Argument 'min_signature_cutoff' must be NULL or one of: ",
+      "'median', 'mean', 'signal', 'roc'"
+    )
+  }
+  if (!is.null(min_signature_cutoff)) {
+    min_signature_cutoff <- tolower(min_signature_cutoff)
+  }
+  if (is.null(min_signature_size) &&
+      !is.null(min_signature_cutoff)) {
+    log_warning(
+      "'min_signature_cutoff' was provided but 'min_signature_size' is NULL. ",
+      "The minimum signature search will not run. Set 'min_signature_size' ",
+      "to enable it."
+    )
+  }
   if (!is.numeric(bootstrap) || length(bootstrap) != 1 || bootstrap < 0 || bootstrap %% 1 != 0)
   {
     log_stop("Argument 'bootstrap' must be an integer")
@@ -377,6 +422,33 @@ run_regression <- function(data,
   signature <- signature[order(abs(signature$coefficient), decreasing = TRUE), ]
   log_message("Done.")
 
+  # Search for the minimum signature with significant univariate survival
+  if (!is.null(min_signature_size))
+  {
+    if (is.null(min_signature_cutoff))
+    {
+      log_warning(
+        "'min_signature_cutoff' not provided. Using 'median' (default)."
+      )
+      cutoff_used <- "median"
+    } else {
+      cutoff_used <- min_signature_cutoff
+    }
+
+    log_message("Searching for minimum prognostic signature...")
+
+    min_signature_result <- clinprog_min_signature(
+      signature = signature,
+      data = full_data,
+      min_size = min_signature_size,
+      score_cutoff = cutoff_used
+    )
+
+    signature <- min_signature_result$signature
+
+    log_message("Done.")
+  }
+
   # Produces histogram and lollipop plots for generated signature
   plot_list <- NULL
   if (plots)
@@ -409,6 +481,8 @@ run_regression <- function(data,
       variancefilter = variancefilter,
       followup = followup,
       type = type,
+      min_signature_size = min_signature_size,
+      min_signature_cutoff = min_signature_cutoff,
       force = force,
       ncores = ncores,
       seed = seed
@@ -438,6 +512,8 @@ run_regression <- function(data,
         variancefilter = variancefilter,
         followup = followup,
         type = type,
+        min_signature_size = min_signature_size,
+        min_signature_cutoff = min_signature_cutoff,
         force = force,
         plots = plots,
         ncores = ncores,
@@ -1193,6 +1269,14 @@ run_survival <- function(data,
 #' and \code{run_survival()} modules (Default: \code{0.01}).
 #' @param followup Numeric. Maximum followup time.
 #' @param type Character. Feature type: either \code{"gene"} (default) or \code{"transcript"} used in \code{run_regression()}.
+#' @param min_signature_size Integer or NULL. Minimum number of features to
+#'   retain when searching for a smaller prognostic signature. If \code{NULL},
+#'   no minimum-signature search is performed (Default: \code{NULL}).
+#' @param min_signature_cutoff Character or NULL. Score cutoff strategy used
+#'   during the minimum-signature search. Must be one of \code{"median"},
+#'   \code{"mean"}, \code{"signal"}, or \code{"roc"}. If
+#'   \code{min_signature_size} is provided and this argument is \code{NULL},
+#'   \code{"median"} is used (Default: \code{NULL}).
 #' @param multivariate Logical. If \code{TRUE}, performs multivariate survival analysis
 #' in \code{run_survival()} (Default: \code{FALSE}).
 #' @param clindata Data.frame. A data.frame to a clinical table used for multivariate analysis.
@@ -1283,6 +1367,8 @@ run_complete <- function(data,
                          variancefilter = 0.01,
                          followup = NULL,
                          type = "gene",
+                         min_signature_size = NULL,
+                         min_signature_cutoff = NULL,
                          multivariate = FALSE,
                          clindata = NULL,
                          roc = FALSE,
@@ -1312,6 +1398,8 @@ run_complete <- function(data,
     variancefilter = variancefilter,
     followup = followup,
     type = type,
+    min_signature_size = min_signature_size,
+    min_signature_cutoff = min_signature_cutoff,
     force = force,
     plots = plots,
     table = table,
