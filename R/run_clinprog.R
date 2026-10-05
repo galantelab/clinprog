@@ -578,7 +578,10 @@ run_regression <- function(data,
 #'   present in \code{clindata} (Default: \code{FALSE}).
 #' @param clindata Data.frame. A data.frame containing binary-categorized
 #' clinical data (e.g., Age, Gender, ...) (required if \code{multivariate = TRUE}).
-#' @param roc Logical. If \code{TRUE}, uses a ROC curve to define the score cutoff instead of median (Default: \code{FALSE}).
+#' @param score_cutoff Character. Strategy used to determine the cutoff for
+#'   categorizing signature scores. Must be one of \code{"median"},
+#'   \code{"mean"}, \code{"signal"}, or \code{"roc"} (Default:
+#'   \code{"median"}).
 #' @param variancefilter Numeric. Minimum normalized variance for follow-up time (0–1; Default: \code{0.01}).
 #' @param followup Numeric. Maximum followup time (Default: \code{NULL}).
 #' @param p.cutoff Numeric. P-value threshold used to select clinical covariates from univariate Cox regression
@@ -589,7 +592,7 @@ run_regression <- function(data,
 #'   extra figures, depending on the chosen parameters (Default: \code{FALSE}).
 #'
 #'   These can also be generated later using \code{plot_km()} and \code{plot_ph()}.
-#'   If \code{roc = TRUE}, a ROC curve can also be generated using \code{plot_roc()}.
+#'   If \code{score_cutoff = "roc"}, a ROC curve can also be generated using \code{plot_roc()}.
 #'   If \code{multivariate = TRUE}, a forest plot can also be generated using \code{plot_forest()}.
 #'   If bootstrap is performed, an extra summary barplot can also be generated using \code{plot_barplot()}.
 #' @param table Logical. If \code{TRUE}, writes output tables to disk (Default: \code{FALSE}).
@@ -756,7 +759,7 @@ run_survival <- function(data,
                          outprefix = "clinprog",
                          multivariate = FALSE,
                          clindata = NULL,
-                         roc = FALSE,
+                         score_cutoff = "median",
                          variancefilter = 0.01,
                          followup = NULL,
                          p.cutoff = 0.2,
@@ -815,6 +818,20 @@ run_survival <- function(data,
     if (is.null(clindata)) {log_stop("'clindata' must be provided when 'multivariate = TRUE'")}
     if (!is.data.frame(clindata)) {log_stop("'clindata' must be a data.frame")}
   }
+
+  if (!is.character(score_cutoff) ||
+      length(score_cutoff) != 1 ||
+      is.na(score_cutoff) ||
+      !tolower(score_cutoff) %in%
+        c("median", "mean", "signal", "roc")) {
+    log_stop(
+      "Argument 'score_cutoff' must be one of: ",
+      "'median', 'mean', 'signal', or 'roc'"
+    )
+  }
+
+  score_cutoff <- tolower(score_cutoff)
+
   log_message("Done.")
 
   # Loads molecular signature
@@ -968,22 +985,64 @@ run_survival <- function(data,
   log_message("Categorizing score...")
 
   # Based on user's choice, use the ROC curve or the median
-  if (roc)
+  if (score_cutoff == "roc")
   {
-    # This value can be changed. By default, it uses the median followup time
-    roc_obj <- survivalROC::survivalROC(Stime = data$OS.time, status = data$OS, marker = data$score,
-                                        predict.time = stats::median(data$OS.time, na.rm = TRUE), method = "NNE",
-                                        span = 0.25*nrow(data)^(-0.20))
-    roc_cutoff <- clinprog_cutoff_roc(data, direction = ifelse(as.numeric(roc_obj$AUC) < 0.5, ">", "<"))
-    score_cutoff <- roc_cutoff$cutoff
-    log_message(paste0("ROC cutoff: ", score_cutoff))
+    roc_obj <- survivalROC::survivalROC(
+      Stime = data$OS.time,
+      status = data$OS,
+      marker = data$score,
+      predict.time = stats::median(data$OS.time, na.rm = TRUE),
+      method = "NNE",
+      span = 0.25 * nrow(data)^(-0.20)
+    )
+
+    roc_cutoff <- clinprog_cutoff_roc(
+      data,
+      direction = ifelse(as.numeric(roc_obj$AUC) < 0.5, ">", "<")
+    )
+
+    score_cutoff_value <- roc_cutoff$cutoff
+
+    log_message(
+      paste0("ROC cutoff: ", round(score_cutoff_value, 4))
+    )
   } else {
-    score_cutoff <- stats::median(data$score, na.rm = TRUE)
-    log_message(paste0("Median cutoff: ", score_cutoff))
+    if (score_cutoff == "median")
+    {
+      score_cutoff_value <- stats::median(
+        data$score,
+        na.rm = TRUE
+      )
+
+      log_message(
+        paste0("Median cutoff: ", round(score_cutoff_value, 4))
+      )
+    } else {
+      if (score_cutoff == "mean")
+      {
+        score_cutoff_value <- mean(
+          data$score,
+          na.rm = TRUE
+        )
+
+        log_message(
+          paste0("Mean cutoff: ", round(score_cutoff_value, 4))
+        )
+      } else {
+        score_cutoff_value <- 0
+
+        log_message(
+          paste0(
+            "Signal cutoff (positive vs. negative): ",
+            round(score_cutoff_value, 4)
+          )
+        )
+      }
+    }
   }
 
   # Explicitly set the "high" group as REF to control for HR (CI 95%) values
-  data$score_group <- ifelse(data$score > score_cutoff, "high", "low")
+  data$score_group <- ifelse(data$score > score_cutoff_value, "high", "low")
   data$score_group <- factor(data$score_group, levels = c("high", "low"))
   log_message("Done.")
 
@@ -1141,7 +1200,7 @@ run_survival <- function(data,
   {
     log_message("Making plots from univariate and multivariate (if applicable) survival analyses...")
     plot_list <- list(
-      km_plot = plot_km(data = data, cutoff = score_cutoff, outprefix = outprefix,
+      km_plot = plot_km(data = data, cutoff = score_cutoff_value, outprefix = outprefix,
                           pval = res_logrank$table$log.rank.pvalue, palette = c("#D73027", "#1A9850")),
       ph_plot = if (!is.null(multi_model)) plot_ph(x = ph_test, is_multi = TRUE,
                                                          outprefix = outprefix) else plot_ph(x = res_logrank$ph,
@@ -1167,11 +1226,11 @@ run_survival <- function(data,
       univariate = res_logrank,
       multivariate = if (!is.null(multi_cox)) multi_cox else NULL
     ),
-    roc_result = if (roc) roc_cutoff else NULL,
+    roc_result = if (score_cutoff == "roc") roc_cutoff else NULL,
     ph_result = if (!is.null(multi_cox)) ph_test else res_logrank$ph,
     plots = plot_list,
     params = list(
-      roc = roc,
+      score_cutoff = score_cutoff,
       multivariate = multivariate,
       variancefilter = variancefilter,
       followup = followup,
@@ -1200,7 +1259,7 @@ run_survival <- function(data,
         signature = class(signature)[1],
         outprefix = outprefix,
         multivariate = multivariate,
-        roc = roc,
+        score_cutoff = score_cutoff,
         variancefilter = variancefilter,
         followup = followup,
         p.cutoff = p.cutoff,
@@ -1280,12 +1339,20 @@ run_survival <- function(data,
 #' @param multivariate Logical. If \code{TRUE}, performs multivariate survival analysis
 #' in \code{run_survival()} (Default: \code{FALSE}).
 #' @param clindata Data.frame. A data.frame to a clinical table used for multivariate analysis.
-#' @param roc Logical. If \code{TRUE}, uses ROC-based cutoff instead of median for scores
-#' in \code{run_survival()} (Default: \code{FALSE}).
+#' @param score_cutoff Character. Strategy used to determine the cutoff for
+#'   categorizing signature scores. Must be one of \code{"median"},
+#'   \code{"mean"}, \code{"signal"}, or \code{"roc"} (Default:
+#'   \code{"median"}).
 #' @param p.cutoff Numeric. Univariate covariate filtering cutoff used for multivariate analysis
 #' in \code{run_survival()} (Default: \code{0.2}).
 #' @param force Logical. If \code{TRUE}, overrides filtering steps related to survival assumptions (Default: \code{FALSE}).
-#' @param plots Logical. If \code{TRUE}, generates plots from both modules (Default: \code{FALSE}).
+#' @param plots Logical. If \code{TRUE}, generates a Kaplan-Meier curve, the proportional hazards assumption plot, and
+#'   extra figures, depending on the chosen parameters (Default: \code{FALSE}).
+#'
+#'   These can also be generated later using \code{plot_km()} and \code{plot_ph()}.
+#'   If \code{score_cutoff = "roc"}, a ROC curve can also be generated using \code{plot_roc()}.
+#'   If \code{multivariate = TRUE}, a forest plot can also be generated using \code{plot_forest()}.
+#'   If bootstrap is performed, an extra summary barplot can also be generated using \code{plot_barplot()}.
 #' @param table Logical. If \code{TRUE}, writes output tables from both modules (Default: \code{FALSE}).
 #' @param saveJSON Logical. If \code{TRUE}, saves to disk the metadata in a JSON file (Default: \code{FALSE}).
 #' @param saveRDS Logical. If \code{TRUE}, saves to disk the R object in a RDS file (Default: \code{FALSE}).
@@ -1371,7 +1438,7 @@ run_complete <- function(data,
                          min_signature_cutoff = NULL,
                          multivariate = FALSE,
                          clindata = NULL,
-                         roc = FALSE,
+                         score_cutoff = "median",
                          p.cutoff = 0.2,
                          force = FALSE,
                          plots = FALSE,
@@ -1420,7 +1487,7 @@ run_complete <- function(data,
     outprefix = outprefix,
     multivariate = multivariate,
     clindata = clindata,
-    roc = roc,
+    score_cutoff = score_cutoff,
     variancefilter = variancefilter,
     followup = followup,
     p.cutoff = p.cutoff,

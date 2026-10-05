@@ -17,7 +17,7 @@ run_complete(
   min_signature_cutoff = NULL,
   multivariate = FALSE,
   clindata = NULL,
-  roc = FALSE,
+  score_cutoff = "median",
   p.cutoff = 0.2,
   force = FALSE,
   plots = FALSE,
@@ -64,15 +64,23 @@ in \code{run_survival()} (Default: \code{FALSE}).}
 
 \item{clindata}{Data.frame. A data.frame to a clinical table used for multivariate analysis.}
 
-\item{roc}{Logical. If \code{TRUE}, uses ROC-based cutoff instead of median for scores
-in \code{run_survival()} (Default: \code{FALSE}).}
+\item{score_cutoff}{Character. Strategy used to determine the cutoff for
+categorizing signature scores. Must be one of \code{"median"},
+\code{"mean"}, \code{"signal"}, or \code{"roc"} (Default:
+\code{"median"}).}
 
 \item{p.cutoff}{Numeric. Univariate covariate filtering cutoff used for multivariate analysis
 in \code{run_survival()} (Default: \code{0.2}).}
 
 \item{force}{Logical. If \code{TRUE}, overrides filtering steps related to survival assumptions (Default: \code{FALSE}).}
 
-\item{plots}{Logical. If \code{TRUE}, generates plots from both modules (Default: \code{FALSE}).}
+\item{plots}{Logical. If \code{TRUE}, generates a Kaplan-Meier curve, the proportional hazards assumption plot, and
+extra figures, depending on the chosen parameters (Default: \code{FALSE}).
+
+These can also be generated later using \code{plot_km()} and \code{plot_ph()}.
+If \code{score_cutoff = "roc"}, a ROC curve can also be generated using \code{plot_roc()}.
+If \code{multivariate = TRUE}, a forest plot can also be generated using \code{plot_forest()}.
+If bootstrap is performed, an extra summary barplot can also be generated using \code{plot_barplot()}.}
 
 \item{table}{Logical. If \code{TRUE}, writes output tables from both modules (Default: \code{FALSE}).}
 

@@ -10,7 +10,7 @@ run_survival(
   outprefix = "clinprog",
   multivariate = FALSE,
   clindata = NULL,
-  roc = FALSE,
+  score_cutoff = "median",
   variancefilter = 0.01,
   followup = NULL,
   p.cutoff = 0.2,
@@ -40,7 +40,10 @@ present in \code{clindata} (Default: \code{FALSE}).}
 \item{clindata}{Data.frame. A data.frame containing binary-categorized
 clinical data (e.g., Age, Gender, ...) (required if \code{multivariate = TRUE}).}
 
-\item{roc}{Logical. If \code{TRUE}, uses a ROC curve to define the score cutoff instead of median (Default: \code{FALSE}).}
+\item{score_cutoff}{Character. Strategy used to determine the cutoff for
+categorizing signature scores. Must be one of \code{"median"},
+\code{"mean"}, \code{"signal"}, or \code{"roc"} (Default:
+\code{"median"}).}
 
 \item{variancefilter}{Numeric. Minimum normalized variance for follow-up time (0–1; Default: \code{0.01}).}
 
@@ -57,7 +60,7 @@ for inclusion in multivariate analysis (Default: \code{0.2}).}
 extra figures, depending on the chosen parameters (Default: \code{FALSE}).
 
 These can also be generated later using \code{plot_km()} and \code{plot_ph()}.
-If \code{roc = TRUE}, a ROC curve can also be generated using \code{plot_roc()}.
+If \code{score_cutoff = "roc"}, a ROC curve can also be generated using \code{plot_roc()}.
 If \code{multivariate = TRUE}, a forest plot can also be generated using \code{plot_forest()}.
 If bootstrap is performed, an extra summary barplot can also be generated using \code{plot_barplot()}.}
 

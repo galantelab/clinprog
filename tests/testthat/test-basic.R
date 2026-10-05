@@ -390,3 +390,12 @@ test_that("run_regression validates minimum signature parameters", {
     "min_signature_cutoff"
   )
 })
+
+expect_error(
+  run_survival(
+    data = toy_expression,
+    signature = toy_signature,
+    score_cutoff = "invalid"
+  ),
+  "score_cutoff"
+)
