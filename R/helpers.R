@@ -238,12 +238,12 @@ clinprog_feature_check <- function(dataf, g, seed = NULL) {
 #' }
 #' @keywords internal
 clinprog_bootstrapfun <- function(full_data,
-                                n_boot,
-                                group_size,
-                                cor_threshold,
-                                coef_threshold,
-                                ncores = 1,
-                                seed = 123) {
+                                  n_boot,
+                                  group_size,
+                                  cor_threshold,
+                                  coef_threshold,
+                                  ncores = 1,
+                                  seed = 123) {
 
   message("Starting bootstrap with ", n_boot, " iterations...")
 
@@ -1722,7 +1722,7 @@ clinprog_resampling <- function(data, covariates, all_covariates,
   }
 
   # Generates bootstrap samples
-  bootstrap_data <- sjstats::bootstrap(data = data, n = bootstrap, size = 0.6)
+  bootstrap_data <- sjstats::bootstrap(data = data, n = bootstrap, size = 0.7)
 
   tables_list <- list()
   valid_iterations <- 0
@@ -1730,7 +1730,7 @@ clinprog_resampling <- function(data, covariates, all_covariates,
 
   while (valid_iterations < bootstrap && current_iteration <= length(bootstrap_data$strap))
   {
-    boot_df <- clinprog_bootstrap(raw_data = data, bootstrap_data = bootstrap_data, iteration = current_iteration, min.prop = 0.2)
+    boot_df <- clinprog_bootstrap(raw_data = data, bootstrap_data = bootstrap_data, iteration = current_iteration, min.prop = 0.1)
     current_iteration <- current_iteration + 1
 
     # Skips invalid bootstrap samples
@@ -1807,7 +1807,7 @@ clinprog_bootstrap <- function(raw_data, bootstrap_data, iteration, min.prop = 0
   bootstrap_df <- as.data.frame(raw_data[boot_indices, , drop = FALSE])
 
   # Checks binary balance for covariates
-  covariate_cols <- setdiff(colnames(bootstrap_df), c("OS", "OS.time"))
+  covariate_cols <- setdiff(colnames(bootstrap_df), c("OS", "OS.time", "score", "score_group"))
   for (col in covariate_cols)
   {
     current_var <- stats::na.omit(bootstrap_df[[col]])

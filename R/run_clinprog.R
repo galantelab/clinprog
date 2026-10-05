@@ -1146,7 +1146,7 @@ run_survival <- function(data,
       log_message("Building initial model...")
       multi_cox_initial <- clinprog_multiCox_test(data = clin, univ_result = univ_cox, logrank_result = res_logrank$table,
                                                 covariates = selected_covariates, all_covariates = uni_covariates,
-                                                use.bootstrap = TRUE, bootstrap = bootstrap, bootstrap.freq = 0.25, multi.p.cutoff = 0.05)
+                                                use.bootstrap = TRUE, bootstrap = bootstrap, bootstrap.freq = 0.25, multi.p.cutoff = 0.1)
       if (multi_cox_initial$bootstrap.used)
       {
         log_message(paste0("Bootstrap resampling performed with ", bootstrap, " iterations."))
