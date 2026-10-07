@@ -2651,3 +2651,1111 @@ plot_boxplot <- function(
   # Returns the combined plot object
   return(combined_plot)
 }
+
+#' Generate boxplots of prognostic score by clinical covariates
+#'
+#' @description Creates a single-page PDF containing a grid of boxplots, one per
+#'   clinical covariate (typically dichotomized, e.g. Age: low/high,
+#'   Race: white/non_white, Menopause: pre/post). Each boxplot compares the
+#'   continuous \code{score} across the categories of a given covariate.
+#'   Optionally, plots can be faceted by a grouping variable (e.g. \code{OS})
+#'   and the score can be tested between the two covariate levels using a
+#'   Mann-Whitney (Wilcoxon) or t-test.
+#'
+#' @param data Data.frame containing clinical information. Must contain the
+#'   \code{score_col} and at least one clinical covariate column. Sample/patient
+#'   IDs are taken from \code{id_col} if provided, otherwise from row names
+#'   (when they are not the default integer sequence).
+#' @param score_col Character. Name of the numeric score column
+#'   (default: \code{"score"}).
+#' @param exclude_cols Character vector. Columns to exclude from the covariate
+#'   list (default: \code{c("OS", "OS.time", "score", "score_group")}).
+#' @param facet_by Character or \code{NULL} (default). Optional column name
+#'   used to facet the plot (e.g. \code{"OS"}). When set, boxplot colors
+#'   follow the facet variable instead of the clinical covariate.
+#' @param palette Character vector. Colors for the boxplots. When
+#'   \code{facet_by = NULL}, the first two colors are used for the two
+#'   covariate levels (default: \code{c("#1A9850", "#D73027")}). When
+#'   faceting, colors are assigned to the facet levels.
+#' @param test Character. Statistical test to compare score between the two
+#'   covariate levels: \code{"wilcox"} (Mann-Whitney, default),
+#'   \code{"t.test"}, or \code{"none"}.
+#' @param paired Logical. Whether to perform a paired test (default:
+#'   \code{FALSE}). Ignored when \code{test = "none"}.
+#' @param pvalue_position Character. Where to place the p-value:
+#'   \code{"subtitle"} (default) or \code{"inside"}. When \code{facet_by} is
+#'   set, \code{"inside"} draws the p-value of each facet level inside its
+#'   own panel.
+#' @param add_pvalue Logical. Whether to compute and display the p-value
+#'   (default: \code{TRUE}).
+#' @param show_points Logical. Whether to overlay jittered points
+#'   (default: \code{FALSE}).
+#' @param show_n Logical. Whether to print the sample size per category inside
+#'   each panel, just above the x axis. When \code{facet_by} is set, the N is
+#'   computed within each facet level (default: \code{FALSE}).
+#' @param order_by_median Logical. If \code{TRUE} (default), x axis categories
+#'   are reordered by the median score.
+#' @param max_features Integer or \code{NULL}. Maximum number of covariates to
+#'   plot. If the data contains more, the first \code{max_features} (in column
+#'   order) are kept. If \code{NULL} (default) and more than 16 covariates are
+#'   present, only the first 16 are plotted with a warning.
+#' @param id_col Character or \code{NULL}. Optional column with sample IDs. If
+#'   \code{NULL} (default), row names are used when they are not the default
+#'   integer sequence.
+#' @param outprefix Character. Output prefix for saving the plot (optional).
+#' @param individual Logical. If \code{TRUE} and \code{outprefix} is provided,
+#'   saves each covariate boxplot as its own PDF file named
+#'   \code{{outprefix}_clinical_{covariate}.pdf}. The combined grid is still
+#'   saved as \code{{outprefix}_clinical_boxplots.pdf} (default:
+#'   \code{FALSE}).
+#' @param theme A ggplot2 theme object. Defaults to \code{theme_clinprog()}.
+#' @param ylab Character. Title for the Y-axis (default: \code{"Score"}).
+#' @param xlab Character. Title for the X-axis (default: \code{NULL}).
+#' @param title Character or \code{NULL}. Optional overall plot title.
+#' @param width Numeric. Plot width in inches (default: \code{NULL},
+#'   auto-computed).
+#' @param height Numeric. Plot height in inches (default: \code{NULL},
+#'   auto-computed).
+#'
+#' @return A \code{patchwork} object containing the clinical covariate
+#'   boxplots.
+#' @importFrom rlang .data
+#' @importFrom dplyr %>%
+#' @export
+plot_clinics <- function(
+    data,
+    score_col = "score",
+    exclude_cols = c("OS", "OS.time", "score", "score_group"),
+    facet_by = NULL,
+    palette = c("#1A9850", "#D73027"),
+    test = c("wilcox", "t.test", "none"),
+    paired = FALSE,
+    pvalue_position = c("subtitle", "inside"),
+    add_pvalue = TRUE,
+    show_points = FALSE,
+    show_n = FALSE,
+    order_by_median = TRUE,
+    max_features = NULL,
+    id_col = NULL,
+    outprefix = NULL,
+    individual = FALSE,
+    theme = theme_clinprog(),
+    ylab = "Score",
+    xlab = NULL,
+    title = NULL,
+    width = NULL,
+    height = NULL
+) {
+
+  log_message("Building clinical covariate boxplots...")
+
+  # Resolves multiple-choice arguments
+  test <- match.arg(test)
+  pvalue_position <- match.arg(pvalue_position)
+
+  # Input validation
+  if (!is.data.frame(data)) {
+    log_stop("'data' must be a data.frame")
+  }
+
+  # score_col
+  if (!is.character(score_col) || length(score_col) != 1) {
+    log_stop("'score_col' must be a single character string")
+  }
+
+  if (!score_col %in% colnames(data)) {
+    log_stop(paste0("Column '", score_col, "' not found in 'data'."))
+  }
+
+  if (!is.numeric(data[[score_col]])) {
+    log_stop(paste0("Column '", score_col, "' must be numeric."))
+  }
+
+  # exclude_cols
+  if (!is.character(exclude_cols)) {
+    log_stop("'exclude_cols' must be a character vector")
+  }
+
+  # facet_by
+  if (!is.null(facet_by)) {
+    if (!is.character(facet_by) || length(facet_by) != 1) {
+      log_stop("'facet_by' must be NULL or a single character string")
+    }
+
+    if (!facet_by %in% colnames(data)) {
+      log_stop(
+        paste0(
+          "'facet_by' column '",
+          facet_by,
+          "' not found in 'data'."
+        )
+      )
+    }
+  }
+
+  # palette
+  if (!is.character(palette) || length(palette) < 2) {
+    log_stop(
+      "'palette' must be a character vector with at least 2 colors"
+    )
+  }
+
+  if (anyNA(palette)) {
+    log_stop("'palette' must not contain NA values")
+  }
+
+  # flags
+  if (!is.logical(add_pvalue) ||
+      length(add_pvalue) != 1 ||
+      is.na(add_pvalue)) {
+    log_stop("'add_pvalue' must be TRUE or FALSE")
+  }
+
+  if (!is.logical(show_points) ||
+      length(show_points) != 1 ||
+      is.na(show_points)) {
+    log_stop("'show_points' must be TRUE or FALSE")
+  }
+
+  if (!is.logical(show_n) ||
+      length(show_n) != 1 ||
+      is.na(show_n)) {
+    log_stop("'show_n' must be TRUE or FALSE")
+  }
+
+  if (!is.logical(order_by_median) ||
+      length(order_by_median) != 1 ||
+      is.na(order_by_median)) {
+    log_stop("'order_by_median' must be TRUE or FALSE")
+  }
+
+  if (!is.logical(paired) ||
+      length(paired) != 1 ||
+      is.na(paired)) {
+    log_stop("'paired' must be TRUE or FALSE")
+  }
+
+  if (!is.logical(individual) ||
+      length(individual) != 1 ||
+      is.na(individual)) {
+    log_stop("'individual' must be TRUE or FALSE")
+  }
+
+  # theme
+  if (!inherits(theme, "theme")) {
+    log_stop("'theme' must be a valid ggplot2 theme object")
+  }
+
+  # labels
+  if (!is.null(ylab) &&
+      (!is.character(ylab) || length(ylab) != 1)) {
+    log_stop("'ylab' must be NULL or a single character string")
+  }
+
+  if (!is.null(xlab) &&
+      (!is.character(xlab) || length(xlab) != 1)) {
+    log_stop("'xlab' must be NULL or a single character string")
+  }
+
+  if (!is.null(title) &&
+      (!is.character(title) || length(title) != 1)) {
+    log_stop("'title' must be NULL or a single character string")
+  }
+
+  # plot sizes
+  if (!is.null(width) &&
+      (!is.numeric(width) || length(width) != 1 || width <= 0)) {
+    log_stop("'width' must be NULL or a single positive numeric value")
+  }
+
+  if (!is.null(height) &&
+      (!is.numeric(height) || length(height) != 1 || height <= 0)) {
+    log_stop("'height' must be NULL or a single positive numeric value")
+  }
+
+  # max_features
+  if (!is.null(max_features)) {
+    if (!is.numeric(max_features) ||
+        length(max_features) != 1 ||
+        max_features <= 0 ||
+        max_features %% 1 != 0) {
+      log_stop(
+        "'max_features' must be NULL or a single positive integer"
+      )
+    }
+  }
+
+  # id_col
+  if (!is.null(id_col)) {
+    if (!is.character(id_col) || length(id_col) != 1) {
+      log_stop(
+        "'id_col' must be NULL or a single character string"
+      )
+    }
+
+    if (!id_col %in% colnames(data)) {
+      log_stop(
+        paste0(
+          "'id_col' column '",
+          id_col,
+          "' not found in 'data'."
+        )
+      )
+    }
+  }
+
+  # outprefix
+  if (!is.null(outprefix)) {
+    if (!is.character(outprefix) || length(outprefix) != 1) {
+      log_stop(
+        "'outprefix' must be NULL or a single character string"
+      )
+    }
+  }
+
+  # Cross-validation: paired only makes sense with a real test
+  if (paired && test == "none") {
+    log_warning(
+      "'paired = TRUE' has no effect when 'test = \"none\"'. ",
+      "Ignoring 'paired'."
+    )
+    paired <- FALSE
+  }
+
+  # Cross-validation: individual only makes sense with outprefix
+  if (individual && is.null(outprefix)) {
+    log_warning(
+      "'individual = TRUE' requires 'outprefix' to be provided. ",
+      "Ignoring 'individual'."
+    )
+    individual <- FALSE
+  }
+
+  # Ensures the score column is never treated as a covariate
+  exclude_cols <- unique(c(exclude_cols, score_col))
+
+  if (!is.null(facet_by)) {
+    exclude_cols <- unique(c(exclude_cols, facet_by))
+  }
+
+  if (!is.null(id_col)) {
+    exclude_cols <- unique(c(exclude_cols, id_col))
+  }
+
+  covariate_cols <- setdiff(colnames(data), exclude_cols)
+
+  if (length(covariate_cols) == 0) {
+    log_stop(
+      "No covariate columns found after removing 'exclude_cols'. ",
+      "Please check your data."
+    )
+  }
+
+  # Drops numeric covariates
+  is_categorical <- vapply(
+    data[covariate_cols],
+    function(x) {
+      is.factor(x) || is.character(x) || is.logical(x)
+    },
+    logical(1)
+  )
+
+  non_categorical <- covariate_cols[!is_categorical]
+
+  if (length(non_categorical) > 0) {
+    log_warning(
+      "The following covariates are not categorical and will be skipped: ",
+      paste(non_categorical, collapse = ", ")
+    )
+
+    covariate_cols <- covariate_cols[is_categorical]
+  }
+
+  if (length(covariate_cols) == 0) {
+    log_stop(
+      "No valid categorical covariate columns remain to plot."
+    )
+  }
+
+  # Enforces dichotomization (2 levels)
+  n_levels <- vapply(
+    data[covariate_cols],
+    function(x) {
+      length(unique(stats::na.omit(x)))
+    },
+    integer(1)
+  )
+
+  bad_covs <- covariate_cols[n_levels != 2]
+
+  if (length(bad_covs) > 0) {
+    log_warning(
+      "The following covariates do not have exactly 2 levels and ",
+      "will be skipped: ",
+      paste(
+        sprintf(
+          "%s (%d levels)",
+          bad_covs,
+          n_levels[bad_covs]
+        ),
+        collapse = ", "
+      )
+    )
+
+    covariate_cols <- covariate_cols[n_levels == 2]
+  }
+
+  if (length(covariate_cols) == 0) {
+    log_stop(
+      "No dichotomized covariates remain after filtering."
+    )
+  }
+
+  # Handles max_features
+  if (!is.null(max_features)) {
+    if (length(covariate_cols) > max_features) {
+      log_message(
+        paste0(
+          "Selecting first ",
+          max_features,
+          " covariates."
+        )
+      )
+
+      covariate_cols <- utils::head(
+        covariate_cols,
+        max_features
+      )
+    }
+  } else if (length(covariate_cols) > 16) {
+    log_warning(
+      paste0(
+        "Data contains ",
+        length(covariate_cols),
+        " covariates. Plotting the first 16 to avoid cluttered layouts."
+      )
+    )
+
+    covariate_cols <- utils::head(covariate_cols, 16)
+  }
+
+  # Builds patient IDs
+  if (!is.null(id_col)) {
+    patient_ids <- as.character(data[[id_col]])
+  } else if (
+    !is.null(rownames(data)) &&
+    any(rownames(data) != as.character(seq_len(nrow(data))))
+  ) {
+    patient_ids <- rownames(data)
+  } else {
+    patient_ids <- as.character(seq_len(nrow(data)))
+  }
+
+  # Facet variable levels
+  facet_levels <- NULL
+  facet_labels <- NULL
+
+  if (!is.null(facet_by)) {
+    raw_facet_vals <- stats::na.omit(
+      as.character(data[[facet_by]])
+    )
+
+    if (length(raw_facet_vals) < 1) {
+      log_stop(
+        paste0(
+          "'facet_by' column '",
+          facet_by,
+          "' has no valid values."
+        )
+      )
+    }
+
+    facet_levels <- unique(raw_facet_vals)
+
+    # Friendly labels for OS status (0 = Alive, 1 = Dead)
+    if (identical(facet_by, "OS")) {
+      numeric_vals <- suppressWarnings(
+        as.numeric(raw_facet_vals)
+      )
+
+      if (!anyNA(numeric_vals) &&
+          all(numeric_vals %in% c(0, 1))) {
+        facet_levels <- c("0", "1")
+        facet_labels <- c(
+          "0" = "Alive",
+          "1" = "Dead"
+        )
+      }
+    }
+
+    if (length(facet_levels) > length(palette)) {
+      log_stop(
+        paste0(
+          "'palette' must contain at least ",
+          length(facet_levels),
+          " colors to color the '",
+          facet_by,
+          "' levels."
+        )
+      )
+    }
+  }
+
+  # Final facet labels
+  facet_final_levels <- if (!is.null(facet_labels)) {
+    unname(facet_labels[facet_levels])
+  } else {
+    facet_levels
+  }
+
+  # Color map keyed by final facet labels
+  if (!is.null(facet_by)) {
+    key_levels <- if (!is.null(facet_labels)) {
+      unname(facet_labels[facet_levels])
+    } else {
+      facet_levels
+    }
+
+    color_map <- stats::setNames(
+      palette[seq_along(key_levels)],
+      key_levels
+    )
+  }
+
+  # Builds one boxplot per covariate
+  plot_list <- list()
+
+  for (cov in covariate_cols) {
+
+    # Temporary data.frame with only the needed columns
+    temp_df <- data.frame(
+      Score = data[[score_col]],
+      Cov = as.character(data[[cov]]),
+      Patient = patient_ids,
+      stringsAsFactors = FALSE
+    )
+
+    if (!is.null(facet_by)) {
+      temp_df$Facet <- as.character(data[[facet_by]])
+    }
+
+    # Removes NAs
+    keep <- !is.na(temp_df$Score) &
+      !is.na(temp_df$Cov)
+
+    if (!is.null(facet_by)) {
+      keep <- keep & !is.na(temp_df$Facet)
+    }
+
+    temp_df <- temp_df[keep, , drop = FALSE]
+
+    if (nrow(temp_df) == 0) {
+      log_warning(
+        paste0(
+          "Skipping '",
+          cov,
+          "': no complete observations."
+        )
+      )
+      next
+    }
+
+    # Factorizes the covariate with sorted levels
+    cov_levels <- sort(unique(temp_df$Cov))
+
+    temp_df$Cov <- factor(
+      temp_df$Cov,
+      levels = cov_levels
+    )
+
+    # Optional: order categories by median score
+    if (order_by_median && length(cov_levels) > 1) {
+      med_order <- tapply(
+        temp_df$Score,
+        temp_df$Cov,
+        stats::median,
+        na.rm = TRUE
+      )
+
+      temp_df$Cov <- factor(
+        temp_df$Cov,
+        levels = names(sort(med_order))
+      )
+    }
+
+    cov_levels <- levels(temp_df$Cov)
+
+    # Optional faceting
+    if (!is.null(facet_by)) {
+      temp_df$Facet <- factor(
+        temp_df$Facet,
+        levels = facet_levels,
+        labels = facet_labels
+      )
+
+      missing_facets <- setdiff(
+        facet_final_levels,
+        unique(as.character(temp_df$Facet))
+      )
+
+      if (length(missing_facets) > 0) {
+        log_warning(
+          paste0(
+            "Covariate '",
+            cov,
+            "' has no observations for facet level(s): ",
+            paste(missing_facets, collapse = ", ")
+          )
+        )
+      }
+    }
+
+    # Ensures both categories are still present after NA removal
+    if (nlevels(droplevels(temp_df$Cov)) < 2) {
+      log_warning(
+        paste0(
+          "Skipping '",
+          cov,
+          "': less than 2 covariate levels after removing NAs."
+        )
+      )
+      next
+    }
+
+    # Statistical tests between the two covariate levels
+    subtitle_text <- NULL
+    inside_annot <- NULL
+
+    if (add_pvalue && test != "none") {
+
+      run_test <- function(sub_df, label) {
+
+        groups <- split(
+          sub_df$Score,
+          sub_df$Cov
+        )
+
+        if (length(groups) != 2 ||
+            any(lengths(groups) < 2)) {
+          return(NULL)
+        }
+
+        use_paired <- paired
+
+        if (
+          use_paired &&
+          length(groups[[1]]) != length(groups[[2]])
+        ) {
+          log_warning(
+            paste0(
+              "'",
+              label,
+              "': 'paired = TRUE' but group sizes differ (",
+              length(groups[[1]]),
+              " vs ",
+              length(groups[[2]]),
+              "). Falling back to 'paired = FALSE'."
+            )
+          )
+
+          use_paired <- FALSE
+        }
+
+        res <- tryCatch(
+          {
+            if (test == "wilcox") {
+              stats::wilcox.test(
+                groups[[1]],
+                groups[[2]],
+                paired = use_paired
+              )
+            } else {
+              stats::t.test(
+                groups[[1]],
+                groups[[2]],
+                paired = use_paired
+              )
+            }
+          },
+          error = function(e) NULL
+        )
+
+        if (is.null(res)) {
+          return(NULL)
+        }
+
+        p_val <- res$p.value
+
+        test_label <- if (test == "wilcox") {
+          "MW"
+        } else {
+          "t-test"
+        }
+
+        if (use_paired) {
+          test_label <- paste0(
+            test_label,
+            " (paired)"
+          )
+        }
+
+        p_str <- if (is.na(p_val)) {
+          "NA"
+        } else if (p_val < 0.001) {
+          "p < 0.001"
+        } else {
+          sprintf(
+            "p = %.3f",
+            p_val
+          )
+        }
+
+        list(
+          label = test_label,
+          p_str = p_str,
+          full = paste0(
+            test_label,
+            " ",
+            p_str
+          )
+        )
+      }
+
+      if (is.null(facet_by)) {
+
+        test_res <- run_test(
+          temp_df,
+          cov
+        )
+
+        if (!is.null(test_res)) {
+          subtitle_text <- test_res$full
+
+          if (pvalue_position == "inside") {
+            inside_annot <- data.frame(
+              x = 1.5,
+              y = Inf,
+              label = test_res$full,
+              stringsAsFactors = FALSE
+            )
+          }
+        } else {
+          log_warning(
+            paste0(
+              "Skipping test for '",
+              cov,
+              "': at least one group has < 2 observations."
+            )
+          )
+        }
+
+      } else {
+
+        # One test per facet level
+        stat_texts <- character(0)
+        annot_rows <- list()
+
+        for (flev in facet_final_levels) {
+
+          sub_df <- temp_df[
+            as.character(temp_df$Facet) == flev,
+            ,
+            drop = FALSE
+          ]
+
+          if (nrow(sub_df) == 0) {
+            next
+          }
+
+          test_res <- run_test(
+            sub_df,
+            paste0(cov, " | ", flev)
+          )
+
+          if (!is.null(test_res)) {
+
+            stat_texts <- c(
+              stat_texts,
+              test_res$full
+            )
+
+            annot_rows[[length(annot_rows) + 1]] <-
+              data.frame(
+                Facet = flev,
+                x = 1.5,
+                y = Inf,
+                label = test_res$full,
+                stringsAsFactors = FALSE
+              )
+
+          } else {
+
+            log_warning(
+              paste0(
+                "Skipping test for '",
+                cov,
+                "' in facet '",
+                flev,
+                "': at least one group has < 2 observations."
+              )
+            )
+          }
+        }
+
+        if (length(stat_texts) > 0) {
+          subtitle_text <- paste(
+            stat_texts,
+            collapse = " | "
+          )
+        }
+
+        if (length(annot_rows) > 0) {
+
+          inside_annot <- do.call(
+            rbind,
+            annot_rows
+          )
+
+          inside_annot$Facet <- factor(
+            inside_annot$Facet,
+            levels = facet_final_levels
+          )
+        }
+      }
+    }
+
+    # N annotations
+    n_annot <- NULL
+
+    if (show_n) {
+
+      y_min_data <- min(
+        temp_df$Score,
+        na.rm = TRUE
+      )
+
+      y_max_data <- max(
+        temp_df$Score,
+        na.rm = TRUE
+      )
+
+      y_offset <- (
+        y_max_data - y_min_data
+      ) * 0.05
+
+      y_n_pos <- y_min_data - y_offset
+
+      if (is.null(facet_by)) {
+
+        n_per_cat <- table(temp_df$Cov)
+
+        n_annot <- data.frame(
+          Cov = factor(
+            names(n_per_cat),
+            levels = cov_levels
+          ),
+          y = y_n_pos,
+          label = paste0(
+            "(n = ",
+            as.integer(n_per_cat),
+            ")"
+          ),
+          stringsAsFactors = FALSE
+        )
+
+      } else {
+
+        n_per_combo <- as.data.frame(
+          table(
+            Cov = temp_df$Cov,
+            Facet = temp_df$Facet
+          ),
+          stringsAsFactors = FALSE
+        )
+
+        n_per_combo <- n_per_combo[
+          n_per_combo$Freq > 0,
+          ,
+          drop = FALSE
+        ]
+
+        n_annot <- data.frame(
+          Cov = factor(
+            n_per_combo$Cov,
+            levels = cov_levels
+          ),
+          Facet = factor(
+            n_per_combo$Facet,
+            levels = facet_final_levels
+          ),
+          y = y_n_pos,
+          label = paste0(
+            "(n = ",
+            as.integer(n_per_combo$Freq),
+            ")"
+          ),
+          stringsAsFactors = FALSE
+        )
+      }
+    }
+
+    # Base plot
+    if (!is.null(facet_by)) {
+
+      p <- ggplot2::ggplot(
+        temp_df,
+        ggplot2::aes(
+          x = .data$Cov,
+          y = .data$Score,
+          fill = .data$Facet
+        )
+      ) +
+        ggplot2::geom_boxplot(
+          outlier.shape = NA,
+          linewidth = 0.5,
+          alpha = 0.7,
+          color = "black"
+        ) +
+        ggplot2::scale_fill_manual(
+          values = color_map
+        ) +
+        ggplot2::facet_grid(
+          ~ .data$Facet,
+          scales = "free_x"
+        )
+
+    } else {
+
+      p <- ggplot2::ggplot(
+        temp_df,
+        ggplot2::aes(
+          x = .data$Cov,
+          y = .data$Score,
+          fill = .data$Cov
+        )
+      ) +
+        ggplot2::geom_boxplot(
+          outlier.shape = NA,
+          linewidth = 0.5,
+          alpha = 0.7,
+          color = "black"
+        ) +
+        ggplot2::scale_fill_manual(
+          values = palette[
+            seq_len(nlevels(temp_df$Cov))
+          ],
+          guide = "none"
+        )
+    }
+
+    # Jittered points
+    if (show_points) {
+      p <- p +
+        ggplot2::geom_jitter(
+          width = 0.2,
+          size = 1.2,
+          alpha = 0.5,
+          color = "black"
+        )
+    }
+
+    # Adds N annotations
+    if (!is.null(n_annot)) {
+      p <- p +
+        ggplot2::geom_text(
+          data = n_annot,
+          ggplot2::aes(
+            x = .data$Cov,
+            y = .data$y,
+            label = .data$label
+          ),
+          inherit.aes = FALSE,
+          vjust = 1,
+          size = 3
+        )
+    }
+
+    # p-value inside panel
+    if (
+      add_pvalue &&
+      test != "none" &&
+      pvalue_position == "inside" &&
+      !is.null(inside_annot)
+    ) {
+      p <- p +
+        ggplot2::geom_text(
+          data = inside_annot,
+          ggplot2::aes(
+            x = .data$x,
+            y = .data$y,
+            label = .data$label
+          ),
+          inherit.aes = FALSE,
+          hjust = 0.5,
+          vjust = 1.2,
+          fontface = "italic",
+          size = 3.5
+        )
+    }
+
+    # Titles and theme
+    p <- p +
+      ggplot2::labs(
+        x = xlab,
+        y = ylab,
+        title = cov,
+        subtitle =
+          if (
+            !is.null(subtitle_text) &&
+            pvalue_position == "subtitle"
+          ) {
+            subtitle_text
+          } else {
+            NULL
+          }
+      ) +
+      theme +
+      ggplot2::theme(
+        legend.position = "none",
+        axis.title = ggplot2::element_text(
+          face = "plain",
+          colour = "black",
+          size = 12
+        ),
+        axis.text = ggplot2::element_text(
+          face = "plain",
+          colour = "black",
+          size = 11
+        ),
+        plot.title = ggplot2::element_text(
+          hjust = 0.5,
+          face = "plain",
+          size = 14
+        ),
+        plot.subtitle = ggplot2::element_text(
+          hjust = 0.5,
+          face = "italic",
+          size = 10
+        ),
+        strip.background = ggplot2::element_rect(
+          fill = "gray90",
+          color = NA
+        ),
+        strip.text = ggplot2::element_text(
+          face = "plain",
+          size = 11
+        ),
+        panel.grid.major.x = ggplot2::element_blank(),
+        panel.grid.minor.x = ggplot2::element_blank(),
+        panel.grid.minor.y = ggplot2::element_blank(),
+        panel.border = ggplot2::element_blank()
+      )
+
+    plot_list[[cov]] <- p
+  }
+
+  if (length(plot_list) == 0) {
+    log_stop(
+      "No valid covariate plots could be generated."
+    )
+  }
+
+  # Combines and optionally saves
+  n_plots <- length(plot_list)
+
+  if (n_plots <= 2) {
+    ncol_plot <- n_plots
+  } else if (n_plots <= 4) {
+    ncol_plot <- 2
+  } else if (n_plots <= 9) {
+    ncol_plot <- 3
+  } else {
+    ncol_plot <- 4
+  }
+
+  nrow_plot <- ceiling(
+    n_plots / ncol_plot
+  )
+
+  if (is.null(width)) {
+    width <- 4 * ncol_plot
+  }
+
+  if (is.null(height)) {
+    height <- 4 * nrow_plot
+  }
+
+  combined_plot <- patchwork::wrap_plots(
+    plot_list,
+    ncol = ncol_plot
+  )
+
+  if (!is.null(title)) {
+    combined_plot <- combined_plot +
+      patchwork::plot_annotation(
+        title = title
+      )
+  }
+
+  # Saves combined grid
+  if (!is.null(outprefix)) {
+
+    grDevices::pdf(
+      file = paste0(
+        outprefix,
+        "_clinical_boxplots.pdf"
+      ),
+      width = width,
+      height = height
+    )
+
+    on.exit(
+      grDevices::dev.off(),
+      add = TRUE
+    )
+
+    print(combined_plot)
+
+    # Saves each covariate individually
+    if (individual) {
+
+      safe_names <- gsub(
+        "[^A-Za-z0-9_\\-]",
+        "_",
+        names(plot_list)
+      )
+
+      ind_width <- if (!is.null(width)) {
+        min(width, 6)
+      } else {
+        6
+      }
+
+      ind_height <- if (!is.null(height)) {
+        min(height, 5)
+      } else {
+        5
+      }
+
+      for (i in seq_along(plot_list)) {
+
+        fname_i <- paste0(
+          outprefix,
+          "_clinical_",
+          safe_names[i],
+          ".pdf"
+        )
+
+        ggplot2::ggsave(
+          filename = fname_i,
+          plot = plot_list[[i]],
+          device = "pdf",
+          width = ind_width,
+          height = ind_height
+        )
+      }
+    }
+  }
+
+  return(combined_plot)
+}

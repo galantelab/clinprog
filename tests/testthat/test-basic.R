@@ -627,3 +627,217 @@ test_that("plot_boxplot validates its input", {
     "max_features"
   )
 })
+
+test_that("plot_clinics returns a patchwork object", {
+  data <- data.frame(
+    score = c(-1, 1, -0.5, 2),
+    OS = c(1, 0, 1, 0),
+    OS.time = c(10, 20, 30, 40),
+    sex = c("F", "M", "F", "M"),
+    treatment = c("A", "B", "A", "B")
+  )
+
+  result <- plot_clinics(
+    data = data,
+    test = "none"
+  )
+
+  expect_s3_class(result, "patchwork")
+})
+
+test_that("plot_clinics skips non-categorical covariates", {
+  data <- data.frame(
+    score = c(-1, 1, -0.5, 2),
+    OS = c(1, 0, 1, 0),
+    OS.time = c(10, 20, 30, 40),
+    sex = c("F", "M", "F", "M"),
+    age = c(50, 60, 55, 65)
+  )
+
+  expect_warning(
+    result <- plot_clinics(
+      data = data,
+      test = "none"
+    ),
+    "not categorical"
+  )
+
+  expect_s3_class(result, "patchwork")
+})
+
+test_that("plot_clinics skips covariates with more than two levels", {
+  data <- data.frame(
+    score = c(-1, 1, -0.5, 2, 0.2, 1.5),
+    OS = c(1, 0, 1, 0, 1, 0),
+    OS.time = c(10, 20, 30, 40, 50, 60),
+    sex = c("F", "M", "F", "M", "F", "M"),
+    stage = c("I", "II", "III", "I", "II", "III")
+  )
+
+  expect_warning(
+    result <- plot_clinics(
+      data = data,
+      test = "none"
+    ),
+    "do not have exactly 2 levels"
+  )
+
+  expect_s3_class(result, "patchwork")
+})
+
+test_that("plot_clinics supports max_features", {
+  data <- data.frame(
+    score = c(-1, 1, -0.5, 2),
+    OS = c(1, 0, 1, 0),
+    OS.time = c(10, 20, 30, 40),
+    sex = c("F", "M", "F", "M"),
+    treatment = c("A", "B", "A", "B"),
+    smoker = c("yes", "no", "yes", "no")
+  )
+
+  result <- plot_clinics(
+    data = data,
+    max_features = 2,
+    test = "none"
+  )
+
+  expect_s3_class(result, "patchwork")
+})
+
+test_that("plot_clinics supports faceting", {
+  data <- data.frame(
+    score = c(
+      -1, 1, -0.5, 2,
+      -0.8, 1.5, -0.3, 2.2
+    ),
+    OS = c(
+      1, 1, 1, 1,
+      0, 0, 0, 0
+    ),
+    OS.time = c(
+      10, 20, 30, 40,
+      15, 25, 35, 45
+    ),
+    sex = c(
+      "F", "M", "F", "M",
+      "F", "M", "F", "M"
+    )
+  )
+
+  result <- plot_clinics(
+    data = data,
+    facet_by = "OS",
+    test = "none"
+  )
+
+  expect_s3_class(result, "patchwork")
+})
+
+test_that("plot_clinics supports plotting options", {
+  data <- data.frame(
+    score = c(-1, 1, -0.5, 2, 0, 1.5),
+    OS = c(1, 0, 1, 0, 1, 0),
+    OS.time = c(10, 20, 30, 40, 50, 60),
+    sex = c("F", "M", "F", "M", "F", "M")
+  )
+
+  result <- plot_clinics(
+    data = data,
+    show_points = TRUE,
+    show_n = TRUE,
+    order_by_median = TRUE,
+    test = "none"
+  )
+
+  expect_s3_class(result, "patchwork")
+})
+
+test_that("plot_clinics validates its input", {
+  data <- data.frame(
+    score = c(-1, 1, -0.5, 2),
+    OS = c(1, 0, 1, 0),
+    OS.time = c(10, 20, 30, 40),
+    sex = c("F", "M", "F", "M")
+  )
+
+  expect_error(
+    plot_clinics(
+      data = "not a data.frame"
+    )
+  )
+
+  expect_error(
+    plot_clinics(
+      data = data,
+      score_col = "missing"
+    )
+  )
+
+  expect_error(
+    plot_clinics(
+      data = data,
+      facet_by = "missing"
+    )
+  )
+
+  expect_error(
+    plot_clinics(
+      data = data,
+      test = "invalid"
+    )
+  )
+
+  expect_error(
+    plot_clinics(
+      data = data,
+      max_features = 0
+    )
+  )
+
+  expect_error(
+    plot_clinics(
+      data = data,
+      id_col = "missing"
+    )
+  )
+})
+
+test_that("plot_clinics ignores individual without outprefix", {
+  data <- data.frame(
+    score = c(-1, 1, -0.5, 2),
+    OS = c(1, 0, 1, 0),
+    OS.time = c(10, 20, 30, 40),
+    sex = c("F", "M", "F", "M")
+  )
+
+  expect_warning(
+    result <- plot_clinics(
+      data = data,
+      individual = TRUE,
+      test = "none"
+    ),
+    "individual"
+  )
+
+  expect_s3_class(result, "patchwork")
+})
+
+test_that("plot_clinics errors when no valid covariates remain", {
+  data <- data.frame(
+    score = c(-1, 1, -0.5, 2),
+    OS = c(1, 0, 1, 0),
+    OS.time = c(10, 20, 30, 40),
+    age = c(50, 60, 55, 65)
+  )
+
+  expect_warning(
+    expect_error(
+      plot_clinics(
+        data = data,
+        test = "none"
+      ),
+      "categorical"
+    ),
+    "not categorical"
+  )
+})
