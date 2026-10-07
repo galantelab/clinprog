@@ -51,30 +51,42 @@ plot_lollipop <- function(signature, outprefix = NULL, theme = theme_clinprog(),
   if (!is.numeric(height) || length(height) != 1 || height <= 0) {stop("'height' must be a single positive numeric value")}
 
   # Prepares data
-  tt <- signature[stats::complete.cases(signature), , drop = FALSE]
+  tt <- signature[stats::complete.cases(signature[, c("feature", "coefficient"), drop = FALSE]), , drop = FALSE]
   tt <- tt[tt$coefficient != 0, , drop = FALSE]
 
   # Checks if signature is still valid
   if (nrow(tt) == 0) {stop("No valid coefficients available for plotting")}
 
   # Selects top 10 features
-  tt <- dplyr::slice_max(tt, order_by = abs(coefficient), n = 10, with_ties = FALSE)
+  tt <- dplyr::slice_max(tt, order_by = abs(.data$coefficient), n = 10, with_ties = FALSE)
 
   # Orders features by coefficient values
   tt$feature <- forcats::fct_reorder(tt$feature, tt$coefficient)
 
+  # Creates direction column to map color
+  tt$Direction <- ifelse(tt$coefficient > 0, "Positive", "Negative")
+
+  # Color map
+  color_map <- c("Negative" = "#1A9850", "Positive" = "#D73027")
+
   # Makes plot
-  ll <- ggplot2::ggplot(tt, ggplot2::aes(x = feature, y = coefficient)) +
-    ggplot2::geom_segment(ggplot2::aes(x = feature, xend = feature, y = 0, yend = coefficient),
-                          linewidth = 1.2, color = "grey") +
-    ggplot2::geom_point(size = 3, colour = "#1c9099") + theme +
-    ggplot2::theme(
-      panel.grid.major.x = ggplot2::element_blank(),
-      axis.ticks.x = ggplot2::element_blank(),
-      axis.title = ggplot2::element_blank(),
-      panel.border = ggplot2::element_blank(),
-      axis.text.x = ggplot2::element_text(angle = 45, hjust = 1)
-    )
+  ll <- ggplot2::ggplot(tt, ggplot2::aes(x = .data$feature, y = .data$coefficient)) +
+    ggplot2::geom_segment(ggplot2::aes(x = .data$feature, xend = .data$feature, y = 0, yend = .data$coefficient),
+                          linewidth = 0.8, color = "grey60", alpha = 0.8) +
+    ggplot2::geom_hline(yintercept = 0, linetype = "dashed", color = "grey40", linewidth = 0.5) +
+    ggplot2::geom_point(ggplot2::aes(color = .data$Direction), size = 4) +
+    ggplot2::scale_color_manual(values = color_map, name = "Prognosis",
+                                labels = c("Negative" = "Favorable (Better)", "Positive" = "Unfavorable (Worse)")) +
+    ggplot2::labs(x = NULL, y = "Coefficient") + ggplot2::coord_flip() + theme +
+    ggplot2::theme(panel.grid.major.x = ggplot2::element_line(color = "grey90", linewidth = 0.5, linetype = "solid"),
+                   panel.grid.major.y = ggplot2::element_blank(),
+                   panel.grid.minor = ggplot2::element_blank(),
+                   axis.ticks.y = ggplot2::element_blank(),
+                   axis.title.y = ggplot2::element_blank(),
+                   legend.position = "top",
+                   legend.title = ggplot2::element_text(size = 10),
+                   legend.text = ggplot2::element_text(size = 8),
+                   panel.border = ggplot2::element_blank())
 
   # Saves if requested
   if (!is.null(outprefix)) {
@@ -93,13 +105,15 @@ plot_lollipop <- function(signature, outprefix = NULL, theme = theme_clinprog(),
 #' @param signature A data.frame with 'feature' and 'coefficient'.
 #' @param outprefix Character. Output prefix for saving the plot (optional).
 #' @param theme A ggplot2 theme object. Defaults to \code{theme_clinprog()}.
+#' @param binwidth Numeric. Width of the histogram bins (Default: \code{NULL}).
 #' @param width Numeric. Plot width in inches (Default: \code{8})
 #' @param height Numeric. Plot height in inches (Default: \code{5})
 #' @param dpi Numeric. Plot DPI resolution (Default: \code{300})
 #'
 #' @return A \code{ggplot} object.
 #' @export
-plot_histogram <- function(signature, outprefix = NULL, theme = theme_clinprog(), width = 8, height = 5, dpi = 300) {
+plot_histogram <- function(signature, outprefix = NULL, theme = theme_clinprog(),
+                             binwidth = NULL, width = 8, height = 5, dpi = 300) {
 
   message("Building histogram plot...")
 
@@ -109,23 +123,52 @@ plot_histogram <- function(signature, outprefix = NULL, theme = theme_clinprog()
   # Validates theme
   if (!inherits(theme, "theme")) {stop("'theme' must be a valid ggplot2 theme object")}
 
+  # Validates binwidth if provided by user
+  if (!is.null(binwidth))
+  {
+    if (!is.numeric(binwidth) || length(binwidth) != 1 || binwidth <= 0)
+    {
+      stop("'binwidth' must be a single positive numeric value.")
+    }
+  }
+
   # Validates plot sizes
   if (!is.numeric(dpi) || length(dpi) != 1 || dpi <= 0) {stop("'dpi' must be a single positive numeric value")}
   if (!is.numeric(width) || length(width) != 1 || width <= 0) {stop("'width' must be a single positive numeric value")}
   if (!is.numeric(height) || length(height) != 1 || height <= 0) {stop("'height' must be a single positive numeric value")}
 
   # Prepares data
-  tt <- signature[stats::complete.cases(signature), , drop = FALSE]
+  tt <- signature[stats::complete.cases(signature[, c("feature", "coefficient"), drop = FALSE]), , drop = FALSE]
   tt <- tt[tt$coefficient != 0, , drop = FALSE]
 
   # Checks if signature is still valid
   if (nrow(tt) == 0) {stop("No valid coefficients available for plotting")}
 
+  # Dynamically calculates binwidth if NULL (using Sturges' Rule for small N)
+  if (is.null(binwidth))
+  {
+    coef_range <- max(tt$coefficient) - min(tt$coefficient)
+    TODO: is it necessary?
+    n_obs <- nrow(tt)
+
+    # Calculates optimal number of bins (Sturges' Rule)
+    num_bins <- grDevices::nclass.Sturges(tt$coefficient)
+
+    # Fallback safety if range is 0 or num_bins calculation fails
+    binwidth <- if (coef_range > 0) coef_range / num_bins else 0.05
+  }
+
   # Makes plot
-  pl <- ggplot2::ggplot(tt, ggplot2::aes(x = coefficient)) +
-    ggplot2::geom_histogram(binwidth = 0.005, alpha = 1) +
+  pl <- ggplot2::ggplot(tt, ggplot2::aes(x = .data$coefficient)) +
+    ggplot2::geom_histogram(binwidth = binwidth, fill = "#1c9099", color = "white", linewidth = 0.3, alpha = 0.8) +
+    ggplot2::geom_density(ggplot2::aes(y = ggplot2::after_stat(.data$density) * nrow(tt) * binwidth),
+                          color = "#016c59", linewidth = 0.8, alpha = 0.8) +
+    ggplot2::geom_vline(xintercept = 0, linetype = "dashed", color = "grey40", linewidth = 0.5) +
     ggplot2::scale_y_continuous(expand = c(0, 0)) +
-    ggplot2::labs(x = "Coefficient", y = NULL) + theme
+    ggplot2::labs(x = "Coefficient", y = "Counts") + theme +
+    ggplot2::theme(panel.grid.major.x = ggplot2::element_blank(),
+                   panel.grid.minor.x = ggplot2::element_blank(),
+                   panel.border = ggplot2::element_blank())
 
   # Saves if requested
   if (!is.null(outprefix)) {
@@ -197,6 +240,7 @@ plot_roc <- function(x, outprefix = NULL, width = 7, height = 6) {
 #' @param is_multi Logical. Whether the model corresponds to a multivariate Cox analysis (default: \code{FALSE}).
 #' @param outprefix Character. Output prefix for saving the plot (optional).
 #' If \code{NULL}, the plot is not written to disk.
+#' @param individual Logical. If \code{TRUE} and \code{outprefix} is provided, saves each Schoenfeld plot separately.
 #' @param theme A ggplot2 theme object. Defaults to \code{theme_clinprog()}.
 #' @param width Numeric. Plot width in inches (optional). If \code{NULL}, the width is set automatically.
 #' @param height Numeric. Plot height in inches (optional). If \code{NULL}, the height is set automatically.
@@ -204,7 +248,7 @@ plot_roc <- function(x, outprefix = NULL, width = 7, height = 6) {
 #'
 #' @return a list of \code{ggplot} objects.
 #' @export
-plot_ph <- function(x, is_multi = FALSE, outprefix = NULL,
+plot_ph <- function(x, is_multi = FALSE, outprefix = NULL, individual = FALSE,
                           theme = theme_clinprog(), width = NULL, height = NULL, ...) {
 
   message("Building proportional hazards plot...")
@@ -222,6 +266,26 @@ plot_ph <- function(x, is_multi = FALSE, outprefix = NULL,
 
   # Validates arguments
   if (!is.logical(is_multi) || length(is_multi) != 1) {stop("'is_multi' must be TRUE or FALSE")}
+  if (!is.logical(individual) || length(individual) != 1 || is.na(individual))
+  {
+    stop("'individual' must be TRUE or FALSE")
+  }
+
+  # Validates outprefix
+  if (!is.null(outprefix))
+  {
+    if (!is.character(outprefix) || length(outprefix) != 1)
+    {
+      stop("'outprefix' must be NULL or a single character string")
+    }
+  }
+
+  # Cross-validation: individual only makes sense with outprefix
+  if (individual && is.null(outprefix))
+  {
+    warning("'individual = TRUE' requires 'outprefix' to be provided. Ignoring 'individual'.")
+    individual <- FALSE
+  }
 
   # Validates plot sizes
   if (!is.null(width))
@@ -249,7 +313,7 @@ plot_ph <- function(x, is_multi = FALSE, outprefix = NULL,
   # Renames variables in plot labels
   ph_plots <- lapply(ph_plots, function(p)
   {
-    if (!is.null(p$labels$y)) {p$labels$y <- gsub("score_group", "Score", p$labels$y)}
+    if (!is.null(p$labels$y)) {p$labels$y <- gsub("score_group", "Score", p$labels$y, fixed = TRUE)}
     return(p)
   })
 
@@ -266,23 +330,40 @@ plot_ph <- function(x, is_multi = FALSE, outprefix = NULL,
   nrow_plot <- ceiling(n_plots / ncol_plot)
 
   # Automatically defines figure dimensions if not provided
-  if (is.null(width)) {width <- 4 * ncol_plot}
+  if (is.null(width)) {width <- 6 * ncol_plot}
   if (is.null(height)) {height <- 4 * nrow_plot}
 
   # Combines plots into a single patchwork object
-  ph_plots <- patchwork::wrap_plots(ph_plots, ncol = ncol_plot)
+  combined_plot <- patchwork::wrap_plots(ph_plots, ncol = ncol_plot)
 
   # Saves plots if requested
   if (!is.null(outprefix))
   {
-    if (!is.character(outprefix) || length(outprefix) != 1) {stop("'outprefix' must be a single character string")}
     filename <- paste0(outprefix, "_ph_assumptions_plot.pdf")
     grDevices::pdf(file = filename, width = width, height = height)
     on.exit(grDevices::dev.off(), add = TRUE)
-    print(ph_plots)
+    print(combined_plot)
+
+    # Saves each variable individually (optional)
+    if (individual)
+    {
+      # Sanitizes variable names for safe file names
+      safe_names <- gsub("[^A-Za-z0-9_\\-]", "_", names(ph_plots))
+
+      # Uses single-plot dimensions for the individual PDFs
+      ind_width  <- if (!is.null(width))  min(width,  6) else 6
+      ind_height <- if (!is.null(height)) min(height, 4) else 4
+
+      for (i in seq_along(ph_plots))
+      {
+        fname_i <- paste0(outprefix, "_ph_assumptions_", safe_names[i], ".pdf")
+        ggplot2::ggsave(filename = fname_i, plot = ph_plots[[i]], device = "pdf",
+                        width = ind_width, height = ind_height)
+      }
+    }
   }
 
-  return(ph_plots)
+  return(combined_plot)
 }
 
 #' Customized Schoenfeld residual plots for clinprog multivariate models
@@ -450,7 +531,7 @@ clinprog_ggcoxzph <- function(fit, resid = T, se = T, df = 4, nsmo = 40, var, po
 #' @return A Kaplan-Meier plot generated by \code{survminer::ggsurvplot()}.
 #' @export
 plot_km <- function(data, cutoff = NULL, outprefix = NULL, pval = FALSE, palette = c("#D73027", "#1A9850"),
-                      ylab = "Survival probability", xlab = "Time", title = NULL, legend.title = "clinprog groups",
+                      ylab = "Survival probability", xlab = "Time", title = NULL, legend.title = "Score cutoff",
                       theme = survminer::theme_survminer(), tables.theme = survminer::theme_cleantable(),
                       width = 8, height = 5) {
 
@@ -530,9 +611,9 @@ plot_km <- function(data, cutoff = NULL, outprefix = NULL, pval = FALSE, palette
     font.y = 18,
     font.tickslab = 14,
     pval.size = 5,
-    pval.coord = c(0, 0.05),
+    pval.coord = c(0, 0.1),
     title = title,
-    legend = c(0.8, 0.9),
+    legend = c(0.85, 0.9),
     legend.title = legend.title,
     linewidth = 1,
     fontsize = 3,
@@ -662,32 +743,57 @@ plot_forest <- function(model_object, outprefix = NULL, panels = NULL,
 #' @param plot_df Data.frame generated by \code{clinprog_merge()} or extracted from \code{clinprog_multiCox_test()}
 #' bootstrap results. Must contain columns \code{covariate} and \code{frequency}.
 #' @param outprefix Character. Output prefix for saving the plot (optional).
-#' @param frequency.threshold Numeric. Frequency threshold displayed as a horizontal dashed line (default: \code{25}).
+#' @param frequency.threshold Numeric. Frequency threshold (in \%) displayed as a horizontal dashed
+#' line (default: \code{25}). Always interpreted as a percentage between 0-100, regardless of \code{type}.
+#' @param type Character. How to display frequencies: \code{\"relative\"} (percentage, default) or
+#' \code{\"absolute\"} (raw counts). Only these two values are accepted.
+#' @param n_bootstraps Integer. Total number of bootstrap iterations (minimum value: 2). Required when
+#' \code{type = \"absolute\"}. When \code{type = \"relative\"} and supplied, absolute frequencies are
+#' converted to percentages via \code{frequency / n_bootstraps * 100}.
 #' @param theme A ggplot2 theme object. Defaults to \code{theme_clinprog()}.
 #' @param bar.width Numeric. Width of bars (default: \code{0.5}).
-#' @param ylab Character. Title for the Y-axis (default: \code{Frequency (\%)}).
+#' @param ylab Character. Title for the Y-axis. If \code{NULL}, a sensible label is chosen automatically based on \code{type}.
 #' @param xlab Character. Title for the X-axis (default: empty string).
 #' @param width Numeric. Plot width in inches (default: \code{8}).
 #' @param height Numeric. Plot height in inches (default: \code{5}).
 #'
 #' @return A \code{ggplot} object.
 #' @export
-plot_barplot <- function(plot_df, outprefix = NULL, frequency.threshold = 25, theme = theme_clinprog(),
-                           bar.width = 0.5, ylab = "Frequency (%)", xlab = "", width = 8, height = 5)
+plot_barplot <- function(plot_df, outprefix = NULL, frequency.threshold = 25, type = c("relative", "absolute"),
+                           n_bootstraps = NULL, theme = theme_clinprog(), bar.width = 0.5,
+                           ylab = NULL, xlab = "", width = 8, height = 5)
 {
 
   message("Building bar plot...")
+
+  # Resolves 'type' (validates that it is one of the accepted values)
+  type <- match.arg(type)
 
   # Validates input data
   if (!is.data.frame(plot_df)) {stop("'plot_df' must be a data.frame")}
   required_cols <- c("covariate", "frequency")
   if (!all(required_cols %in% colnames(plot_df))) {stop("'plot_df' must contain columns: 'covariate' and 'frequency'")}
 
-  # Validates frequency threshold
+  # Validates frequency threshold (always in %)
   if (!is.numeric(frequency.threshold) || length(frequency.threshold) != 1 ||
       frequency.threshold < 0 || frequency.threshold > 100)
   {
-    stop("'frequency.threshold' must be a numeric value between 0 and 100")
+    stop("'frequency.threshold' must be a numeric value (percentage) between 0 and 100")
+  }
+
+  # Validates bootstraps
+  if (!is.null(n_bootstraps))
+  {
+    if (!is.numeric(n_bootstraps) || length(n_bootstraps) != 1 || n_bootstraps < 2 || n_bootstraps %% 1 != 0)
+    {
+      stop("'n_bootstraps' must be NULL or a single integer value >= 2")
+    }
+  }
+
+  # Enforces: type = "absolute" requires "n_bootstraps" (otherwise the threshold cannot be positioned on the axis)
+  if (type == "absolute" && is.null(n_bootstraps))
+  {
+    stop("'n_bootstraps' must be provided when 'type = absolute'.")
   }
 
   # Validates bar width
@@ -696,29 +802,85 @@ plot_barplot <- function(plot_df, outprefix = NULL, frequency.threshold = 25, th
   # Validates theme
   if (!inherits(theme, "theme")) {stop("'theme' must be a valid ggplot2 theme object")}
 
-  # Validates labels for the axis
-  if (!is.character(ylab) || length(ylab) != 1) {stop("'ylab' must be a single character string")}
+  # Validates axis labels (ylab NULL = auto; xlab must be a string)
+  if (!is.null(ylab) && (!is.character(ylab) || length(ylab) != 1)) {stop("'ylab' must be NULL or a single character string")}
   if (!is.character(xlab) || length(xlab) != 1) {stop("'xlab' must be a single character string")}
 
   # Validates plot sizes
   if (!is.numeric(width) || length(width) != 1 || width <= 0) {stop("'width' must be a single positive numeric value")}
   if (!is.numeric(height) || length(height) != 1 || height <= 0) {stop("'height' must be a single positive numeric value")}
 
-  # Ensures frequency is numeric
-  plot_df$frequency <- as.numeric(plot_df$frequency)
-  if (any(is.na(plot_df$frequency))) {stop("'frequency' column contains NA values")}
-  if (any(plot_df$frequency < 0 || plot_df$frequency > 100)) {stop("'frequency' values must be between 0 and 100")}
+  # Substitutes 'score_group' by 'Score'
+  plot_df$covariate <- gsub("^score_group$", "Score", plot_df$covariate)
 
-  # Sorts variables by decreasing frequency
-  plot_df <- plot_df[order(plot_df$frequency, decreasing = TRUE), , drop = FALSE]
+  # Ensures frequency is numeric and non-negative
+  plot_df$frequency <- as.numeric(plot_df$frequency)
+  if (anyNA(plot_df$frequency)) {stop("'frequency' column contains NA values")}
+  if (any(plot_df$frequency < 0)) {stop("'frequency' values must be non-negative")}
+
+  # Resolves units: computes 'freq_pct' (always in %) for ordering and threshold comparison, and 'freq_display' (Y axis)
+  if (type == "relative")
+  {
+    if (!is.null(n_bootstraps))
+    {
+      # Converts absolute counts --> percentages
+      freq_pct <- plot_df$frequency / n_bootstraps * 100
+      if (any(freq_pct > 100, na.rm = TRUE)) {stop("Computed relative frequencies > 100%. Check 'n_bootstraps'.")}
+    }
+    else
+    {
+      # Assumes 'frequency' is already a percentage
+      freq_pct <- plot_df$frequency
+      if (any(freq_pct > 100, na.rm = TRUE))
+      {
+        stop("'frequency' values exceed 100 but 'n_bootstraps' was not provided. ",
+                 "Either pass 'n_bootstraps' or make sure 'frequency' is already a percentage.")
+      }
+    }
+    freq_display <- freq_pct
+    y_max <- 100
+    y_brk <- seq(0, 100, by = 20)
+    if (is.null(ylab)) ylab <- "Frequency (%)"
+  }
+  else {  # type == "absolute"
+    # n_bootstraps is guaranteed non-NULL here (checked above)
+    freq_display <- plot_df$frequency
+    freq_pct <- plot_df$frequency / n_bootstraps * 100
+    y_max <- ceiling(max(freq_display, na.rm = TRUE) * 1.05)
+    if (!is.finite(y_max) || y_max <= 0) y_max <- 1
+    y_brk <- pretty(c(0, y_max))
+    if (is.null(ylab)) ylab <- "Frequency (count)"
+  }
+
+  # Attaches internal columns used for plotting/ordering
+  plot_df$freq_pct <- freq_pct
+  plot_df$freq_display <- freq_display
+
+  # Orders by percentage (stable across 'type' choices)
+  plot_df <- plot_df[order(plot_df$freq_pct, decreasing = TRUE), , drop = FALSE]
+
+  # Positions the threshold line on the correct axis scale. 'frequency.threshold' is always in %; convert to counts when needed.
+  if (type == "absolute")
+  {
+    threshold_display <- frequency.threshold / 100 * n_bootstraps
+  } else {
+    threshold_display <- frequency.threshold
+  }
 
   # Generates barplot
-  final_plot <- ggplot2::ggplot(data = plot_df, ggplot2::aes(x = stats::reorder(covariate, -frequency), y = frequency)) +
-    ggplot2::geom_col(width = bar.width, color = "grey", fill = "grey") +
+  final_plot <- ggplot2::ggplot(data = plot_df,
+                                ggplot2::aes(x = stats::reorder(.data$covariate, .data$freq_display),
+                                             y = .data$freq_display)) +
+    ggplot2::geom_col(width = bar.width, color = "white", fill = "#1c9099", linewidth = 0.3, alpha = 0.8) +
     ggplot2::xlab(xlab) + ggplot2::ylab(ylab) +
-    ggplot2::geom_hline(yintercept = frequency.threshold, color = "#BB1136", linetype = "dashed", linewidth = 0.5) +
-    ggplot2::scale_y_continuous(breaks = seq(0, 100, by = 20), limits = c(0, 100)) +
-    theme + ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 60, hjust = 1))
+    ggplot2::geom_hline(yintercept = threshold_display, color = "grey40", linetype = "dashed", linewidth = 0.5) +
+    ggplot2::scale_y_continuous(breaks = y_brk, limits = c(0, y_max), expand = c(0, 0)) +
+    ggplot2::coord_flip() + theme +
+    ggplot2::theme(axis.text.y = ggplot2::element_text(angle = 0, hjust = 1),
+                   panel.grid.major.x = ggplot2::element_line(colour = "grey90"),
+                   panel.grid.major.y = ggplot2::element_blank(),
+                   panel.grid.minor.y = ggplot2::element_blank(),
+                   panel.border = ggplot2::element_blank())
 
   # Saves plot
   if (!is.null(outprefix))
