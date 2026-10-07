@@ -1477,3 +1477,310 @@ test_that("plot_lineplot_score saves a PDF when outprefix is provided", {
     )
   )
 })
+
+test_that("plot_scatter returns a patchwork object", {
+  data <- data.frame(
+    OS = c(0, 0, 0, 1, 1, 1),
+    OS.time = c(2, 4, 6, 3, 5, 7),
+    GeneA = c(1, 2, 3, 2, 4, 5),
+    GeneB = c(5, 4, 3, 4, 2, 1)
+  )
+
+  result <- plot_scatter(data)
+
+  expect_s3_class(result, "patchwork")
+})
+
+
+test_that("plot_scatter accepts a signature", {
+  data <- data.frame(
+    OS = c(0, 0, 0, 1, 1, 1),
+    OS.time = c(2, 4, 6, 3, 5, 7),
+    GeneA = c(1, 2, 3, 2, 4, 5),
+    GeneB = c(5, 4, 3, 4, 2, 1),
+    GeneC = c(2, 3, 4, 3, 5, 6)
+  )
+
+  signature <- data.frame(
+    feature = c("GeneA", "GeneB", "GeneC"),
+    coefficient = c(0.1, -0.8, 0.3)
+  )
+
+  result <- plot_scatter(
+    data = data,
+    signature = signature,
+    max_features = 2
+  )
+
+  expect_s3_class(result, "patchwork")
+})
+
+
+test_that("plot_scatter supports max_features", {
+  data <- data.frame(
+    OS = c(0, 0, 0, 1, 1, 1),
+    OS.time = c(2, 4, 6, 3, 5, 7),
+    GeneA = c(1, 2, 3, 2, 4, 5),
+    GeneB = c(5, 4, 3, 4, 2, 1),
+    GeneC = c(2, 3, 4, 3, 5, 6)
+  )
+
+  result <- plot_scatter(
+    data = data,
+    max_features = 2
+  )
+
+  expect_s3_class(result, "patchwork")
+})
+
+
+test_that("plot_scatter supports expression normalization", {
+  data <- data.frame(
+    OS = c(0, 0, 0, 1, 1, 1),
+    OS.time = c(2, 4, 6, 3, 5, 7),
+    GeneA = c(0, 1, 3, 2, 4, 7)
+  )
+
+  result <- plot_scatter(
+    data = data,
+    norm_exp = TRUE
+  )
+
+  expect_s3_class(result, "patchwork")
+})
+
+
+test_that("plot_scatter supports disabling statistical annotation", {
+  data <- data.frame(
+    OS = c(0, 0, 0, 1, 1, 1),
+    OS.time = c(2, 4, 6, 3, 5, 7),
+    GeneA = c(1, 2, 3, 2, 4, 5)
+  )
+
+  result <- plot_scatter(
+    data = data,
+    add_stat = FALSE
+  )
+
+  expect_s3_class(result, "patchwork")
+})
+
+
+test_that("plot_scatter removes missing values", {
+  data <- data.frame(
+    OS = c(0, 0, 0, 1, 1, 1),
+    OS.time = c(2, NA, 6, 3, 5, 7),
+    GeneA = c(1, 2, NA, 2, 4, 5)
+  )
+
+  result <- plot_scatter(data, add_stat = FALSE)
+
+  expect_s3_class(result, "patchwork")
+})
+
+
+test_that("plot_scatter validates required columns", {
+  data <- data.frame(
+    OS = c(0, 1, 0, 1),
+    OS.time = c(2, 4, 6, 8),
+    GeneA = c(1, 2, 3, 4)
+  )
+
+  expect_error(
+    plot_scatter(data, os_col = "status"),
+    "not found"
+  )
+
+  expect_error(
+    plot_scatter(data, time_col = "followup"),
+    "not found"
+  )
+})
+
+
+test_that("plot_scatter validates follow-up time", {
+  data <- data.frame(
+    OS = c(0, 1, 0, 1),
+    OS.time = c("short", "long", "short", "long"),
+    GeneA = c(1, 2, 3, 4)
+  )
+
+  expect_error(
+    plot_scatter(data),
+    "must be numeric"
+  )
+})
+
+
+test_that("plot_scatter validates signature", {
+  data <- data.frame(
+    OS = c(0, 1, 0, 1),
+    OS.time = c(2, 4, 6, 8),
+    GeneA = c(1, 2, 3, 4)
+  )
+
+  expect_error(
+    plot_scatter(
+      data = data,
+      signature = data.frame(
+        feature = "GeneA",
+        weight = 1
+      )
+    ),
+    "feature.*coefficient"
+  )
+
+  expect_error(
+    plot_scatter(
+      data = data,
+      signature = data.frame(
+        feature = "MissingGene",
+        coefficient = 1
+      )
+    ),
+    "present in 'data'"
+  )
+})
+
+
+test_that("plot_scatter validates max_features", {
+  data <- data.frame(
+    OS = c(0, 1, 0, 1),
+    OS.time = c(2, 4, 6, 8),
+    GeneA = c(1, 2, 3, 4)
+  )
+
+  expect_error(
+    plot_scatter(data, max_features = 0),
+    "max_features"
+  )
+
+  expect_error(
+    plot_scatter(data, max_features = 1.5),
+    "max_features"
+  )
+})
+
+
+test_that("plot_scatter validates logical arguments", {
+  data <- data.frame(
+    OS = c(0, 1, 0, 1),
+    OS.time = c(2, 4, 6, 8),
+    GeneA = c(1, 2, 3, 4)
+  )
+
+  expect_error(
+    plot_scatter(data, add_stat = 1),
+    "add_stat"
+  )
+
+  expect_error(
+    plot_scatter(data, norm_exp = 1),
+    "norm_exp"
+  )
+
+  expect_error(
+    plot_scatter(data, individual = 1),
+    "individual"
+  )
+})
+
+
+test_that("plot_scatter validates palette", {
+  data <- data.frame(
+    OS = c(0, 1, 0, 1),
+    OS.time = c(2, 4, 6, 8),
+    GeneA = c(1, 2, 3, 4)
+  )
+
+  expect_error(
+    plot_scatter(data, palette = "black"),
+    "palette"
+  )
+})
+
+
+test_that("plot_scatter validates plot dimensions and labels", {
+  data <- data.frame(
+    OS = c(0, 1, 0, 1),
+    OS.time = c(2, 4, 6, 8),
+    GeneA = c(1, 2, 3, 4)
+  )
+
+  expect_error(
+    plot_scatter(data, width = 0),
+    "width"
+  )
+
+  expect_error(
+    plot_scatter(data, height = 0),
+    "height"
+  )
+
+  expect_error(
+    plot_scatter(data, xlab = 1),
+    "xlab"
+  )
+
+  expect_error(
+    plot_scatter(data, ylab = 1),
+    "ylab"
+  )
+})
+
+
+test_that("plot_scatter warns when individual output has no prefix", {
+  data <- data.frame(
+    OS = c(0, 0, 0, 1, 1, 1),
+    OS.time = c(2, 4, 6, 3, 5, 7),
+    GeneA = c(1, 2, 3, 2, 4, 5)
+  )
+
+  expect_warning(
+    result <- plot_scatter(
+      data = data,
+      individual = TRUE
+    ),
+    "outprefix"
+  )
+
+  expect_s3_class(result, "patchwork")
+})
+
+
+test_that("plot_scatter saves combined and individual PDFs", {
+  data <- data.frame(
+    OS = c(0, 0, 0, 1, 1, 1),
+    OS.time = c(2, 4, 6, 3, 5, 7),
+    GeneA = c(1, 2, 3, 2, 4, 5),
+    GeneB = c(5, 4, 3, 4, 2, 1)
+  )
+
+  outprefix <- file.path(tempdir(), "clinprog_scatter")
+
+  result <- plot_scatter(
+    data = data,
+    outprefix = outprefix,
+    individual = TRUE
+  )
+
+  expect_s3_class(result, "patchwork")
+
+  expect_true(
+    file.exists(
+      paste0(outprefix, "_feature_scatter.pdf")
+    )
+  )
+
+  expect_true(
+    file.exists(
+      paste0(outprefix, "_feature_scatter_GeneA.pdf")
+    )
+  )
+
+  expect_true(
+    file.exists(
+      paste0(outprefix, "_feature_scatter_GeneB.pdf")
+    )
+  )
+})

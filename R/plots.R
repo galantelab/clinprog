@@ -4602,3 +4602,518 @@ plot_lineplot_score <- function(
 
   return(p)
 }
+
+#' Generate gene/transcript expression scatter plots vs follow-up time in a grid
+#'
+#' @description Creates a single-page PDF containing a grid of scatter plots
+#'   for multiple features showing expression vs follow-up time, faceted by OS
+#'   status. Spearman correlation coefficients and p-values are automatically
+#'   calculated and displayed.
+#'
+#' @param data Data.frame containing expression and clinical/survival data.
+#' @param signature A data.frame with `feature` and `coefficient`
+#'   (Default: `NULL`).
+#' @param os_col Character. Column name for OS status (Default: `"OS"`).
+#' @param time_col Character. Column name for follow-up time
+#'   (Default: `"OS.time"`).
+#' @param outprefix Character. Output prefix for saving the plot (optional).
+#' @param theme A ggplot2 theme object. Defaults to `theme_clinprog()`.
+#' @param exclude_cols Character vector. Columns to exclude from the feature
+#'   list (Default: `c("OS", "OS.time", "score", "score_group")`).
+#' @param palette Character vector. Color palette for OS groups
+#'   (Default: `c("#1A9850", "#D73027")`).
+#' @param add_stat Logical. Whether to perform and display Spearman
+#'   correlation test (Default: `TRUE`).
+#' @param max_features Numeric. Maximum number of features to plot
+#'   (Default: `NULL`).
+#' @param norm_exp Logical. Whether to apply log2 normalization on expression
+#'   data (Default: `FALSE`).
+#' @param width Numeric. Plot width in inches (Default: `NULL`).
+#' @param height Numeric. Plot height in inches (Default: `NULL`).
+#' @param ylab Character. Title for the Y-axis (Default: `NULL`).
+#' @param xlab Character. Title for the X-axis (Default: `"Followup"`).
+#' @param individual Logical. If `TRUE` and `outprefix` is provided, saves
+#'   each feature scatter plot as its own PDF file. The combined grid is still
+#'   saved as `<outprefix>_feature_scatter.pdf` (Default: `FALSE`).
+#'
+#' @return A patchwork object containing the feature scatter plots.
+#' @importFrom rlang .data
+#' @importFrom dplyr %>%
+#' @export
+plot_scatter <- function(
+    data,
+    signature = NULL,
+    os_col = "OS",
+    time_col = "OS.time",
+    outprefix = NULL,
+    theme = theme_clinprog(),
+    exclude_cols = c("OS", "OS.time", "score", "score_group"),
+    palette = c("#1A9850", "#D73027"),
+    add_stat = TRUE,
+    max_features = NULL,
+    norm_exp = FALSE,
+    width = NULL,
+    height = NULL,
+    ylab = NULL,
+    xlab = "Followup",
+    individual = FALSE
+) {
+
+  log_message(
+    "Building feature expression vs follow-up time scatter plots..."
+  )
+
+  # Validate input data
+  if (!is.data.frame(data)) {
+    log_stop("'data' must be a data.frame")
+  }
+
+  if (!os_col %in% colnames(data)) {
+    log_stop(paste0("Column '", os_col, "' not found in data."))
+  }
+
+  if (!time_col %in% colnames(data)) {
+    log_stop(paste0("Column '", time_col, "' not found in data."))
+  }
+
+  if (!is.numeric(data[[time_col]])) {
+    log_stop(paste0("Column '", time_col, "' must be numeric."))
+  }
+
+  # Validate signature
+  if (!is.null(signature)) {
+    if (!is.data.frame(signature)) {
+      log_stop("'signature' must be a data.frame")
+    }
+
+    if (!all(c("feature", "coefficient") %in% colnames(signature))) {
+      log_stop(
+        "'signature' must contain 'feature' and 'coefficient' columns"
+      )
+    }
+
+    if (!all(signature$feature %in% colnames(data))) {
+      log_stop(
+        "All features in 'signature' must be present in 'data' column names"
+      )
+    }
+  }
+
+  # Validate excluded columns
+  if (!is.character(exclude_cols)) {
+    log_stop("'exclude_cols' must be a character vector")
+  }
+
+  # Validate palette
+  if (!is.null(palette) &&
+      (!is.character(palette) || length(palette) < 2)) {
+    log_stop(
+      "'palette' must be a character vector with at least 2 valid colors or NULL"
+    )
+  }
+
+  # Validate statistical display
+  if (!is.logical(add_stat) || length(add_stat) != 1) {
+    log_stop("'add_stat' must be a single logical value")
+  }
+
+  # Validate normalization
+  if (!is.logical(norm_exp) || length(norm_exp) != 1) {
+    log_stop("'norm_exp' must be a single logical value")
+  }
+
+  # Validate individual output
+  if (!is.logical(individual) ||
+      length(individual) != 1 ||
+      is.na(individual)) {
+    log_stop("'individual' must be TRUE or FALSE")
+  }
+
+  # Validate theme
+  if (!inherits(theme, "theme")) {
+    log_stop("'theme' must be a valid ggplot2 theme object")
+  }
+
+  # Validate axis labels
+  if (!is.null(ylab) &&
+      (!is.character(ylab) || length(ylab) != 1)) {
+    log_stop("'ylab' must be a single character string or NULL")
+  }
+
+  if (!is.character(xlab) || length(xlab) != 1) {
+    log_stop("'xlab' must be a single character string")
+  }
+
+  # Validate plot dimensions
+  if (!is.null(width) &&
+      (!is.numeric(width) || length(width) != 1 || width <= 0)) {
+    log_stop("'width' must be a single positive numeric value or NULL")
+  }
+
+  if (!is.null(height) &&
+      (!is.numeric(height) || length(height) != 1 || height <= 0)) {
+    log_stop("'height' must be a single positive numeric value or NULL")
+  }
+
+  # Validate max_features
+  if (!is.null(max_features)) {
+    if (!is.numeric(max_features) ||
+        length(max_features) != 1 ||
+        max_features <= 0 ||
+        max_features %% 1 != 0) {
+      log_stop(
+        "'max_features' must be a single positive integer or NULL"
+      )
+    }
+  }
+
+  # Validate outprefix
+  if (!is.null(outprefix)) {
+    if (!is.character(outprefix) || length(outprefix) != 1) {
+      log_stop(
+        "'outprefix' must be NULL or a single character string"
+      )
+    }
+  }
+
+  # individual only makes sense with outprefix
+  if (individual && is.null(outprefix)) {
+    log_warning(
+      "'individual = TRUE' requires 'outprefix' to be provided. ",
+      "Ignoring 'individual'."
+    )
+    individual <- FALSE
+  }
+
+  # Identify feature columns
+  gene_cols <- setdiff(colnames(data), exclude_cols)
+
+  if (length(gene_cols) == 0) {
+    log_stop(
+      "No feature columns found after removing 'exclude_cols'."
+    )
+  }
+
+  # Handle max_features
+  if (!is.null(max_features)) {
+    if (length(gene_cols) > max_features) {
+      if (!is.null(signature)) {
+        log_message(
+          paste0(
+            "Selecting ", max_features,
+            " features based on signature coefficients."
+          )
+        )
+
+        gene_cols <- signature %>%
+          dplyr::slice_max(
+            order_by = abs(.data$coefficient),
+            n = max_features,
+            with_ties = FALSE
+          ) %>%
+          dplyr::pull(.data$feature)
+      } else {
+        log_message(
+          paste0(
+            "Selecting ", max_features, " features."
+          )
+        )
+
+        gene_cols <- utils::head(gene_cols, max_features)
+      }
+    }
+  } else {
+    if (length(gene_cols) > 8) {
+      log_warning(
+        paste0(
+          "Data contains ", length(gene_cols),
+          " features. Plotting top 8 features to avoid cluttered layouts."
+        )
+      )
+
+      if (!is.null(signature)) {
+        log_message(
+          "Selecting top 8 features based on signature coefficients."
+        )
+
+        gene_cols <- signature %>%
+          dplyr::slice_max(
+            order_by = abs(.data$coefficient),
+            n = 8,
+            with_ties = FALSE
+          ) %>%
+          dplyr::pull(.data$feature)
+      } else {
+        log_message("Selecting first 8 features.")
+        gene_cols <- utils::head(gene_cols, 8)
+      }
+    }
+  }
+
+  # Validate selected feature columns
+  non_numeric_genes <- gene_cols[
+    !vapply(data[gene_cols], is.numeric, logical(1))
+  ]
+
+  if (length(non_numeric_genes) > 0) {
+    log_warning(
+      paste(
+        "The following feature columns are not numeric and will be skipped:",
+        paste(non_numeric_genes, collapse = ", ")
+      )
+    )
+
+    gene_cols <- setdiff(gene_cols, non_numeric_genes)
+  }
+
+  if (length(gene_cols) == 0) {
+    log_stop(
+      "No valid numeric feature columns remaining to plot."
+    )
+  }
+
+  # Define Y-axis label
+  if (is.null(ylab)) {
+    ylab <- if (norm_exp) {
+      "log2(Expression + 1)"
+    } else {
+      "Expression"
+    }
+  }
+
+  # Generate plots
+  plot_list <- list()
+
+  for (gene in gene_cols) {
+
+    temp_df <- data.frame(
+      OS_Val = data[[os_col]],
+      Time = data[[time_col]],
+      Expression = if (norm_exp) {
+        log2(data[[gene]] + 1)
+      } else {
+        data[[gene]]
+      }
+    )
+
+    # Remove NAs
+    temp_df <- temp_df[
+      !is.na(temp_df$OS_Val) &
+        !is.na(temp_df$Time) &
+        !is.na(temp_df$Expression),
+      ,
+      drop = FALSE
+    ]
+
+    # Format OS factor
+    temp_df$OS_Group <- factor(
+      temp_df$OS_Val,
+      levels = c(0, 1),
+      labels = c("Alive", "Dead")
+    )
+
+    # Calculate Spearman correlation
+    subtitle_text <- NULL
+
+    if (add_stat) {
+      stat_texts <- NULL
+
+      for (grp in c("Alive", "Dead")) {
+        sub_df <- temp_df[temp_df$OS_Group == grp, ]
+
+        if (nrow(sub_df) >= 3) {
+          test_res <- stats::cor.test(
+            sub_df$Time,
+            sub_df$Expression,
+            method = "spearman",
+            alternative = "two.sided",
+            exact = FALSE,
+            continuity = FALSE
+          )
+
+          r_val <- test_res$estimate
+          p_val <- test_res$p.value
+
+          p_str <- if (is.na(p_val)) {
+            "NA"
+          } else if (p_val < 0.001) {
+            "p < 0.001"
+          } else {
+            sprintf("p = %.3f", p_val)
+          }
+
+          stat_texts <- c(
+            stat_texts,
+            sprintf("rho = %.2f (%s)", r_val, p_str)
+          )
+        } else {
+          log_warning(
+            paste(
+              "Sub dataframe length for group '", grp,
+              "' is less than 3 and will be skipped."
+            )
+          )
+        }
+      }
+
+      if (length(stat_texts) > 0) {
+        subtitle_text <- paste(stat_texts, collapse = " | ")
+      }
+    }
+
+    # Map colors for OS groups
+    color_map <- c(
+      "Alive" = palette[1],
+      "Dead" = palette[2]
+    )
+
+    # Generate scatter plot
+    p <- ggplot2::ggplot(
+      temp_df,
+      ggplot2::aes(
+        x = .data$Time,
+        y = .data$Expression,
+        color = .data$OS_Group
+      )
+    ) +
+      ggplot2::geom_point(
+        alpha = 0.5,
+        size = 2
+      ) +
+      ggplot2::geom_smooth(
+        method = "lm",
+        formula = y ~ x,
+        se = FALSE,
+        linewidth = 0.8
+      ) +
+      ggplot2::scale_color_manual(
+        values = color_map
+      ) +
+      ggplot2::facet_grid(
+        ~ .data$OS_Group,
+        scales = "free_x"
+      ) +
+      ggplot2::labs(
+        x = xlab,
+        y = ylab,
+        title = gene,
+        subtitle = subtitle_text
+      ) +
+      theme +
+      ggplot2::theme(
+        legend.position = "none",
+        axis.title = ggplot2::element_text(
+          face = "plain",
+          colour = "black",
+          size = 12
+        ),
+        axis.text = ggplot2::element_text(
+          face = "plain",
+          colour = "black",
+          size = 12
+        ),
+        panel.grid = ggplot2::element_blank(),
+        plot.title = ggplot2::element_text(
+          hjust = 0.5,
+          face = "plain",
+          size = 14
+        ),
+        plot.subtitle = ggplot2::element_text(
+          hjust = 0.5,
+          face = "italic",
+          size = 12
+        ),
+        strip.background = ggplot2::element_rect(
+          fill = "gray90",
+          color = NA
+        ),
+        strip.text = ggplot2::element_text(
+          face = "plain",
+          size = 12
+        )
+      )
+
+    plot_list[[gene]] <- p
+  }
+
+  # Determine grid dimensions
+  n_plots <- length(plot_list)
+
+  if (n_plots <= 2) {
+    ncol_plot <- 1
+  } else if (n_plots <= 4) {
+    ncol_plot <- 2
+  } else {
+    ncol_plot <- 2
+  }
+
+  nrow_plot <- ceiling(n_plots / ncol_plot)
+
+  # Automatic figure dimensions
+  if (is.null(width)) {
+    width <- 8 * ncol_plot
+  }
+
+  if (is.null(height)) {
+    height <- 4 * nrow_plot
+  }
+
+  # Combine plots
+  combined_plot <- patchwork::wrap_plots(
+    plot_list,
+    ncol = ncol_plot
+  )
+
+  # Save PDF
+  if (!is.null(outprefix)) {
+    grDevices::pdf(
+      file = paste0(outprefix, "_feature_scatter.pdf"),
+      width = width,
+      height = height
+    )
+
+    on.exit(grDevices::dev.off(), add = TRUE)
+
+    print(combined_plot)
+
+    # Save individual plots
+    if (individual) {
+      safe_names <- gsub(
+        "[^A-Za-z0-9_\\-]",
+        "_",
+        names(plot_list)
+      )
+
+      ind_width <- if (!is.null(width)) {
+        min(width, 8)
+      } else {
+        8
+      }
+
+      ind_height <- if (!is.null(height)) {
+        min(height, 4)
+      } else {
+        4
+      }
+
+      for (i in seq_along(plot_list)) {
+        fname_i <- paste0(
+          outprefix,
+          "_feature_scatter_",
+          safe_names[i],
+          ".pdf"
+        )
+
+        ggplot2::ggsave(
+          filename = fname_i,
+          plot = plot_list[[i]],
+          device = "pdf",
+          width = ind_width,
+          height = ind_height
+        )
+      }
+    }
+  }
+
+  return(combined_plot)
+}
