@@ -399,3 +399,100 @@ expect_error(
   ),
   "score_cutoff"
 )
+
+test_that("plot_swimmer returns a ggplot object", {
+  data <- data.frame(
+    score_group = c("low", "high", "low", "high"),
+    score = c(-1, 1, -0.5, 2),
+    OS = c(1, 0, 1, 0),
+    OS.time = c(10, 20, 30, 40)
+  )
+
+  result <- plot_swimmer(
+    data = data,
+    cutoff = 0
+  )
+
+  expect_s3_class(result, "ggplot")
+})
+
+test_that("plot_swimmer groups patients according to cutoff", {
+  data <- data.frame(
+    score_group = c("low", "high", "low", "high"),
+    score = c(-1, 1, -0.5, 2),
+    OS = c(1, 0, 1, 0),
+    OS.time = c(10, 20, 30, 40)
+  )
+
+  result <- plot_swimmer(
+    data = data,
+    cutoff = 0
+  )
+
+  plot_data <- ggplot2::ggplot_build(result)$data[[1]]
+
+  expect_equal(
+    sort(unique(plot_data$fill)),
+    sort(c("#D73027", "#1A9850"))
+  )
+})
+
+test_that("plot_swimmer validates its input", {
+  data <- data.frame(
+    score_group = c("low", "high"),
+    score = c(-1, 1),
+    OS = c(1, 0),
+    OS.time = c(10, 20)
+  )
+
+  expect_error(
+    plot_swimmer(
+      data = "not a data.frame",
+      cutoff = 0
+    ),
+    "data"
+  )
+
+  expect_error(
+    plot_swimmer(
+      data = data[, c("score", "OS", "OS.time")],
+      cutoff = 0
+    ),
+    "score_group"
+  )
+
+  expect_error(
+    plot_swimmer(
+      data = data,
+      cutoff = "zero"
+    ),
+    "cutoff"
+  )
+
+  expect_error(
+    plot_swimmer(
+      data = data,
+      cutoff = 0,
+      sort_by = "invalid"
+    )
+  )
+})
+
+test_that("plot_swimmer accepts patient labels", {
+  data <- data.frame(
+    score_group = c("low", "high"),
+    score = c(-1, 1),
+    OS = c(1, 0),
+    OS.time = c(10, 20),
+    patient = c("patient_1", "patient_2")
+  )
+
+  result <- plot_swimmer(
+    data = data,
+    cutoff = 0,
+    id_col = "patient",
+    show_labels = TRUE
+  )
+
+  expect_s3_class(result, "ggplot")
+})

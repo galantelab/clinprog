@@ -731,3 +731,821 @@ plot_barplot <- function(plot_df, outprefix = NULL, frequency.threshold = 25, th
 
   return(final_plot)
 }
+
+#' Generate a swimmer plot for clinprog score groups
+#'
+#' @description Creates a swimmer plot (a.k.a. swimlane plot) where each
+#' horizontal bar represents one patient. The bar length corresponds to the
+#' follow-up time (from time = 0 up to the observed \code{time_col}), and the
+#' bar color encodes whether the patient's score is below or equal (low) or
+#' strictly above (high) the specified \code{cutoff}. At the end of each bar,
+#' a symbol indicates the patient's status at last follow-up: a circle for
+#' alive/censored and a triangle for dead/event (shapes are configurable).
+#'
+#' @param data Data.frame containing clinical/survival information. Must
+#' contain at least the columns referenced by \code{group_col},
+#' \code{score_col}, \code{os_col}, and \code{time_col}.
+#' @param cutoff Numeric. Cutoff used to dichotomize the score into
+#' \code{"Low"} and \code{"High"}.
+#' @param group_col Character. Column name with the dichotomized score group.
+#' Validated for existence, but the actual coloring is derived from
+#' \code{score_col} and \code{cutoff} (Default: \code{"score_group"}).
+#' @param score_col Character. Column name with the numeric score (Default:
+#' \code{"score"}). Used together with \code{cutoff} to define the Low/High
+#' color group.
+#' @param os_col Character. Column name for OS status (Default: \code{"OS"}).
+#' Values are expected to be 0/1 (0 = Alive/censored, 1 = Dead/event).
+#' @param time_col Character. Column name for follow-up time (Default:
+#' \code{"OS.time"}).
+#' @param id_col Character or NULL. Column name used as patient ID for the
+#' Y-axis. If \code{NULL} (Default), row names are used when they differ
+#' from the default integer sequence; otherwise an internal index is
+#' generated.
+#' @param outprefix Character. Output prefix for saving the plot (Default:
+#' \code{NULL}). If \code{NULL}, the plot is not written to disk.
+#' @param palette Character vector of length 2. Colors for below/equal and
+#' above cutoff (Default: \code{c("#1A9850", "#D73027")}).
+#' @param ylab Character. Title for the Y-axis (Default: \code{"Patients"}).
+#' @param xlab Character. Title for the X-axis (Default:
+#' \code{"Follow-up time"}).
+#' @param title Character. Plot title (Default: \code{NULL}).
+#' @param legend_title Character. Title for the color legend (Default:
+#' \code{"Score cutoff"}).
+#' @param theme A ggplot2 theme object. Defaults to \code{theme_clinprog()}.
+#' @param width Numeric. Plot width in inches (Default: \code{8}).
+#' @param height Numeric. Plot height in inches (Default: \code{6}).
+#' @param show_labels Logical or character vector. If \code{NULL} (Default)
+#' or \code{FALSE}, no patient labels are shown on the Y-axis. If
+#' \code{TRUE}, all patients are labeled. If a character vector, only the
+#' matching patient IDs are labeled (others are blank).
+#' @param sort_by Character. Order patients along the Y-axis by follow-up
+#' \code{"time"} (Default), \code{"score"}, or keep original order
+#' \code{"none"}.
+#' @param time_cutoff Numeric or \code{NULL} (Default). Optional vertical
+#' dashed line at a given follow-up time.
+#' @param facet_by Character or \code{NULL} (Default). Optional column name
+#' used to facet the plot.
+#' @param alive_shape Numeric. Point shape for alive/censored patients
+#' (Default: \code{16}, filled circle).
+#' @param dead_shape Numeric. Point shape for dead/event patients (Default:
+#' \code{17}, filled triangle).
+#' @param alive_color Character. Color for alive/censored patients
+#' (Default: \code{"#2C7FB8"}, blue).
+#' @param dead_color Character. Color for dead/event patients
+#' (Default: \code{"#F28E2B"}, orange).
+#' @param point_size Numeric. Size of the status symbols (Default: \code{1}).
+#' @param bar_height Numeric. Height of the swimmer bars, between 0 and 1
+#' (Default: \code{0.7}).
+#' @param show_legend Logical. Whether to display the legend (Default:
+#' \code{TRUE}).
+#'
+#' @return A \code{ggplot} object.
+#' @export
+plot_swimmer <- function(
+    data,
+    cutoff,
+    group_col = "score_group",
+    score_col = "score",
+    os_col = "OS",
+    time_col = "OS.time",
+    id_col = NULL,
+    outprefix = NULL,
+    palette = c("#1A9850", "#D73027"),
+    ylab = "Patients",
+    xlab = "Follow-up time",
+    title = NULL,
+    legend_title = "Score cutoff",
+    theme = theme_clinprog(),
+    width = 8,
+    height = 6,
+    show_labels = NULL,
+    sort_by = c("time", "score", "none"),
+    time_cutoff = NULL,
+    facet_by = NULL,
+    alive_shape = 16,
+    dead_shape = 17,
+    alive_color = "#2C7FB8",
+    dead_color = "#F28E2B",
+    point_size = 1,
+    bar_height = 0.7,
+    show_legend = TRUE
+) {
+  log_message("Building swimmer plot...")
+
+  sort_by <- match.arg(sort_by)
+
+  # Validates input data
+
+  if (!is.data.frame(data)) {
+    log_stop("Argument 'data' must be a data.frame")
+  }
+
+  if (!is.character(group_col) || length(group_col) != 1) {
+    log_stop("Argument 'group_col' must be a single character string")
+  }
+
+  if (!is.character(score_col) || length(score_col) != 1) {
+    log_stop("Argument 'score_col' must be a single character string")
+  }
+
+  if (!is.character(os_col) || length(os_col) != 1) {
+    log_stop("Argument 'os_col' must be a single character string")
+  }
+
+  if (!is.character(time_col) || length(time_col) != 1) {
+    log_stop("Argument 'time_col' must be a single character string")
+  }
+
+  required_cols <- c(
+    group_col,
+    score_col,
+    os_col,
+    time_col
+  )
+
+  if (!all(required_cols %in% colnames(data))) {
+    missing <- setdiff(required_cols, colnames(data))
+
+    log_stop(
+      "Argument 'data' is missing required column(s): ",
+      paste(missing, collapse = ", ")
+    )
+  }
+
+  if (!is.numeric(data[[score_col]])) {
+    log_stop(
+      paste0(
+        "Column '",
+        score_col,
+        "' must be numeric."
+      )
+    )
+  }
+
+  if (!is.numeric(data[[time_col]])) {
+    log_stop(
+      paste0(
+        "Column '",
+        time_col,
+        "' must be numeric."
+      )
+    )
+  }
+
+  # Validates cutoff
+
+  if (missing(cutoff) || is.null(cutoff)) {
+    log_stop(
+      "Argument 'cutoff' must be provided (numeric scalar)."
+    )
+  }
+
+  if (!is.numeric(cutoff) ||
+      length(cutoff) != 1 ||
+      !is.finite(cutoff)) {
+    log_stop(
+      "Argument 'cutoff' must be a single finite numeric value"
+    )
+  }
+
+  # Validates palette
+
+  if (!is.character(palette) || length(palette) < 2) {
+    log_stop(
+      "Argument 'palette' must be a character vector with at least 2 colors"
+    )
+  }
+
+  if (anyNA(palette[1:2])) {
+    log_stop(
+      "Argument 'palette' must not contain NA values"
+    )
+  }
+
+  # Validates theme
+
+  if (!inherits(theme, "theme")) {
+    log_stop(
+      "Argument 'theme' must be a valid ggplot2 theme object"
+    )
+  }
+
+  # Validates labels
+
+  if (!is.null(ylab) &&
+      (!is.character(ylab) || length(ylab) != 1)) {
+    log_stop(
+      "Argument 'ylab' must be NULL or a single character string"
+    )
+  }
+
+  if (!is.null(xlab) &&
+      (!is.character(xlab) || length(xlab) != 1)) {
+    log_stop(
+      "Argument 'xlab' must be NULL or a single character string"
+    )
+  }
+
+  if (!is.null(title) &&
+      (!is.character(title) || length(title) != 1)) {
+    log_stop(
+      "Argument 'title' must be NULL or a single character string"
+    )
+  }
+
+  if (!is.null(legend_title) &&
+      (!is.character(legend_title) || length(legend_title) != 1)) {
+    log_stop(
+      "Argument 'legend_title' must be NULL or a single character string"
+    )
+  }
+
+  # Validates plot sizes
+
+  if (!is.numeric(width) ||
+      length(width) != 1 ||
+      width <= 0) {
+    log_stop(
+      "Argument 'width' must be a single positive numeric value"
+    )
+  }
+
+  if (!is.numeric(height) ||
+      length(height) != 1 ||
+      height <= 0) {
+    log_stop(
+      "Argument 'height' must be a single positive numeric value"
+    )
+  }
+
+  # Validates visual parameters
+
+  if (!is.numeric(alive_shape) ||
+      length(alive_shape) != 1) {
+    log_stop(
+      "Argument 'alive_shape' must be a single numeric value"
+    )
+  }
+
+  if (!is.numeric(dead_shape) ||
+      length(dead_shape) != 1) {
+    log_stop(
+      "Argument 'dead_shape' must be a single numeric value"
+    )
+  }
+
+  if (!is.character(alive_color) ||
+      length(alive_color) != 1) {
+    log_stop(
+      "Argument 'alive_color' must be a single color string"
+    )
+  }
+
+  if (!is.character(dead_color) ||
+      length(dead_color) != 1) {
+    log_stop(
+      "Argument 'dead_color' must be a single color string"
+    )
+  }
+
+  if (!is.numeric(point_size) ||
+      length(point_size) != 1 ||
+      point_size <= 0) {
+    log_stop(
+      "Argument 'point_size' must be a single positive numeric value"
+    )
+  }
+
+  if (!is.numeric(bar_height) ||
+      length(bar_height) != 1 ||
+      bar_height <= 0 ||
+      bar_height > 1) {
+    log_stop(
+      "Argument 'bar_height' must be a single numeric value in (0, 1]"
+    )
+  }
+
+  if (!is.logical(show_legend) ||
+      length(show_legend) != 1 ||
+      is.na(show_legend)) {
+    log_stop(
+      "Argument 'show_legend' must be TRUE or FALSE"
+    )
+  }
+
+  # Validates optional time cutoff
+
+  if (!is.null(time_cutoff)) {
+    if (!is.numeric(time_cutoff) ||
+        length(time_cutoff) != 1 ||
+        !is.finite(time_cutoff)) {
+      log_stop(
+        "Argument 'time_cutoff' must be NULL or a single finite numeric value"
+      )
+    }
+  }
+
+  # Validates facet_by
+
+  if (!is.null(facet_by)) {
+    if (!is.character(facet_by) ||
+        length(facet_by) != 1) {
+      log_stop(
+        "Argument 'facet_by' must be NULL or a single character string"
+      )
+    }
+
+    if (!facet_by %in% colnames(data)) {
+      log_stop(
+        paste0(
+          "Argument 'facet_by' column '",
+          facet_by,
+          "' not found in data."
+        )
+      )
+    }
+  }
+
+  # Validates id_col
+
+  if (!is.null(id_col)) {
+    if (!is.character(id_col) ||
+        length(id_col) != 1) {
+      log_stop(
+        "Argument 'id_col' must be NULL or a single character string"
+      )
+    }
+
+    if (!id_col %in% colnames(data)) {
+      log_stop(
+        paste0(
+          "Argument 'id_col' column '",
+          id_col,
+          "' not found in data."
+        )
+      )
+    }
+  }
+
+  # Validates show_labels
+
+  if (!is.null(show_labels) &&
+      !is.logical(show_labels) &&
+      !is.character(show_labels)) {
+    log_stop(
+      "Argument 'show_labels' must be NULL, TRUE/FALSE, or a character vector of patient IDs"
+    )
+  }
+
+  if (is.logical(show_labels) &&
+      length(show_labels) != 1) {
+    log_stop(
+      "Argument 'show_labels' must be a single logical value"
+    )
+  }
+
+  if (is.character(show_labels) &&
+      length(show_labels) == 0) {
+    log_stop(
+      "Argument 'show_labels' character vector must not be empty"
+    )
+  }
+
+  # Cross-validations
+
+  n_patients_check <- nrow(data)
+
+  if (!is.null(facet_by) &&
+      isTRUE(show_labels)) {
+    log_warning(
+      "Combining 'facet_by' with 'show_labels = TRUE' may produce crowded Y axes. ",
+      "Consider passing a subset of IDs to 'show_labels'."
+    )
+  }
+
+  if (is.null(facet_by) &&
+      isTRUE(show_labels) &&
+      n_patients_check > 50) {
+    log_warning(
+      "Showing labels for ",
+      n_patients_check,
+      " patients may be unreadable. ",
+      "Consider subsetting via 'show_labels'."
+    )
+  }
+
+  if (!is.null(time_cutoff)) {
+    max_time_check <- suppressWarnings(
+      max(data[[time_col]], na.rm = TRUE)
+    )
+
+    if (is.finite(max_time_check) &&
+        time_cutoff > max_time_check) {
+      log_warning(
+        "'time_cutoff' (",
+        time_cutoff,
+        ") exceeds the maximum observed follow-up time (",
+        round(max_time_check, 2),
+        ")."
+      )
+    }
+  }
+
+  # Prepares data
+
+  temp_df <- data[
+    !is.na(data[[os_col]]) &
+      !is.na(data[[time_col]]) &
+      !is.na(data[[score_col]]),
+    ,
+    drop = FALSE
+  ]
+
+  if (nrow(temp_df) == 0) {
+    log_stop(
+      "No valid rows available after removing NA values."
+    )
+  }
+
+  os_vals <- unique(
+    stats::na.omit(temp_df[[os_col]])
+  )
+
+  if (!all(os_vals %in% c(0, 1))) {
+    log_stop(
+      paste0(
+        "Column '",
+        os_col,
+        "' must contain only 0 (Alive) and 1 (Dead) values."
+      )
+    )
+  }
+
+  if (any(temp_df[[time_col]] < 0, na.rm = TRUE)) {
+    log_stop(
+      paste0(
+        "Column '",
+        time_col,
+        "' contains negative values."
+      )
+    )
+  }
+
+  # Constructs patient IDs
+
+  if (!is.null(id_col)) {
+    temp_df$.patient_id <- as.character(
+      temp_df[[id_col]]
+    )
+  } else if (
+             !is.null(rownames(data)) &&
+               any(
+                   rownames(data) !=
+                     as.character(seq_len(nrow(data)))
+               )
+             ) {
+    temp_df$.patient_id <- rownames(temp_df)
+  } else {
+    temp_df$.patient_id <- as.character(
+      seq_len(nrow(temp_df))
+    )
+  }
+
+  if (anyDuplicated(temp_df$.patient_id)) {
+    log_warning(
+      "Duplicated patient IDs detected. Appending row index to make them unique."
+    )
+
+    temp_df$.patient_id <- paste0(
+      temp_df$.patient_id,
+      "_",
+      seq_len(nrow(temp_df))
+    )
+  }
+
+  # Defines Low/High group based on cutoff and score_col
+
+  temp_df$.score_group <- ifelse(
+    temp_df[[score_col]] > cutoff,
+    "High",
+    "Low"
+  )
+
+  temp_df$.score_group <- factor(
+    temp_df$.score_group,
+    levels = c("Low", "High")
+  )
+
+  if (length(unique(temp_df$.score_group)) < 2) {
+    log_warning(
+      "All patients fall in the same score group given the provided 'cutoff'. ",
+      "Only one color will appear."
+    )
+  }
+
+  temp_df$.status <- factor(
+    temp_df[[os_col]],
+    levels = c(0, 1),
+    labels = c("Alive", "Dead")
+  )
+
+  temp_df$.time <- temp_df[[time_col]]
+
+  # Ordering of patients on the Y axis
+
+  if (sort_by == "time") {
+    ord <- order(
+      temp_df$.time,
+      decreasing = FALSE
+    )
+  } else if (sort_by == "score") {
+    ord <- order(
+      temp_df[[score_col]],
+      decreasing = FALSE
+    )
+  } else {
+    ord <- seq_len(nrow(temp_df))
+  }
+
+  temp_df <- temp_df[
+    ord,
+    ,
+    drop = FALSE
+  ]
+
+  temp_df$.patient_factor <- factor(
+    temp_df$.patient_id,
+    levels = temp_df$.patient_id
+  )
+
+  # Determines which labels to show
+
+  all_levels <- levels(
+    temp_df$.patient_factor
+  )
+
+  label_levels <- stats::setNames(
+    rep("", length(all_levels)),
+    all_levels
+  )
+
+  if (is.null(show_labels) ||
+      (is.logical(show_labels) &&
+       isFALSE(show_labels))) {
+    show_labels_flag <- FALSE
+
+  } else if (
+             is.logical(show_labels) &&
+               isTRUE(show_labels)
+             ) {
+    label_levels[] <- all_levels
+    show_labels_flag <- TRUE
+
+  } else if (is.character(show_labels)) {
+    valid_ids <- intersect(
+      show_labels,
+      all_levels
+    )
+
+    if (length(valid_ids) == 0) {
+      log_warning(
+        "None of the IDs in 'show_labels' matched patient IDs. ",
+        "No labels will be shown."
+      )
+
+      show_labels_flag <- FALSE
+
+    } else {
+      if (length(valid_ids) < length(show_labels)) {
+        unmatched <- setdiff(
+          show_labels,
+          valid_ids
+        )
+
+        log_warning(
+          "Some IDs in 'show_labels' did not match any patient: ",
+          paste(unmatched, collapse = ", ")
+        )
+      }
+
+      label_levels[valid_ids] <- valid_ids
+      show_labels_flag <- TRUE
+    }
+
+  } else {
+    show_labels_flag <- FALSE
+  }
+
+  # Maps
+
+  color_map <- c(
+    "Low" = palette[1],
+    "High" = palette[2]
+  )
+
+  shape_map <- c(
+    "Alive" = alive_shape,
+    "Dead" = dead_shape
+  )
+
+  status_color_map <- c(
+    "Alive" = alive_color,
+    "Dead" = dead_color
+  )
+
+  # Builds the plot
+
+  half_h <- bar_height / 2
+
+  p <- ggplot2::ggplot(
+    temp_df,
+    ggplot2::aes(
+      xmin = 0,
+      xmax = .data$.time,
+      ymin = as.numeric(.data$.patient_factor) - half_h,
+      ymax = as.numeric(.data$.patient_factor) + half_h,
+      fill = .data$.score_group
+    )
+  ) +
+    ggplot2::geom_rect(
+      color = NA
+    ) +
+    ggplot2::geom_point(
+      ggplot2::aes(
+        x = .data$.time,
+        y = as.numeric(.data$.patient_factor),
+        color = .data$.status,
+        shape = .data$.status
+      ),
+      size = point_size,
+      stroke = 0.3
+    ) +
+    ggplot2::scale_fill_manual(
+      values = color_map,
+      name = legend_title,
+      labels = c(
+        "Low" = paste0(
+          "Low (<= ",
+          round(cutoff, 4),
+          ")"
+        ),
+        "High" = paste0(
+          "High (> ",
+          round(cutoff, 4),
+          ")"
+        )
+      )
+    ) +
+    ggplot2::scale_color_manual(
+      values = status_color_map,
+      name = "Status",
+      labels = c(
+        "Alive" = "Alive / Censored",
+        "Dead" = "Dead / Event"
+      )
+    ) +
+    ggplot2::scale_shape_manual(
+      values = shape_map,
+      name = "Status",
+      labels = c(
+        "Alive" = "Alive / Censored",
+        "Dead" = "Dead / Event"
+      )
+    ) +
+    ggplot2::scale_x_continuous(
+      expand = ggplot2::expansion(
+        mult = c(0.01, 0.03)
+      ),
+      breaks = scales::pretty_breaks(n = 5)
+    ) +
+    ggplot2::guides(
+      fill = ggplot2::guide_legend(
+        override.aes = list(
+          shape = 22,
+          color = NA,
+          size = 3,
+          stroke = 0
+        ),
+        order = 1
+      ),
+      color = ggplot2::guide_legend(
+        override.aes = list(
+          shape = c(alive_shape, dead_shape),
+          size = 3
+        ),
+        order = 2
+      ),
+      shape = "none"
+    ) +
+    ggplot2::labs(
+      x = xlab,
+      y = ylab,
+      title = title
+    )
+
+  # Y-axis: labels & breaks depend on facet presence
+
+  if (is.null(facet_by)) {
+    p <- p +
+      ggplot2::scale_y_continuous(
+        breaks = seq_along(all_levels),
+        labels = label_levels,
+        expand = ggplot2::expansion(mult = 0.01)
+      )
+  } else {
+    y_label_fun <- function(pos) {
+      idx <- round(pos)
+
+      ifelse(
+        idx >= 1 &
+          idx <= length(all_levels),
+        label_levels[idx],
+        ""
+      )
+    }
+
+    p <- p +
+      ggplot2::scale_y_continuous(
+        breaks = seq_along(all_levels),
+        labels = y_label_fun,
+        expand = ggplot2::expansion(mult = 0.01)
+      )
+
+  }
+
+  if (!is.null(time_cutoff)) {
+    p <- p +
+      ggplot2::geom_vline(
+        xintercept = time_cutoff,
+        linetype = "dashed",
+        color = "grey40",
+        linewidth = 0.5
+      )
+  }
+
+  if (!is.null(facet_by)) {
+    p <- p +
+      ggplot2::facet_grid(
+        stats::as.formula(
+          paste(facet_by, "~ .")
+        ),
+        scales = "free_y",
+        space = "free_y"
+      )
+  }
+
+  p <- p +
+    theme +
+    ggplot2::theme(
+      panel.grid.major.y = ggplot2::element_blank(),
+      panel.grid.minor = ggplot2::element_blank(),
+      panel.grid.major.x = ggplot2::element_line(
+        color = "grey90",
+        linewidth = 0.4
+      ),
+      panel.border = ggplot2::element_blank(),
+      axis.ticks.y = ggplot2::element_blank(),
+      axis.text.y = ggplot2::element_text(
+        size = 8,
+        hjust = 1
+      ),
+      legend.position = if (show_legend) "top" else "none",
+      legend.key.size = ggplot2::unit(0.4, "cm"),
+      legend.title = ggplot2::element_text(size = 10),
+      legend.text = ggplot2::element_text(size = 8)
+    )
+
+  if (!show_labels_flag) {
+    p <- p +
+      ggplot2::theme(
+        axis.text.y = ggplot2::element_blank(),
+        axis.ticks.y = ggplot2::element_blank()
+      )
+  }
+
+  # Saves if requested
+
+  if (!is.null(outprefix)) {
+    if (!is.character(outprefix) ||
+      length(outprefix) != 1) {
+      log_stop(
+        "Argument 'outprefix' must be a single character string"
+      )
+    }
+
+    fname <- paste0(
+      outprefix,
+      "_swimmer_plot.pdf"
+    )
+
+    ggplot2::ggsave(
+      filename = fname,
+      plot = p,
+      device = "pdf",
+      width = width,
+      height = height
+    )
+  }
+
+  return(p)
+}
