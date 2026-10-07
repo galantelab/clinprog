@@ -1088,3 +1088,182 @@ test_that("plot_wordcloud maps word size to absolute expression-coefficient weig
     "AbsWeight"
   )
 })
+
+test_that("plot_barplot_score returns a ggplot object", {
+  data <- data.frame(
+    OS = c(0, 0, 0, 1, 1, 1),
+    score = c(-2, -1, 0.5, 1, 2, 3)
+  )
+
+  result <- plot_barplot_score(data)
+
+  expect_s3_class(result, "ggplot")
+})
+
+
+test_that("plot_barplot_score supports a custom score cutoff", {
+  data <- data.frame(
+    OS = c(0, 0, 0, 1, 1, 1),
+    score = c(-2, -1, 0.5, 1, 2, 3)
+  )
+
+  result <- plot_barplot_score(
+    data = data,
+    score_cutoff = 1
+  )
+
+  expect_s3_class(result, "ggplot")
+})
+
+
+test_that("plot_barplot_score removes missing OS and score values", {
+  data <- data.frame(
+    OS = c(0, 0, 1, 1, NA, 0),
+    score = c(-2, NA, 1, 2, 3, -1)
+  )
+
+  result <- plot_barplot_score(data)
+
+  expect_s3_class(result, "ggplot")
+})
+
+
+test_that("plot_barplot_score validates required columns", {
+  data <- data.frame(
+    OS = c(0, 1),
+    score = c(-1, 1)
+  )
+
+  expect_error(
+    plot_barplot_score(
+      data = data,
+      os_col = "status"
+    ),
+    "not found"
+  )
+
+  expect_error(
+    plot_barplot_score(
+      data = data,
+      score_col = "risk"
+    ),
+    "not found"
+  )
+})
+
+
+test_that("plot_barplot_score validates score column", {
+  data <- data.frame(
+    OS = c(0, 1),
+    score = c("low", "high")
+  )
+
+  expect_error(
+    plot_barplot_score(data),
+    "must be numeric"
+  )
+})
+
+
+test_that("plot_barplot_score validates score cutoff", {
+  data <- data.frame(
+    OS = c(0, 0, 1, 1),
+    score = c(-1, 0, 1, 2)
+  )
+
+  expect_error(
+    plot_barplot_score(
+      data = data,
+      score_cutoff = c(0, 1)
+    ),
+    "score_cutoff"
+  )
+})
+
+
+test_that("plot_barplot_score validates palette", {
+  data <- data.frame(
+    OS = c(0, 0, 1, 1),
+    score = c(-1, 0, 1, 2)
+  )
+
+  expect_error(
+    plot_barplot_score(
+      data = data,
+      palette = "black"
+    ),
+    "palette"
+  )
+})
+
+
+test_that("plot_barplot_score validates plot dimensions", {
+  data <- data.frame(
+    OS = c(0, 0, 1, 1),
+    score = c(-1, 0, 1, 2)
+  )
+
+  expect_error(
+    plot_barplot_score(data, width = 0),
+    "width"
+  )
+
+  expect_error(
+    plot_barplot_score(data, height = 0),
+    "height"
+  )
+})
+
+
+test_that("plot_barplot_score validates axis labels", {
+  data <- data.frame(
+    OS = c(0, 0, 1, 1),
+    score = c(-1, 0, 1, 2)
+  )
+
+  expect_error(
+    plot_barplot_score(data, xlab = 1),
+    "xlab"
+  )
+
+  expect_error(
+    plot_barplot_score(data, ylab = 1),
+    "ylab"
+  )
+})
+
+
+test_that("plot_barplot_score accepts custom column names", {
+  data <- data.frame(
+    status = c(0, 0, 1, 1),
+    risk_score = c(-1, 0, 1, 2)
+  )
+
+  result <- plot_barplot_score(
+    data = data,
+    os_col = "status",
+    score_col = "risk_score"
+  )
+
+  expect_s3_class(result, "ggplot")
+})
+
+
+test_that("plot_barplot_score saves a PDF when outprefix is provided", {
+  data <- data.frame(
+    OS = c(0, 0, 1, 1),
+    score = c(-1, 0, 1, 2)
+  )
+
+  outprefix <- file.path(tempdir(), "clinprog_barplot_score")
+
+  result <- plot_barplot_score(
+    data = data,
+    outprefix = outprefix
+  )
+
+  expect_s3_class(result, "ggplot")
+  expect_true(
+    file.exists(paste0(outprefix, "_score_barplot.pdf"))
+  )
+})

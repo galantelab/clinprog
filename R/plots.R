@@ -4078,3 +4078,284 @@ plot_wordcloud <- function(
 
   return(final_plot)
 }
+
+#' Generate score barplot by OS group
+#'
+#' @description Creates a barplot of patient scores grouped by overall
+#'   survival status. Bars are colored according to whether the score is below
+#'   or above the specified cutoff. A Pearson's chi-square test is used to
+#'   assess the association between OS status and score group.
+#'
+#' @param data Data.frame containing clinical/survival data.
+#' @param palette Character vector of length at least 2. Colors for below and
+#'   above cutoff (default: \code{c("#1A9850", "#D73027")}).
+#' @param outprefix Character. Output prefix for saving the plot (optional).
+#' @param score_cutoff Numeric. Threshold used to define low/high score groups
+#'   (default: \code{0}).
+#' @param os_col Character. Column name for OS status (default: \code{"OS"}).
+#' @param score_col Character. Column name for score values
+#'   (default: \code{"score"}).
+#' @param theme A ggplot2 theme object. Defaults to \code{theme_clinprog()}.
+#' @param xlab Character. Title for the X-axis (default: \code{"Patients"}).
+#' @param ylab Character. Title for the Y-axis (default: \code{"Score"}).
+#' @param width Numeric. Plot width in inches (default: \code{8}).
+#' @param height Numeric. Plot height in inches (default: \code{5}).
+#'
+#' @return A \code{ggplot} object.
+#' @importFrom rlang .data
+#' @export
+plot_barplot_score <- function(
+    data,
+    palette = c("#1A9850", "#D73027"),
+    outprefix = NULL,
+    score_cutoff = 0,
+    os_col = "OS",
+    score_col = "score",
+    theme = theme_clinprog(),
+    xlab = "Patients",
+    ylab = "Score",
+    width = 8,
+    height = 5
+) {
+
+  log_message("Building score barplot by OS status...")
+
+  # Validate input
+  if (!is.data.frame(data)) {
+    log_stop("'data' must be a data.frame")
+  }
+
+  if (!os_col %in% colnames(data)) {
+    log_stop(
+      paste0("Column '", os_col, "' not found in data.")
+    )
+  }
+
+  if (!score_col %in% colnames(data)) {
+    log_stop(
+      paste0("Column '", score_col, "' not found in data.")
+    )
+  }
+
+  if (!is.numeric(data[[score_col]])) {
+    log_stop(
+      paste0("Column '", score_col, "' must be numeric.")
+    )
+  }
+
+  # Validate theme
+  if (!inherits(theme, "theme")) {
+    log_stop("'theme' must be a valid ggplot2 theme object")
+  }
+
+  # Validate score cutoff
+  if (!is.numeric(score_cutoff) || length(score_cutoff) != 1) {
+    log_stop("'score_cutoff' must be a single numeric value.")
+  }
+
+  # Validate color palette
+  if (length(palette) < 2) {
+    log_stop("'palette' must contain at least 2 colors.")
+  }
+
+  # Validate plot dimensions
+  if (!is.numeric(width) || length(width) != 1 || width <= 0) {
+    log_stop("'width' must be a single positive numeric value")
+  }
+
+  if (!is.numeric(height) || length(height) != 1 || height <= 0) {
+    log_stop("'height' must be a single positive numeric value")
+  }
+
+  # Validate plot axes
+  if (!is.character(ylab) || length(ylab) != 1) {
+    log_stop("'ylab' must be a single character string")
+  }
+
+  if (!is.character(xlab) || length(xlab) != 1) {
+    log_stop("'xlab' must be a single character string")
+  }
+
+  # Prepare data
+  temp_df <- data[
+    !is.na(data[[os_col]]) & !is.na(data[[score_col]]),
+    ,
+    drop = FALSE
+  ]
+
+  # Format OS group labels
+  temp_df$OS_Group <- factor(
+    temp_df[[os_col]],
+    levels = c(0, 1),
+    labels = c("Alive", "Dead")
+  )
+
+  # Define status based on threshold
+  temp_df$Color_Group <- ifelse(
+    temp_df[[score_col]] >= score_cutoff,
+    "High",
+    "Low"
+  )
+
+  temp_df$Color_Group <- factor(
+    temp_df$Color_Group,
+    levels = c("Low", "High")
+  )
+
+  # Calculate score relative to cutoff
+  temp_df$score_diff <- temp_df[[score_col]] - score_cutoff
+
+  # Calculate Pearson's Chi-Square test
+  contingency_tab <- table(
+    temp_df$OS_Group,
+    temp_df$Color_Group
+  )
+
+  chisq_res <- suppressWarnings(
+    stats::chisq.test(contingency_tab)
+  )
+
+  pval <- chisq_res$p.value
+
+  # Format p-value
+  p_formatted <- if (pval < 0.001) {
+    "p < 0.001"
+  } else {
+    paste0("p = ", round(pval, 3))
+  }
+
+  p_text <- paste0("Chi-Square ", p_formatted)
+
+  # Manual color mapping
+  color_map <- c(
+    "Low" = palette[1],
+    "High" = palette[2]
+  )
+
+  # Order samples within each OS group
+  temp_df <- temp_df[
+    order(temp_df$OS_Group, temp_df[[score_col]]),
+    ,
+    drop = FALSE
+  ]
+
+  temp_df$Sample_ID <- factor(seq_len(nrow(temp_df)))
+
+  # Position annotation relative to current data limits
+  max_y <- max(temp_df$score_diff, na.rm = TRUE)
+  min_y <- min(temp_df$score_diff, na.rm = TRUE)
+
+  y_pos <- max_y - (max_y - min_y) * 0.05
+
+  annot_df <- data.frame(
+    OS_Group = factor(
+      "Alive",
+      levels = levels(temp_df$OS_Group)
+    ),
+    Sample_ID = factor(
+      5,
+      levels = levels(temp_df$Sample_ID)
+    ),
+    score_diff = y_pos,
+    label = p_text
+  )
+
+  # Create plot
+  p <- ggplot2::ggplot(
+    temp_df,
+    ggplot2::aes(
+      x = .data$Sample_ID,
+      y = .data$score_diff,
+      fill = .data$Color_Group
+    )
+  ) +
+    ggplot2::geom_col(width = 0.8) +
+    ggplot2::scale_fill_manual(
+      values = color_map,
+      name = "Score cutoff",
+      labels = c("Low", "High")
+    ) +
+    ggplot2::scale_y_continuous(
+      labels = function(x) x + round(score_cutoff, 4)
+    ) +
+    ggplot2::geom_hline(
+      yintercept = 0,
+      linetype = "dashed",
+      color = "black",
+      linewidth = 0.6
+    ) +
+    ggplot2::facet_grid(
+      ~ OS_Group,
+      scales = "free_x",
+      space = "free_x"
+    ) +
+    ggplot2::labs(
+      x = xlab,
+      y = ylab
+    ) +
+    ggplot2::geom_text(
+      data = annot_df,
+      ggplot2::aes(
+        x = .data$Sample_ID,
+        y = .data$score_diff,
+        label = .data$label
+      ),
+      inherit.aes = FALSE,
+      hjust = 0,
+      vjust = 1,
+      fontface = "italic",
+      size = 4
+    ) +
+    theme +
+    ggplot2::theme(
+      axis.text.x = ggplot2::element_blank(),
+      axis.ticks.x = ggplot2::element_blank(),
+      axis.title = ggplot2::element_text(
+        face = "plain",
+        colour = "black",
+        size = 14
+      ),
+      axis.text = ggplot2::element_text(
+        face = "plain",
+        colour = "black",
+        size = 12
+      ),
+      legend.title = ggplot2::element_text(
+        face = "plain",
+        colour = "black",
+        size = 12
+      ),
+      legend.text = ggplot2::element_text(
+        face = "plain",
+        colour = "black",
+        size = 10
+      ),
+      panel.grid = ggplot2::element_blank(),
+      strip.background = ggplot2::element_rect(
+        fill = "gray90",
+        color = NA
+      ),
+      strip.text = ggplot2::element_text(
+        face = "plain",
+        size = 12
+      )
+    )
+
+  # Save PDF if outprefix is provided
+  if (!is.null(outprefix)) {
+    if (!is.character(outprefix) || length(outprefix) != 1) {
+      log_stop("'outprefix' must be a single character string")
+    }
+
+    grDevices::pdf(
+      file = paste0(outprefix, "_score_barplot.pdf"),
+      width = width,
+      height = height
+    )
+
+    on.exit(grDevices::dev.off(), add = TRUE)
+    print(p)
+  }
+
+  return(p)
+}
