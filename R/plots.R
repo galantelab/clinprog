@@ -4359,3 +4359,246 @@ plot_barplot_score <- function(
 
   return(p)
 }
+
+#' Generate line plots for score vs follow-up time by OS status
+#'
+#' @param data Data.frame containing clinical/survival data.
+#' @param palette Character vector of length 2. Colors for below and above
+#'   cutoff (Default: \code{c("#1A9850", "#D73027")}).
+#' @param outprefix Character. Output prefix for saving the plot (optional).
+#' @param score_cutoff Numeric. Threshold to define low/high score color scheme
+#'   (Default: \code{0}).
+#' @param os_col Character. Column name for OS status (Default: \code{"OS"}).
+#' @param time_col Character. Column name for follow-up time
+#'   (Default: \code{"OS.time"}).
+#' @param score_col Character. Column name for score values
+#'   (Default: \code{"score"}).
+#' @param theme A ggplot2 theme object. Defaults to \code{theme_clinprog()}.
+#' @param xlab Character. Title for the X-axis (Default: \code{"Followup"}).
+#' @param ylab Character. Title for the Y-axis (Default: \code{"Score"}).
+#' @param width Numeric. Plot width in inches (Default: \code{12}).
+#' @param height Numeric. Plot height in inches (Default: \code{6}).
+#'
+#' @return A \code{ggplot} object.
+#' @importFrom rlang .data
+#' @export
+plot_lineplot_score <- function(
+    data,
+    palette = c("#1A9850", "#D73027"),
+    outprefix = NULL,
+    score_cutoff = 0,
+    os_col = "OS",
+    time_col = "OS.time",
+    score_col = "score",
+    theme = theme_clinprog(),
+    xlab = "Followup",
+    ylab = "Score",
+    width = 12,
+    height = 6
+) {
+
+  log_message("Building score vs follow-up time line plots by OS status...")
+
+  # Validate input
+  if (!is.data.frame(data)) {
+    log_stop("'data' must be a data.frame")
+  }
+
+  if (!os_col %in% colnames(data)) {
+    log_stop(paste0("Column '", os_col, "' not found in data."))
+  }
+
+  if (!time_col %in% colnames(data)) {
+    log_stop(paste0("Column '", time_col, "' not found in data."))
+  }
+
+  if (!score_col %in% colnames(data)) {
+    log_stop(paste0("Column '", score_col, "' not found in data."))
+  }
+
+  if (!is.numeric(data[[score_col]])) {
+    log_stop(paste0("Column '", score_col, "' must be numeric."))
+  }
+
+  if (!is.numeric(data[[time_col]])) {
+    log_stop(paste0("Column '", time_col, "' must be numeric."))
+  }
+
+  # Validate theme
+  if (!inherits(theme, "theme")) {
+    log_stop("'theme' must be a valid ggplot2 theme object")
+  }
+
+  # Validate score cutoff
+  if (!is.numeric(score_cutoff) || length(score_cutoff) != 1) {
+    log_stop("'score_cutoff' must be a single numeric value.")
+  }
+
+  # Validate color palette
+  if (length(palette) < 2) {
+    log_stop("'palette' must contain at least 2 colors.")
+  }
+
+  # Validate plot dimensions
+  if (!is.numeric(width) || length(width) != 1 || width <= 0) {
+    log_stop("'width' must be a single positive numeric value")
+  }
+
+  if (!is.numeric(height) || length(height) != 1 || height <= 0) {
+    log_stop("'height' must be a single positive numeric value")
+  }
+
+  # Validate plot axes
+  if (!is.character(ylab) || length(ylab) != 1) {
+    log_stop("'ylab' must be a single character string")
+  }
+
+  if (!is.character(xlab) || length(xlab) != 1) {
+    log_stop("'xlab' must be a single character string")
+  }
+
+  # Prepare data
+  temp_df <- data[
+    !is.na(data[[os_col]]) &
+      !is.na(data[[score_col]]) &
+      !is.na(data[[time_col]]),
+    ,
+    drop = FALSE
+  ]
+
+  # Format OS group labels (0 = Alive, 1 = Dead)
+  temp_df$OS_Group <- factor(
+    temp_df[[os_col]],
+    levels = c(0, 1),
+    labels = c("Alive", "Dead")
+  )
+
+  # Define status based on threshold for point colors
+  temp_df$Color_Group <- ifelse(
+    temp_df[[score_col]] >= score_cutoff,
+    "High",
+    "Low"
+  )
+
+  temp_df$Color_Group <- factor(
+    temp_df$Color_Group,
+    levels = c("Low", "High")
+  )
+
+  # Calculate score relative to cutoff
+  temp_df$score_diff <- temp_df[[score_col]] - score_cutoff
+
+  # Set names for manual color mapping
+  color_map <- c(
+    "Low" = palette[1],
+    "High" = palette[2]
+  )
+
+  # Order data by follow-up time
+  temp_df <- temp_df[
+    order(temp_df$OS_Group, temp_df[[time_col]]),
+    ,
+    drop = FALSE
+  ]
+
+  # Create line plot
+  max_time <- max(
+    round(temp_df[[time_col]], 0),
+    na.rm = TRUE
+  )
+
+  p <- ggplot2::ggplot(
+    temp_df,
+    ggplot2::aes(
+      x = .data[[time_col]],
+      y = .data$score_diff
+    )
+  ) +
+    ggplot2::geom_line(
+      color = "grey50",
+      alpha = 0.7,
+      linewidth = 0.3
+    ) +
+    ggplot2::geom_point(
+      ggplot2::aes(color = .data$Color_Group),
+      size = 1.5,
+      alpha = 0.7
+    ) +
+    ggplot2::scale_color_manual(
+      values = color_map,
+      name = "Score cutoff",
+      labels = c("Low", "High")
+    ) +
+    ggplot2::scale_x_continuous(
+      limits = c(0, max_time),
+      breaks = round(seq(0, max_time, length.out = 5))
+    ) +
+    ggplot2::scale_y_continuous(
+      labels = function(y) y + round(score_cutoff, 4)
+    ) +
+    ggplot2::geom_hline(
+      yintercept = 0,
+      linetype = "dashed",
+      color = "black",
+      linewidth = 0.5
+    ) +
+    ggplot2::facet_grid(
+      ~ OS_Group,
+      scales = "free_x"
+    ) +
+    ggplot2::labs(
+      x = xlab,
+      y = ylab
+    ) +
+    theme +
+    ggplot2::theme(
+      panel.grid = ggplot2::element_blank(),
+      axis.title = ggplot2::element_text(
+        face = "plain",
+        colour = "black",
+        size = 14
+      ),
+      axis.text = ggplot2::element_text(
+        face = "plain",
+        colour = "black",
+        size = 12
+      ),
+      legend.title = ggplot2::element_text(
+        face = "plain",
+        colour = "black",
+        size = 12
+      ),
+      legend.text = ggplot2::element_text(
+        face = "plain",
+        colour = "black",
+        size = 10
+      ),
+      strip.background = ggplot2::element_rect(
+        fill = "gray90",
+        color = NA
+      ),
+      strip.text = ggplot2::element_text(
+        face = "plain",
+        size = 12
+      )
+    )
+
+  # Save PDF if outprefix is passed
+  if (!is.null(outprefix)) {
+    if (!is.character(outprefix) || length(outprefix) != 1) {
+      log_stop("'outprefix' must be a single character string")
+    }
+
+    grDevices::pdf(
+      file = paste0(outprefix, "_lineplot_score_followup.pdf"),
+      width = width,
+      height = height
+    )
+
+    on.exit(grDevices::dev.off(), add = TRUE)
+
+    print(p)
+  }
+
+  return(p)
+}

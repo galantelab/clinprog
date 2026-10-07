@@ -1267,3 +1267,213 @@ test_that("plot_barplot_score saves a PDF when outprefix is provided", {
     file.exists(paste0(outprefix, "_score_barplot.pdf"))
   )
 })
+
+test_that("plot_lineplot_score returns a ggplot object", {
+  data <- data.frame(
+    OS = c(0, 0, 0, 1, 1, 1),
+    OS.time = c(2, 4, 6, 3, 5, 7),
+    score = c(-2, -1, 0.5, 1, 2, 3)
+  )
+
+  result <- plot_lineplot_score(data)
+
+  expect_s3_class(result, "ggplot")
+})
+
+
+test_that("plot_lineplot_score supports a custom score cutoff", {
+  data <- data.frame(
+    OS = c(0, 0, 0, 1, 1, 1),
+    OS.time = c(2, 4, 6, 3, 5, 7),
+    score = c(-2, -1, 0.5, 1, 2, 3)
+  )
+
+  result <- plot_lineplot_score(
+    data = data,
+    score_cutoff = 1
+  )
+
+  expect_s3_class(result, "ggplot")
+})
+
+
+test_that("plot_lineplot_score removes missing values", {
+  data <- data.frame(
+    OS = c(0, 0, 1, 1, NA, 0),
+    OS.time = c(2, NA, 5, 7, 8, 10),
+    score = c(-2, 0, 1, 2, 3, NA)
+  )
+
+  result <- plot_lineplot_score(data)
+
+  expect_s3_class(result, "ggplot")
+})
+
+
+test_that("plot_lineplot_score validates required columns", {
+  data <- data.frame(
+    OS = c(0, 1),
+    OS.time = c(2, 4),
+    score = c(-1, 1)
+  )
+
+  expect_error(
+    plot_lineplot_score(
+      data = data,
+      os_col = "status"
+    ),
+    "not found"
+  )
+
+  expect_error(
+    plot_lineplot_score(
+      data = data,
+      time_col = "followup"
+    ),
+    "not found"
+  )
+
+  expect_error(
+    plot_lineplot_score(
+      data = data,
+      score_col = "risk"
+    ),
+    "not found"
+  )
+})
+
+
+test_that("plot_lineplot_score validates numeric columns", {
+  data <- data.frame(
+    OS = c(0, 1),
+    OS.time = c(2, 4),
+    score = c(-1, 1)
+  )
+
+  expect_error(
+    plot_lineplot_score(
+      data = transform(data, score = c("low", "high"))
+    ),
+    "must be numeric"
+  )
+
+  expect_error(
+    plot_lineplot_score(
+      data = transform(data, OS.time = c("short", "long"))
+    ),
+    "must be numeric"
+  )
+})
+
+
+test_that("plot_lineplot_score validates score cutoff", {
+  data <- data.frame(
+    OS = c(0, 0, 1, 1),
+    OS.time = c(2, 4, 3, 5),
+    score = c(-1, 0, 1, 2)
+  )
+
+  expect_error(
+    plot_lineplot_score(
+      data = data,
+      score_cutoff = c(0, 1)
+    ),
+    "score_cutoff"
+  )
+})
+
+
+test_that("plot_lineplot_score validates palette", {
+  data <- data.frame(
+    OS = c(0, 0, 1, 1),
+    OS.time = c(2, 4, 3, 5),
+    score = c(-1, 0, 1, 2)
+  )
+
+  expect_error(
+    plot_lineplot_score(
+      data = data,
+      palette = "black"
+    ),
+    "palette"
+  )
+})
+
+
+test_that("plot_lineplot_score validates plot dimensions", {
+  data <- data.frame(
+    OS = c(0, 0, 1, 1),
+    OS.time = c(2, 4, 3, 5),
+    score = c(-1, 0, 1, 2)
+  )
+
+  expect_error(
+    plot_lineplot_score(data, width = 0),
+    "width"
+  )
+
+  expect_error(
+    plot_lineplot_score(data, height = 0),
+    "height"
+  )
+})
+
+
+test_that("plot_lineplot_score validates axis labels", {
+  data <- data.frame(
+    OS = c(0, 0, 1, 1),
+    OS.time = c(2, 4, 3, 5),
+    score = c(-1, 0, 1, 2)
+  )
+
+  expect_error(
+    plot_lineplot_score(data, xlab = 1),
+    "xlab"
+  )
+
+  expect_error(
+    plot_lineplot_score(data, ylab = 1),
+    "ylab"
+  )
+})
+
+
+test_that("plot_lineplot_score accepts custom column names", {
+  data <- data.frame(
+    status = c(0, 0, 1, 1),
+    followup = c(2, 4, 3, 5),
+    risk_score = c(-1, 0, 1, 2)
+  )
+
+  result <- plot_lineplot_score(
+    data = data,
+    os_col = "status",
+    time_col = "followup",
+    score_col = "risk_score"
+  )
+
+  expect_s3_class(result, "ggplot")
+})
+
+
+test_that("plot_lineplot_score saves a PDF when outprefix is provided", {
+  data <- data.frame(
+    OS = c(0, 0, 1, 1),
+    OS.time = c(2, 4, 3, 5),
+    score = c(-1, 0, 1, 2)
+  )
+
+  outprefix <- file.path(tempdir(), "clinprog_lineplot_score")
+
+  result <- plot_lineplot_score(
+    data = data,
+    outprefix = outprefix
+  )
+
+  expect_s3_class(result, "ggplot")
+  expect_true(
+    file.exists(
+      paste0(outprefix, "_lineplot_score_followup.pdf")
+    )
+  )
+})
