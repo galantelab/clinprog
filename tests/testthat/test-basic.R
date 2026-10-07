@@ -496,3 +496,134 @@ test_that("plot_swimmer accepts patient labels", {
 
   expect_s3_class(result, "ggplot")
 })
+
+test_that("plot_boxplot returns a patchwork object", {
+  data <- data.frame(
+    score_group = c("low", "high", "low", "high"),
+    OS = c(1, 0, 1, 0),
+    OS.time = c(10, 20, 30, 40),
+    GeneA = c(1, 5, 2, 6),
+    GeneB = c(2, 7, 3, 8)
+  )
+
+  result <- plot_boxplot(
+    data = data
+  )
+
+  expect_s3_class(result, "patchwork")
+})
+
+test_that("plot_boxplot supports feature selection with a signature", {
+  data <- data.frame(
+    score_group = c("low", "high", "low", "high"),
+    OS = c(1, 0, 1, 0),
+    OS.time = c(10, 20, 30, 40),
+    GeneA = c(1, 5, 2, 6),
+    GeneB = c(2, 7, 3, 8),
+    GeneC = c(3, 9, 4, 10)
+  )
+
+  signature <- data.frame(
+    feature = c("GeneA", "GeneB", "GeneC"),
+    coefficient = c(0.1, -2, 0.5)
+  )
+
+  result <- plot_boxplot(
+    data = data,
+    signature = signature,
+    max_features = 2
+  )
+
+  expect_s3_class(result, "patchwork")
+})
+
+test_that("plot_boxplot supports expression normalization", {
+  data <- data.frame(
+    score_group = c("low", "high", "low", "high"),
+    OS = c(1, 0, 1, 0),
+    OS.time = c(10, 20, 30, 40),
+    GeneA = c(1, 5, 2, 6)
+  )
+
+  result <- plot_boxplot(
+    data = data,
+    norm_exp = TRUE
+  )
+
+  expect_s3_class(result, "patchwork")
+})
+
+test_that("plot_boxplot supports faceting and sample sizes", {
+  data <- data.frame(
+    score_group = c(
+      "low", "high", "low", "high",
+      "low", "high", "low", "high"
+    ),
+    OS = c(
+      1, 1, 1, 1,
+      0, 0, 0, 0
+    ),
+    OS.time = c(
+      10, 20, 30, 40,
+      15, 25, 35, 45
+    ),
+    GeneA = c(
+      1, 5, 2, 6,
+      3, 7, 4, 8
+    )
+  )
+
+  result <- plot_boxplot(
+    data = data,
+    facet_by = "OS",
+    show_n = TRUE
+  )
+
+  expect_s3_class(result, "patchwork")
+})
+
+test_that("plot_boxplot validates its input", {
+  data <- data.frame(
+    score_group = c("low", "high"),
+    OS = c(1, 0),
+    OS.time = c(10, 20),
+    GeneA = c(1, 5)
+  )
+
+  expect_error(
+    plot_boxplot(
+      data = "not a data.frame"
+    ),
+    "data"
+  )
+
+  expect_error(
+    plot_boxplot(
+      data = data,
+      group_col = "missing"
+    )
+  )
+
+  expect_error(
+    plot_boxplot(
+      data = data,
+      facet_by = "missing"
+    ),
+    "facet_by"
+  )
+
+  expect_error(
+    plot_boxplot(
+      data = data,
+      test = "invalid"
+    )
+  )
+
+  expect_error(
+    plot_boxplot(
+      data = data,
+      max_features = 0
+    ),
+    "max_features"
+  )
+})

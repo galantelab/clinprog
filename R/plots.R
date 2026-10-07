@@ -1550,3 +1550,1104 @@ plot_swimmer <- function(
 
   return(p)
 }
+
+#' Generate feature expression boxplots by prognostic group in a grid
+#'
+#' @description Creates a single-page PDF containing a grid of boxplots for
+#' multiple genes/transcripts. Optionally, each panel can be faceted by an
+#' external grouping variable. Individual per-feature PDFs can also be written
+#' to disk.
+#'
+#' @param data Data.frame containing expression data and metadata columns.
+#' @param signature A data.frame with \code{feature} and \code{coefficient}
+#'   (default: \code{NULL}).
+#' @param group_col Character. The name of the column used for grouping
+#'   (default: \code{"score_group"}).
+#' @param facet_by Character or \code{NULL} (default). Optional column name
+#'   used to facet each panel (e.g. \code{"OS"}).
+#' @param exclude_cols Character vector. Columns to exclude from the gene list
+#'   (default: \code{c("OS", "OS.time", "score", "score_group")}).
+#' @param palette Character vector. Colors for the \code{group_col} levels
+#'   (default: \code{c("#D73027", "#1A9850")}).
+#' @param test Character. Statistical test to compare expression between the
+#'   two \code{group_col} levels: \code{"wilcox"} (Mann-Whitney, default),
+#'   \code{"t.test"}, or \code{"none"}.
+#' @param paired Logical. Whether to perform a paired test (default:
+#'   \code{FALSE}). Ignored when \code{test = "none"}.
+#' @param pvalue_position Character. Where to place the p-value:
+#'   \code{"subtitle"} (default) or \code{"inside"}. When \code{facet_by} is
+#'   set, \code{"inside"} draws the p-value of each facet level inside its
+#'   own panel.
+#' @param add_pvalue Logical. Whether to compute and display the p-value
+#'   (default: \code{TRUE}).
+#' @param show_points Logical. Whether to show jittered points over the
+#'   boxplots (default: \code{FALSE}).
+#' @param show_n Logical. Whether to print the sample size per group inside
+#'   each panel, just above the x axis (default: \code{FALSE}).
+#' @param max_features Numeric. Max features to plot (default: \code{NULL}).
+#' @param norm_exp Logical. Whether to apply log2 normalization on expression
+#'   data (default: \code{FALSE}).
+#' @param outprefix Character. Output prefix for saving the plot (optional).
+#' @param individual Logical. If \code{TRUE} and \code{outprefix} is provided,
+#'   saves each feature boxplot as its own PDF file named
+#'   \code{{outprefix}_feature_{feature}.pdf}. The combined grid is still
+#'   saved as \code{{outprefix}_feature_expression.pdf} (default:
+#'   \code{FALSE}).
+#' @param theme A ggplot2 theme object. Defaults to \code{theme_clinprog()}.
+#' @param ylab Character. Title for the Y-axis (default: \code{NULL}).
+#' @param xlab Character. Title for the X-axis (default: \code{"Score"}).
+#' @param width Numeric. Plot width in inches (default: \code{NULL}).
+#' @param height Numeric. Plot height in inches (default: \code{NULL}).
+#'
+#' @return A \code{ggplot} object.
+#' @importFrom rlang .data
+#' @importFrom dplyr %>%
+#' @export
+plot_boxplot <- function(
+  data,
+  signature = NULL,
+  group_col = "score_group",
+  facet_by = NULL,
+  outprefix = NULL,
+  theme = theme_clinprog(),
+  exclude_cols = c("OS", "OS.time", "score", "score_group"),
+  palette = c("#D73027", "#1A9850"),
+  test = c("wilcox", "t.test", "none"),
+  paired = FALSE,
+  pvalue_position = c("subtitle", "inside"),
+  add_pvalue = TRUE,
+  show_points = FALSE,
+  show_n = FALSE,
+  max_features = NULL,
+  norm_exp = FALSE,
+  individual = FALSE,
+  width = NULL,
+  height = NULL,
+  ylab = NULL,
+  xlab = "Score"
+)
+{
+  log_message("Building feature expression boxplots...")
+
+  # Resolves multiple-choice arguments
+  test <- match.arg(test)
+  pvalue_position <- match.arg(pvalue_position)
+
+  # Validates input data
+  if (!is.data.frame(data)) {
+    log_stop("'data' must be a data.frame")
+  }
+
+  if (!is.character(group_col) || length(group_col) != 1) {
+    log_stop("'group_col' must be a single character string")
+  }
+
+  if (!group_col %in% colnames(data)) {
+    log_stop(
+      paste0(
+        "'data' must contain the grouping column: '",
+        group_col,
+        "'"
+      )
+    )
+  }
+
+  # Validates signature if provided
+  if (!is.null(signature))
+  {
+    if (!is.data.frame(signature)) {
+      log_stop("'signature' must be a data.frame")
+    }
+
+    if (!all(c("feature", "coefficient") %in% colnames(signature)))
+    {
+      log_stop(
+        "'signature' must contain 'feature' and 'coefficient' columns"
+      )
+    }
+
+    if (!all(signature$feature %in% colnames(data)))
+    {
+      log_stop(
+        "All features in 'signature' must be present in 'data' column names"
+      )
+    }
+  }
+
+  # Validates excluded columns
+  if (!is.character(exclude_cols)) {
+    log_stop("'exclude_cols' must be a character vector")
+  }
+
+  # Validates facet_by
+  if (!is.null(facet_by))
+  {
+    if (!is.character(facet_by) || length(facet_by) != 1)
+    {
+      log_stop(
+        "'facet_by' must be NULL or a single character string"
+      )
+    }
+
+    if (!facet_by %in% colnames(data)) {
+      log_stop(
+        paste0(
+          "'facet_by' column '",
+          facet_by,
+          "' not found in 'data'."
+        )
+      )
+    }
+  }
+
+  # Validates colors
+  if (!is.null(palette) && !is.character(palette))
+  {
+    log_stop(
+      "'palette' must be a character vector of valid color names/codes or NULL"
+    )
+  }
+
+  if (!is.null(palette) && anyNA(palette)) {
+    log_stop("'palette' must not contain NA values")
+  }
+
+  # Validates p-value display
+  if (!is.logical(add_pvalue) ||
+      length(add_pvalue) != 1 ||
+      is.na(add_pvalue))
+  {
+    log_stop("'add_pvalue' must be a single logical value")
+  }
+
+  # Validates normalization expression
+  if (!is.logical(norm_exp) ||
+      length(norm_exp) != 1 ||
+      is.na(norm_exp))
+  {
+    log_stop("'norm_exp' must be a single logical value")
+  }
+
+  # Validates flags
+  if (!is.logical(paired) ||
+      length(paired) != 1 ||
+      is.na(paired))
+  {
+    log_stop("'paired' must be TRUE or FALSE")
+  }
+
+  if (!is.logical(individual) ||
+      length(individual) != 1 ||
+      is.na(individual))
+  {
+    log_stop("'individual' must be TRUE or FALSE")
+  }
+
+  if (!is.logical(show_n) ||
+      length(show_n) != 1 ||
+      is.na(show_n))
+  {
+    log_stop("'show_n' must be TRUE or FALSE")
+  }
+
+  # Validates theme
+  if (!inherits(theme, "theme")) {
+    log_stop("'theme' must be a valid ggplot2 theme object")
+  }
+
+  # Validates labels for the axis
+  if (!is.null(ylab) &&
+      (!is.character(ylab) || length(ylab) != 1))
+  {
+    log_stop("'ylab' must be a single character string or NULL")
+  }
+
+  if (!is.character(xlab) || length(xlab) != 1) {
+    log_stop("'xlab' must be a single character string")
+  }
+
+  # Validates plot sizes
+  if (!is.null(width) &&
+      (!is.numeric(width) || length(width) != 1 || width <= 0))
+  {
+    log_stop(
+      "'width' must be a single positive numeric value or NULL"
+    )
+  }
+
+  if (!is.null(height) &&
+      (!is.numeric(height) || length(height) != 1 || height <= 0))
+  {
+    log_stop(
+      "'height' must be a single positive numeric value or NULL"
+    )
+  }
+
+  # Validates logical point display
+  if (!is.logical(show_points) ||
+      length(show_points) != 1 ||
+      is.na(show_points))
+  {
+    log_stop("'show_points' must be a single logical value")
+  }
+
+  # Validates max_features
+  if (!is.null(max_features))
+  {
+    if (!is.numeric(max_features) ||
+        length(max_features) != 1 ||
+        max_features <= 0 ||
+        max_features %% 1 != 0)
+    {
+      log_stop(
+        "'max_features' must be a single positive integer or NULL"
+      )
+    }
+  }
+
+  # Validates outprefix
+  if (!is.null(outprefix))
+  {
+    if (!is.character(outprefix) || length(outprefix) != 1)
+    {
+      log_stop(
+        "'outprefix' must be NULL or a single character string"
+      )
+    }
+  }
+
+  # Cross-validation: paired only makes sense with a real test
+  if (paired && test == "none")
+  {
+    log_warning(
+      "'paired = TRUE' has no effect when 'test = \"none\"'. ",
+      "Ignoring 'paired'."
+    )
+    paired <- FALSE
+  }
+
+  # Cross-validation: individual only makes sense with outprefix
+  if (individual && is.null(outprefix))
+  {
+    log_warning(
+      "'individual = TRUE' requires 'outprefix' to be provided. ",
+      "Ignoring 'individual'."
+    )
+    individual <- FALSE
+  }
+
+  # Identifies gene columns (all columns except the excluded ones)
+  gene_cols <- setdiff(colnames(data), exclude_cols)
+
+  if (length(gene_cols) == 0) {
+    log_stop(
+      "No gene columns found after removing 'exclude_cols'. ",
+      "Please check your data."
+    )
+  }
+
+  # Handles max_features filtering and warnings
+  if (!is.null(max_features))
+  {
+    if (length(gene_cols) > max_features)
+    {
+      if (!is.null(signature))
+      {
+        # Selects top max features based on absolute coefficient values
+        log_message(
+          paste0(
+            "Selecting ",
+            max_features,
+            " features based on signature coefficients."
+          )
+        )
+
+        gene_cols <- signature %>%
+          dplyr::slice_max(
+            order_by = abs(.data$coefficient),
+            n = max_features,
+            with_ties = FALSE
+          ) %>%
+          dplyr::pull(.data$feature)
+      } else {
+        # Selects first max features
+        log_message(
+          paste0(
+            "Selecting first ",
+            max_features,
+            " features."
+          )
+        )
+
+        gene_cols <- utils::head(gene_cols, max_features)
+      }
+    } else {
+      log_message(
+        paste0(
+          "Data does not contain more than ",
+          max_features,
+          " features (",
+          length(gene_cols),
+          "). Plotting all features."
+        )
+      )
+    }
+  } else {
+    if (length(gene_cols) > 16)
+    {
+      log_warning(
+        paste0(
+          "Data contains ",
+          length(gene_cols),
+          " features. Plotting 16 features to avoid cluttered layouts."
+        )
+      )
+
+      if (!is.null(signature))
+      {
+        # Selects top 16 based on absolute coefficient values
+        log_message(
+          "Selecting 16 features based on signature coefficients."
+        )
+
+        gene_cols <- signature %>%
+          dplyr::slice_max(
+            order_by = abs(.data$coefficient),
+            n = 16,
+            with_ties = FALSE
+          ) %>%
+          dplyr::pull(.data$feature)
+      } else {
+        # Selects first 16 max features
+        log_message("Selecting first 16 features.")
+        gene_cols <- utils::head(gene_cols, 16)
+      }
+    }
+  }
+
+  # Validates if selected gene columns are numeric
+  non_numeric_genes <- gene_cols[
+    !vapply(data[gene_cols], is.numeric, logical(1))
+  ]
+
+  if (length(non_numeric_genes) > 0)
+  {
+    log_warning(
+      paste(
+        "The following gene columns are not numeric and will be skipped:",
+        paste(non_numeric_genes, collapse = ", ")
+      )
+    )
+
+    gene_cols <- setdiff(gene_cols, non_numeric_genes)
+  }
+
+  if (length(gene_cols) == 0) {
+    log_stop("No valid numeric gene columns remaining to plot.")
+  }
+
+  # Ensures grouping column is a factor for proper categorical plotting
+  data[[group_col]] <- as.factor(data[[group_col]])
+  group_levels <- levels(data[[group_col]])
+  n_groups <- length(group_levels)
+
+  # Checks color length if provided
+  if (!is.null(palette) &&
+      is.null(names(palette)) &&
+      length(palette) < n_groups)
+  {
+    log_stop(
+      paste0(
+        "'palette' must contain at least ",
+        n_groups,
+        " colors for the groups in '",
+        group_col,
+        "'"
+      )
+    )
+  }
+
+  # Defines Y-axis label if NULL
+  if (is.null(ylab)) {
+    ylab <- if (norm_exp) "log2(Expression + 1)" else "Expression"
+  }
+
+  # Facet variable levels and friendly labels
+  facet_levels <- NULL
+  facet_labels <- NULL
+
+  if (!is.null(facet_by))
+  {
+    raw_facet_vals <- stats::na.omit(as.character(data[[facet_by]]))
+
+    if (length(raw_facet_vals) < 1)
+    {
+      log_stop(
+        paste0(
+          "'facet_by' column '",
+          facet_by,
+          "' has no valid values."
+        )
+      )
+    }
+
+    facet_levels <- unique(raw_facet_vals)
+
+    # Friendly labels for OS status (0 = Alive, 1 = Dead)
+    if (identical(facet_by, "OS"))
+    {
+      numeric_vals <- suppressWarnings(
+        as.numeric(raw_facet_vals)
+      )
+
+      if (!anyNA(numeric_vals) &&
+          all(numeric_vals %in% c(0, 1)))
+      {
+        facet_levels <- c("0", "1")
+        facet_labels <- c(
+          "0" = "Alive",
+          "1" = "Dead"
+        )
+      }
+    }
+  }
+
+  # Final facet labels (used for diagnostics)
+  facet_final_levels <- if (!is.null(facet_labels)) {
+    unname(facet_labels[facet_levels])
+  } else {
+    facet_levels
+  }
+
+  # List to store the generated plots
+  plot_list <- list()
+
+  # Makes plot for each feature
+  for (gene in gene_cols)
+  {
+    # Creates a temporary data.frame for ggplot2 to avoid CRAN notes
+    # on tidy evaluation
+    if (norm_exp)
+    {
+      # Applies log2 normalization on expression data if requested
+      temp_df <- data.frame(
+        Group = data[[group_col]],
+        Expression = log2(data[[gene]] + 1),
+        stringsAsFactors = FALSE
+      )
+    } else {
+      # No log2 normalization on expression data
+      temp_df <- data.frame(
+        Group = data[[group_col]],
+        Expression = data[[gene]],
+        stringsAsFactors = FALSE
+      )
+    }
+
+    if (!is.null(facet_by)) {
+      temp_df$Facet <- as.character(data[[facet_by]])
+    }
+
+    # Removes missing values
+    keep <- !is.na(temp_df$Expression) &
+      !is.na(temp_df$Group)
+
+    if (!is.null(facet_by)) {
+      keep <- keep & !is.na(temp_df$Facet)
+    }
+
+    temp_df <- temp_df[keep, , drop = FALSE]
+
+    if (nrow(temp_df) == 0)
+    {
+      log_warning(
+        paste0(
+          "Skipping '",
+          gene,
+          "': no complete observations."
+        )
+      )
+      next
+    }
+
+    # Restores Group as factor with original level order
+    temp_df$Group <- factor(
+      temp_df$Group,
+      levels = group_levels
+    )
+
+    # Ensures at least 2 groups exist after NA removal
+    if (nlevels(droplevels(temp_df$Group)) < 2)
+    {
+      log_warning(
+        paste0(
+          "Skipping '",
+          gene,
+          "': less than 2 groups after removing NAs."
+        )
+      )
+      next
+    }
+
+    # Optional faceting
+    if (!is.null(facet_by))
+    {
+      temp_df$Facet <- factor(
+        temp_df$Facet,
+        levels = facet_levels,
+        labels = facet_labels
+      )
+
+      # Compare against the FINAL labels (post-rename)
+      missing_facets <- setdiff(
+        facet_final_levels,
+        unique(as.character(temp_df$Facet))
+      )
+
+      if (length(missing_facets) > 0)
+      {
+        log_warning(
+          paste0(
+            "Feature '",
+            gene,
+            "' has no observations for facet level(s): ",
+            paste(missing_facets, collapse = ", ")
+          )
+        )
+      }
+    }
+
+    # Statistical tests between the two group_col levels
+    subtitle_text <- NULL
+    inside_annot <- NULL
+
+    if (add_pvalue && test != "none")
+    {
+      # Helper that runs the test on a subset and returns label + p-value
+      run_test <- function(sub_df, label)
+      {
+        groups <- split(
+          sub_df$Expression,
+          sub_df$Group
+        )
+
+        if (length(groups) != 2 ||
+            any(lengths(groups) < 2))
+        {
+          return(NULL)
+        }
+
+        use_paired <- paired
+
+        if (use_paired &&
+            length(groups[[1]]) != length(groups[[2]]))
+        {
+          log_warning(
+            paste0(
+              "'",
+              label,
+              "': 'paired = TRUE' but group sizes differ (",
+              length(groups[[1]]),
+              " vs ",
+              length(groups[[2]]),
+              "). Falling back to 'paired = FALSE'."
+            )
+          )
+
+          use_paired <- FALSE
+        }
+
+        res <- tryCatch({
+          if (test == "wilcox") {
+            stats::wilcox.test(
+              groups[[1]],
+              groups[[2]],
+              paired = use_paired
+            )
+          } else {
+            stats::t.test(
+              groups[[1]],
+              groups[[2]],
+              paired = use_paired
+            )
+          }
+        }, error = function(e) NULL)
+
+        if (is.null(res)) {
+          return(NULL)
+        }
+
+        p_val <- res$p.value
+        test_label <- if (test == "wilcox") {
+          "MW"
+        } else {
+          "t-test"
+        }
+
+        if (use_paired) {
+          test_label <- paste0(
+            test_label,
+            " (paired)"
+          )
+        }
+
+        p_str <- if (is.na(p_val)) {
+          "NA"
+        } else if (p_val < 0.001) {
+          "p < 0.001"
+        } else {
+          sprintf("p = %.3f", p_val)
+        }
+
+        list(
+          label = test_label,
+          p_str = p_str,
+          full = paste0(
+            test_label,
+            " ",
+            p_str
+          )
+        )
+      }
+
+      if (is.null(facet_by))
+      {
+        # Single test per feature
+        test_res <- run_test(
+          temp_df,
+          gene
+        )
+
+        if (!is.null(test_res))
+        {
+          subtitle_text <- test_res$full
+
+          if (pvalue_position == "inside")
+          {
+            inside_annot <- data.frame(
+              x = 1.5,
+              y = Inf,
+              label = test_res$full,
+              stringsAsFactors = FALSE
+            )
+          }
+        } else {
+          log_warning(
+            paste0(
+              "Skipping test for '",
+              gene,
+              "': at least one group has < 2 observations."
+            )
+          )
+        }
+      } else {
+        # One test per facet level
+        stat_texts <- character(0)
+        annot_rows <- list()
+
+        for (flev in facet_final_levels)
+        {
+          sub_df <- temp_df[
+            as.character(temp_df$Facet) == flev,
+            ,
+            drop = FALSE
+          ]
+
+          if (nrow(sub_df) == 0) {
+            next
+          }
+
+          test_res <- run_test(
+            sub_df,
+            paste0(gene, " | ", flev)
+          )
+
+          if (!is.null(test_res))
+          {
+            stat_texts <- c(
+              stat_texts,
+              test_res$full
+            )
+
+            annot_rows[[length(annot_rows) + 1]] <- data.frame(
+              Facet = flev,
+              x = 1.5,
+              y = Inf,
+              label = test_res$full,
+              stringsAsFactors = FALSE
+            )
+          } else {
+            log_warning(
+              paste0(
+                "Skipping test for '",
+                gene,
+                "' in facet '",
+                flev,
+                "': at least one group has < 2 observations."
+              )
+            )
+          }
+        }
+
+        if (length(stat_texts) > 0) {
+          subtitle_text <- paste(
+            stat_texts,
+            collapse = " | "
+          )
+        }
+
+        if (length(annot_rows) > 0)
+        {
+          inside_annot <- do.call(
+            rbind,
+            annot_rows
+          )
+
+          inside_annot$Facet <- factor(
+            inside_annot$Facet,
+            levels = facet_final_levels
+          )
+        }
+      }
+    }
+
+    # The X axis is ALWAYS the group itself
+    temp_df$X_lab <- factor(
+      temp_df$Group,
+      levels = group_levels
+    )
+
+    # Prepares the annotation data.frame for sample sizes
+    n_annot <- NULL
+
+    if (show_n)
+    {
+      # 5% of the data range as offset below the minimum
+      y_min_data <- min(
+        temp_df$Expression,
+        na.rm = TRUE
+      )
+
+      y_max_data <- max(
+        temp_df$Expression,
+        na.rm = TRUE
+      )
+
+      y_offset <- (
+        y_max_data - y_min_data
+      ) * 0.05
+
+      y_n_pos <- y_min_data - y_offset
+
+      if (is.null(facet_by))
+      {
+        n_per_group <- table(
+          temp_df$Group
+        )
+
+        n_annot <- data.frame(
+          X_lab = factor(
+            names(n_per_group),
+            levels = group_levels
+          ),
+          y = y_n_pos,
+          label = paste0(
+            "(n = ",
+            as.integer(n_per_group),
+            ")"
+          ),
+          stringsAsFactors = FALSE
+        )
+      } else {
+        n_per_combo <- as.data.frame(
+          table(
+            Group = temp_df$Group,
+            Facet = temp_df$Facet
+          ),
+          stringsAsFactors = FALSE
+        )
+
+        n_per_combo <- n_per_combo[
+          n_per_combo$Freq > 0,
+          ,
+          drop = FALSE
+        ]
+
+        n_annot <- data.frame(
+          X_lab = factor(
+            n_per_combo$Group,
+            levels = group_levels
+          ),
+          Facet = factor(
+            n_per_combo$Facet,
+            levels = facet_final_levels
+          ),
+          y = y_n_pos,
+          label = paste0(
+            "(n = ",
+            as.integer(n_per_combo$Freq),
+            ")"
+          ),
+          stringsAsFactors = FALSE
+        )
+      }
+    }
+
+    # Base plot
+    if (!is.null(facet_by))
+    {
+      p <- ggplot2::ggplot(
+        temp_df,
+        ggplot2::aes(
+          x = .data$X_lab,
+          y = .data$Expression,
+          fill = .data$Group
+        )
+      ) +
+        ggplot2::geom_boxplot(
+          outlier.shape = NA,
+          linewidth = 0.5,
+          alpha = 0.7,
+          color = "black"
+        ) +
+        ggplot2::facet_wrap(
+          ~ .data$Facet,
+          scales = "free_x",
+          drop = TRUE
+        )
+    } else {
+      p <- ggplot2::ggplot(
+        temp_df,
+        ggplot2::aes(
+          x = .data$X_lab,
+          y = .data$Expression,
+          fill = .data$Group
+        )
+      ) +
+        ggplot2::geom_boxplot(
+          outlier.shape = NA,
+          linewidth = 0.5,
+          alpha = 0.7,
+          color = "black"
+        )
+    }
+
+    # Applies custom colors if specified
+    if (!is.null(palette)) {
+      p <- p +
+        ggplot2::scale_fill_manual(
+          values = palette,
+          guide = "none"
+        )
+    }
+
+    # Adds jitter points to boxplots
+    if (show_points)
+    {
+      p <- p +
+        ggplot2::geom_jitter(
+          width = 0.2,
+          size = 1.2,
+          alpha = 0.5,
+          color = "black"
+        )
+    }
+
+    # Adds N annotations inside the panel
+    if (!is.null(n_annot))
+    {
+      p <- p +
+        ggplot2::geom_text(
+          data = n_annot,
+          ggplot2::aes(
+            x = .data$X_lab,
+            y = .data$y,
+            label = .data$label
+          ),
+          inherit.aes = FALSE,
+          vjust = 1,
+          size = 3
+        )
+    }
+
+    # p-value inside panel
+    if (add_pvalue &&
+        test != "none" &&
+        pvalue_position == "inside" &&
+        !is.null(inside_annot))
+    {
+      p <- p +
+        ggplot2::geom_text(
+          data = inside_annot,
+          ggplot2::aes(
+            x = .data$x,
+            y = .data$y,
+            label = .data$label
+          ),
+          inherit.aes = FALSE,
+          hjust = 0.5,
+          vjust = 1.2,
+          fontface = "italic",
+          size = 3.5
+        )
+    }
+
+    # Adds labs to plots
+    p <- p +
+      ggplot2::labs(
+        x = xlab,
+        y = ylab,
+        title = gene,
+        subtitle = if (
+          !is.null(subtitle_text) &&
+          pvalue_position == "subtitle"
+        ) {
+          subtitle_text
+        } else {
+          NULL
+        }
+      ) +
+      theme +
+      ggplot2::theme(
+        legend.position = "none",
+        axis.title = ggplot2::element_text(
+          face = "plain",
+          colour = "black",
+          size = 12
+        ),
+        axis.text = ggplot2::element_text(
+          face = "plain",
+          colour = "black",
+          size = 12
+        ),
+        plot.title = ggplot2::element_text(
+          hjust = 0.5,
+          face = "plain",
+          size = 14
+        ),
+        plot.subtitle = ggplot2::element_text(
+          hjust = 0.5,
+          face = "italic",
+          size = 10
+        ),
+        strip.background = ggplot2::element_rect(
+          fill = "gray90",
+          color = NA
+        ),
+        strip.text = ggplot2::element_text(
+          face = "plain",
+          size = 11
+        ),
+        panel.grid.major.x = ggplot2::element_blank(),
+        panel.grid.minor.x = ggplot2::element_blank(),
+        panel.grid.minor.y = ggplot2::element_blank(),
+        panel.border = ggplot2::element_blank()
+      )
+
+    # Adds new plot to list of feature plots
+    plot_list[[gene]] <- p
+  }
+
+  if (length(plot_list) == 0) {
+    log_stop("No valid feature plots could be generated.")
+  }
+
+  # Extracts number of plots
+  n_plots <- length(plot_list)
+
+  # Dynamically defines number of columns
+  if (n_plots <= 2) {
+    ncol_plot <- n_plots
+  } else if (n_plots <= 4) {
+    ncol_plot <- 2
+  } else if (n_plots <= 9) {
+    ncol_plot <- 3
+  } else {
+    ncol_plot <- 4
+  }
+
+  # Dynamically defines number of rows
+  nrow_plot <- ceiling(
+    n_plots / ncol_plot
+  )
+
+  # Automatically defines figure dimensions
+  if (is.null(width)) {
+    width <- 4 * ncol_plot
+  }
+
+  if (is.null(height)) {
+    height <- 4 * nrow_plot
+  }
+
+  # Combines plots into a single patchwork object
+  combined_plot <- patchwork::wrap_plots(
+    plot_list,
+    ncol = ncol_plot
+  )
+
+  # Saves the single-page grid PDF if an outprefix is provided
+  if (!is.null(outprefix))
+  {
+    grDevices::pdf(
+      file = paste0(
+        outprefix,
+        "_feature_expression.pdf"
+      ),
+      width = width,
+      height = height
+    )
+
+    on.exit(
+      grDevices::dev.off(),
+      add = TRUE
+    )
+
+    print(combined_plot)
+
+    # Saves each feature individually (optional)
+    if (individual)
+    {
+      # Sanitizes feature names for safe file names
+      safe_names <- gsub(
+        "[^A-Za-z0-9_\\-]",
+        "_",
+        names(plot_list)
+      )
+
+      # Uses single-plot dimensions for individual PDFs
+      ind_width <- if (!is.null(width)) {
+        min(width, 6)
+      } else {
+        6
+      }
+
+      ind_height <- if (!is.null(height)) {
+        min(height, 5)
+      } else {
+        5
+      }
+
+      for (i in seq_along(plot_list))
+      {
+        fname_i <- paste0(
+          outprefix,
+          "_feature_",
+          safe_names[i],
+          ".pdf"
+        )
+
+        ggplot2::ggsave(
+          filename = fname_i,
+          plot = plot_list[[i]],
+          device = "pdf",
+          width = ind_width,
+          height = ind_height
+        )
+      }
+    }
+  }
+
+  # Returns the combined plot object
+  return(combined_plot)
+}
