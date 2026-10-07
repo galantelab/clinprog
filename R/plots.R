@@ -800,6 +800,7 @@ plot_barplot <- function(plot_df, outprefix = NULL, frequency.threshold = 25, th
 #' \code{TRUE}).
 #'
 #' @return A \code{ggplot} object.
+#' @importFrom rlang .data
 #' @export
 plot_swimmer <- function(
     data,
