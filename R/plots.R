@@ -3759,3 +3759,322 @@ plot_clinics <- function(
 
   return(combined_plot)
 }
+
+#' Generate signature wordcloud weighted by expression and coefficient
+#'
+#' @description Creates a wordcloud of features present in a signature. The
+#'   size of each name is proportional to the absolute product of its mean
+#'   expression and coefficient. Colors indicate directionality (positive vs
+#'   negative coefficients).
+#'
+#' @param data Data.frame containing sample expression data and metadata
+#'   columns.
+#' @param signature Data.frame containing columns \code{feature} and
+#'   \code{coefficient}.
+#' @param feature_col Character. Column name in \code{signature} for feature
+#'   names (default: \code{"feature"}).
+#' @param coef_col Character. Column name in \code{signature} for model
+#'   coefficients (default: \code{"coefficient"}).
+#' @param pos_color Character. Color for positive coefficients (default:
+#'   \code{"#D73027"}).
+#' @param neg_color Character. Color for negative coefficients (default:
+#'   \code{"#1A9850"}).
+#' @param outprefix Character. Output prefix for saving the plot (optional).
+#' @param theme A ggplot2 theme object. Defaults to \code{theme_clinprog()}.
+#' @param width Numeric. Plot width in inches (default: \code{NULL}).
+#' @param height Numeric. Plot height in inches (default: \code{NULL}).
+#' @param min_alpha Numeric. Minimum alpha transparency value between 0 and 1
+#'   (default: \code{0.5}).
+#' @param max_alpha Numeric. Maximum alpha transparency value between 0 and 1
+#'   (default: \code{1.0}).
+#' @param max_size Numeric. Maximum size parameter for wordcloud text size
+#'   scaling (default: \code{NULL}).
+#'
+#' @return A \code{ggplot} object.
+#' @importFrom rlang .data
+#' @export
+plot_wordcloud <- function(
+    data,
+    signature,
+    feature_col = "feature",
+    coef_col = "coefficient",
+    pos_color = "#D73027",
+    neg_color = "#1A9850",
+    outprefix = NULL,
+    theme = theme_clinprog(),
+    width = NULL,
+    height = NULL,
+    max_size = NULL,
+    min_alpha = 0.5,
+    max_alpha = 1.0
+) {
+  log_message("Building signature wordcloud...")
+
+  # Validate input data.frames
+  if (!is.data.frame(data)) {
+    log_stop("'data' must be a data.frame")
+  }
+
+  if (!is.data.frame(signature)) {
+    log_stop("'signature' must be a data.frame")
+  }
+
+  # Validate signature column names
+  if (!feature_col %in% colnames(signature)) {
+    log_stop(
+      paste0(
+        "'signature' must contain column: '",
+        feature_col,
+        "'"
+      )
+    )
+  }
+
+  if (!coef_col %in% colnames(signature)) {
+    log_stop(
+      paste0(
+        "'signature' must contain column: '",
+        coef_col,
+        "'"
+      )
+    )
+  }
+
+  # Validate theme
+  if (!inherits(theme, "theme")) {
+    log_stop("'theme' must be a valid ggplot2 theme object")
+  }
+
+  # Validate colors
+  if (!is.character(pos_color) || length(pos_color) != 1) {
+    log_stop("'pos_color' must be a single color string")
+  }
+
+  if (!is.character(neg_color) || length(neg_color) != 1) {
+    log_stop("'neg_color' must be a single color string")
+  }
+
+  # Validate plot dimensions and sizes
+  if (!is.null(width) &&
+      (!is.numeric(width) || length(width) != 1 || width <= 0)) {
+    log_stop(
+      "'width' must be a single positive numeric value or NULL"
+    )
+  }
+
+  if (!is.null(height) &&
+      (!is.numeric(height) || length(height) != 1 || height <= 0)) {
+    log_stop(
+      "'height' must be a single positive numeric value or NULL"
+    )
+  }
+
+  if (!is.null(max_size) &&
+      (!is.numeric(max_size) || length(max_size) != 1 || max_size <= 0)) {
+    log_stop(
+      "'max_size' must be a single positive numeric value or NULL"
+    )
+  }
+
+  # Validate alpha limits
+  if (!is.numeric(min_alpha) ||
+      length(min_alpha) != 1 ||
+      min_alpha < 0 ||
+      min_alpha > 1) {
+    log_stop(
+      "'min_alpha' must be a single numeric value between 0 and 1"
+    )
+  }
+
+  if (!is.numeric(max_alpha) ||
+      length(max_alpha) != 1 ||
+      max_alpha < 0 ||
+      max_alpha > 1) {
+    log_stop(
+      "'max_alpha' must be a single numeric value between 0 and 1"
+    )
+  }
+
+  if (min_alpha > max_alpha) {
+    log_stop("'min_alpha' cannot be greater than 'max_alpha'")
+  }
+
+  # Extract feature names and coefficients
+  features <- as.character(signature[[feature_col]])
+  coefs <- as.numeric(signature[[coef_col]])
+
+  # Check matching features in data
+  common_features <- intersect(features, colnames(data))
+
+  if (length(common_features) == 0) {
+    log_stop(
+      "None of the signature features were found in 'data' column names."
+    )
+  }
+
+  if (length(common_features) < length(features)) {
+    missing <- setdiff(features, common_features)
+
+    log_warning(
+      paste0(
+        length(missing),
+        " signature feature(s) missing from data and skipped: ",
+        paste(missing, collapse = ", ")
+      )
+    )
+  }
+
+  # Filter signature data to present features
+  signature_subset <- signature[
+    signature[[feature_col]] %in% common_features,
+    ,
+    drop = FALSE
+  ]
+
+  # Calculate mean expression per feature across samples
+  mean_expr <- colMeans(
+    data[, signature_subset[[feature_col]], drop = FALSE],
+    na.rm = TRUE
+  )
+
+  # Build summary data.frame for plotting
+  df_cloud <- data.frame(
+    Gene = signature_subset[[feature_col]],
+    Coef = signature_subset[[coef_col]],
+    MeanExpr = mean_expr[signature_subset[[feature_col]]],
+    stringsAsFactors = FALSE
+  )
+
+  # Calculate metric product and absolute weight for size
+  df_cloud$WeightProduct <- df_cloud$MeanExpr * df_cloud$Coef
+  df_cloud$AbsWeight <- abs(df_cloud$WeightProduct)
+  df_cloud$Direction <- ifelse(
+    df_cloud$Coef >= 0,
+    "Positive",
+    "Negative"
+  )
+
+  # Handle edge-case where all weights are 0 or NA
+  if (all(is.na(df_cloud$AbsWeight)) ||
+      all(df_cloud$AbsWeight == 0)) {
+    log_stop(
+      "All calculated feature weights are zero or NA. Cannot build wordcloud."
+    )
+  }
+
+  # Dynamically define max_size and min_size based on feature count
+  if (is.null(max_size)) {
+    n_genes <- nrow(df_cloud)
+
+    if (n_genes == 1) {
+      max_size <- 16
+      min_size <- 16
+    } else if (n_genes <= 3) {
+      max_size <- 22
+      min_size <- 12
+    } else if (n_genes <= 15) {
+      max_size <- 24
+      min_size <- 8
+    } else {
+      max_size <- pmin(
+        pmax(48 / (n_genes^0.35), 6),
+        20
+      )
+      min_size <- pmin(
+        pmax(max_size * 0.25, 2),
+        4
+      )
+    }
+  } else {
+    min_size <- pmax(max_size * 0.25, 2)
+  }
+
+  # Define default figure dimensions
+  if (is.null(width)) {
+    width <- 6
+  }
+
+  if (is.null(height)) {
+    height <- 4
+  }
+
+  # Generate wordcloud
+  final_plot <- ggplot2::ggplot(
+    df_cloud,
+    ggplot2::aes(
+      label = .data$Gene,
+      size = .data$AbsWeight,
+      color = .data$Direction,
+      alpha = .data$AbsWeight
+    )
+  ) +
+    ggwordcloud::geom_text_wordcloud_area(
+      rm_outside = FALSE,
+      show.legend = TRUE,
+      eccentricity = 0.95,
+      grid_margin = 1,
+      shape = "circle",
+      grid_size = 4,
+      key_glyph = ggplot2::draw_key_point
+    ) +
+    ggplot2::scale_size_continuous(
+      range = c(min_size, max_size),
+      guide = "none"
+    ) +
+    ggplot2::scale_color_manual(
+      values = c(
+        "Positive" = pos_color,
+        "Negative" = neg_color
+      ),
+      name = "Feature direction"
+    ) +
+    ggplot2::scale_alpha_continuous(
+      range = c(min_alpha, max_alpha),
+      guide = "none"
+    ) +
+    theme +
+    ggplot2::theme(
+      panel.background = ggplot2::element_blank(),
+      panel.border = ggplot2::element_rect(
+        color = "black",
+        fill = NA,
+        linewidth = 0.5
+      ),
+      panel.grid = ggplot2::element_blank(),
+      axis.text = ggplot2::element_blank(),
+      axis.ticks = ggplot2::element_blank(),
+      axis.title = ggplot2::element_blank(),
+      plot.background = ggplot2::element_blank(),
+      legend.background = ggplot2::element_blank(),
+      legend.box.background = ggplot2::element_blank(),
+      legend.key = ggplot2::element_blank(),
+      legend.position = "right"
+    ) +
+    ggplot2::guides(
+      color = ggplot2::guide_legend(
+        override.aes = list(
+          shape = 16,
+          size = 4,
+          alpha = 1
+        )
+      )
+    )
+
+  # Save plot to PDF if outprefix is provided
+  if (!is.null(outprefix)) {
+    if (!is.character(outprefix) || length(outprefix) != 1) {
+      log_stop("'outprefix' must be a single character string")
+    }
+
+    grDevices::pdf(
+      file = paste0(outprefix, "_signature_wordcloud.pdf"),
+      width = width,
+      height = height
+    )
+
+    on.exit(grDevices::dev.off(), add = TRUE)
+    print(final_plot)
+  }
+
+  return(final_plot)
+}

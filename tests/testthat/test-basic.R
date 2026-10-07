@@ -841,3 +841,250 @@ test_that("plot_clinics errors when no valid covariates remain", {
     "not categorical"
   )
 })
+
+test_that("plot_wordcloud returns a ggplot object", {
+  data <- data.frame(
+    OS = c(1, 0, 1, 0),
+    OS.time = c(10, 20, 30, 40),
+    TP53 = c(1, 2, 3, 4),
+    EGFR = c(4, 3, 2, 1),
+    BRCA1 = c(2, 2, 2, 2)
+  )
+
+  signature <- data.frame(
+    feature = c("TP53", "EGFR", "BRCA1"),
+    coefficient = c(1, -0.5, 0.25)
+  )
+
+  result <- plot_wordcloud(
+    data = data,
+    signature = signature
+  )
+
+  expect_s3_class(result, "ggplot")
+})
+
+test_that("plot_wordcloud skips missing signature features", {
+  data <- data.frame(
+    TP53 = c(1, 2, 3, 4),
+    EGFR = c(4, 3, 2, 1)
+  )
+
+  signature <- data.frame(
+    feature = c("TP53", "EGFR", "MISSING"),
+    coefficient = c(1, -0.5, 0.25)
+  )
+
+  expect_warning(
+    result <- plot_wordcloud(
+      data = data,
+      signature = signature
+    ),
+    "missing from data"
+  )
+
+  expect_s3_class(result, "ggplot")
+})
+
+test_that("plot_wordcloud errors when no signature features are present", {
+  data <- data.frame(
+    TP53 = c(1, 2, 3, 4),
+    EGFR = c(4, 3, 2, 1)
+  )
+
+  signature <- data.frame(
+    feature = c("BRCA1", "MYC"),
+    coefficient = c(1, -0.5)
+  )
+
+  expect_error(
+    plot_wordcloud(
+      data = data,
+      signature = signature
+    ),
+    "None of the signature features"
+  )
+})
+
+test_that("plot_wordcloud errors when all weights are zero", {
+  data <- data.frame(
+    TP53 = c(0, 0, 0, 0),
+    EGFR = c(0, 0, 0, 0)
+  )
+
+  signature <- data.frame(
+    feature = c("TP53", "EGFR"),
+    coefficient = c(1, -1)
+  )
+
+  expect_error(
+    plot_wordcloud(
+      data = data,
+      signature = signature
+    ),
+    "zero or NA"
+  )
+})
+
+test_that("plot_wordcloud handles missing expression values", {
+  data <- data.frame(
+    TP53 = c(1, 2, NA, 4),
+    EGFR = c(4, NA, 2, 1)
+  )
+
+  signature <- data.frame(
+    feature = c("TP53", "EGFR"),
+    coefficient = c(1, -0.5)
+  )
+
+  result <- plot_wordcloud(
+    data = data,
+    signature = signature
+  )
+
+  expect_s3_class(result, "ggplot")
+})
+
+test_that("plot_wordcloud validates its arguments", {
+  data <- data.frame(
+    TP53 = c(1, 2, 3, 4),
+    EGFR = c(4, 3, 2, 1)
+  )
+
+  signature <- data.frame(
+    feature = c("TP53", "EGFR"),
+    coefficient = c(1, -0.5)
+  )
+
+  expect_error(
+    plot_wordcloud(
+      data = "not a data.frame",
+      signature = signature
+    )
+  )
+
+  expect_error(
+    plot_wordcloud(
+      data = data,
+      signature = "not a data.frame"
+    )
+  )
+
+  expect_error(
+    plot_wordcloud(
+      data = data,
+      signature = data.frame(coefficient = c(1, -0.5))
+    )
+  )
+
+  expect_error(
+    plot_wordcloud(
+      data = data,
+      signature = data.frame(feature = c("TP53", "EGFR"))
+    )
+  )
+
+  expect_error(
+    plot_wordcloud(
+      data = data,
+      signature = signature,
+      min_alpha = -0.1
+    )
+  )
+
+  expect_error(
+    plot_wordcloud(
+      data = data,
+      signature = signature,
+      max_alpha = 1.1
+    )
+  )
+
+  expect_error(
+    plot_wordcloud(
+      data = data,
+      signature = signature,
+      min_alpha = 0.8,
+      max_alpha = 0.2
+    )
+  )
+
+  expect_error(
+    plot_wordcloud(
+      data = data,
+      signature = signature,
+      max_size = 0
+    )
+  )
+})
+
+test_that("plot_wordcloud accepts custom size and dimensions", {
+  data <- data.frame(
+    TP53 = c(1, 2, 3, 4),
+    EGFR = c(4, 3, 2, 1),
+    BRCA1 = c(2, 3, 2, 3)
+  )
+
+  signature <- data.frame(
+    feature = c("TP53", "EGFR", "BRCA1"),
+    coefficient = c(1, -0.5, 0.25)
+  )
+
+  result <- plot_wordcloud(
+    data = data,
+    signature = signature,
+    max_size = 20,
+    min_alpha = 0.3,
+    max_alpha = 0.9,
+    width = 7,
+    height = 5
+  )
+
+  expect_s3_class(result, "ggplot")
+})
+
+test_that("plot_wordcloud handles different signature sizes", {
+  data <- data.frame(
+    TP53 = 1:4,
+    EGFR = 2:5,
+    BRCA1 = 3:6,
+    MYC = 4:7,
+    KRAS = 5:8
+  )
+
+  for (n in c(1, 2, 4)) {
+    signature <- data.frame(
+      feature = colnames(data)[seq_len(n)],
+      coefficient = seq_len(n)
+    )
+
+    result <- plot_wordcloud(
+      data = data,
+      signature = signature
+    )
+
+    expect_s3_class(result, "ggplot")
+  }
+})
+
+test_that("plot_wordcloud maps word size to absolute expression-coefficient weight", {
+  data <- data.frame(
+    TP53 = c(1, 1, 1, 1),
+    EGFR = c(2, 2, 2, 2)
+  )
+
+  signature <- data.frame(
+    feature = c("TP53", "EGFR"),
+    coefficient = c(2, -3)
+  )
+
+  result <- plot_wordcloud(
+    data = data,
+    signature = signature
+  )
+
+  expect_equal(
+    rlang::as_label(result$mapping$size),
+    "AbsWeight"
+  )
+})
