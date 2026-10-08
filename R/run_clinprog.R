@@ -689,7 +689,7 @@ run_regression <- function(data,
 #'   outprefix = "my_analysis",
 #'   multivariate = TRUE,
 #'   clindata = clinical_data,
-#'   roc = TRUE,
+#'   score_cutoff = "roc",
 #'   variancefilter = 0.01,
 #'   followup = NULL,
 #'   p.cutoff = 0.2,
@@ -885,7 +885,6 @@ run_survival <- function(data,
   {
     log_stop("Argument 'bootstrap' must be an integer")
   }
-  if (!is.logical(roc) || length(roc) != 1) {log_stop("Argument 'roc' must be a boolean [TRUE or FALSE]")}
   if (!is.logical(force) || length(force) != 1) {log_stop("Argument 'force' must be a boolean [TRUE or FALSE]")}
   if (!is.logical(table) || length(table) != 1) {log_stop("Argument 'table' must be a boolean [TRUE or FALSE]")}
   if (!is.logical(saveJSON) || length(saveJSON) != 1) {log_stop("Argument 'saveJSON' must be a boolean [TRUE or FALSE]")}
@@ -1200,18 +1199,72 @@ run_survival <- function(data,
   {
     log_message("Making plots from univariate and multivariate (if applicable) survival analyses...")
     plot_list <- list(
-      km_plot = plot_km(data = data, cutoff = score_cutoff_value, outprefix = outprefix,
-                          pval = res_logrank$table$log.rank.pvalue, palette = c("#D73027", "#1A9850")),
-      ph_plot = if (!is.null(multi_model)) plot_ph(x = ph_test, is_multi = TRUE,
-                                                         outprefix = outprefix) else plot_ph(x = res_logrank$ph,
-                                                                                                   outprefix = outprefix),
-      roc_plot = if (isTRUE(roc)) plot_roc(x = roc_cutoff, outprefix = outprefix) else NULL,
-      forest_plot = if (!is.null(multi_model)) plot_forest(model_object = multi_model,
-                                                             outprefix = outprefix) else NULL,
+      km_plot = plot_km(
+        data = data,
+        cutoff = score_cutoff_value,
+        outprefix = outprefix,
+        pval = paste0(
+          "p = ", res_logrank$table$log.rank.pvalue,
+          "\nHR: ", res_logrank$table$hazard.ratio
+        )
+      ),
+      swim_plot = plot_swimmer(
+        data = data,
+        cutoff = score_cutoff_value,
+        outprefix = outprefix,
+        facet_by = "score_group"
+      ),
+      ph_plot = if (!is.null(multi_model)) {
+        plot_ph(x = ph_test, is_multi = TRUE, outprefix = outprefix)
+      } else {
+        plot_ph(x = res_logrank$ph, outprefix = outprefix)
+      },
+      box_plot = plot_boxplot(
+        data = data,
+        signature = raw_sig_df,
+        outprefix = outprefix
+      ),
+      scatter_plot = plot_scatter(
+        data = data,
+        signature = raw_sig_df,
+        outprefix = outprefix
+      ),
+      wordcloud_plot = plot_wordcloud(
+        data = data,
+        signature = raw_sig_df,
+        outprefix = outprefix
+      ),
+      score_bar_plot = plot_barplot_score(
+        data = data,
+        score_cutoff = score_cutoff_value,
+        outprefix = outprefix
+      ),
+      line_plot = plot_lineplot_score(
+        data = data,
+        score_cutoff = score_cutoff_value,
+        outprefix = outprefix
+      ),
+      roc_plot = if (score_cutoff == "roc") {
+        plot_roc(x = roc_cutoff, outprefix = outprefix)
+      } else NULL,
+      forest_plot = if (!is.null(multi_model)) {
+        plot_forest(model_object = multi_model, outprefix = outprefix)
+      } else NULL,
+      clinics_box_plot = if (!is.null(multi_model)) {
+        plot_clinics(data = clin, outprefix = outprefix)
+      } else NULL,
       bar_plot = if (!is.null(multi_cox_initial$model) &&
-                     isTRUE(multi_cox_initial$bootstrap.used)) plot_barplot(plot_df = multi_cox$bootstrap.table,
-                                                                              outprefix = outprefix,
-                                                                              frequency.threshold = 25) else NULL)
+                     isTRUE(multi_cox_initial$bootstrap.used) &&
+                     !is.null(multi_cox_initial$bootstrap.table)) {
+        plot_barplot(
+          plot_df = multi_cox_initial$bootstrap.table,
+          outprefix = outprefix,
+          type = "absolute",
+          n_bootstraps = bootstrap,
+          frequency.threshold = 25
+        )
+      } else NULL
+    )
     log_message("Done.")
   }
 
@@ -1219,7 +1272,7 @@ run_survival <- function(data,
   # Listed parameters are only those directly affecting the scientific results/model
   result <- new_clinprog_survival(
     signature = raw_sig_df,
-    score_cutoff = score_cutoff,
+    score_cutoff = score_cutoff_value,
     expression_data = data,
     clinical_data = clin,
     survival = list(
@@ -1397,7 +1450,7 @@ run_survival <- function(data,
 #'   type = "gene",
 #'   multivariate = TRUE,
 #'   clindata = clinical_data,
-#'   roc = TRUE,
+#'   score_cutoff = "roc",
 #'   p.cutoff = 0.2,
 #'   force = TRUE,
 #'   plots = TRUE,
@@ -1516,7 +1569,7 @@ run_complete <- function(data,
       type = type,
       multivariate = multivariate,
       clindata = clindata,
-      roc = roc,
+      score_cutoff = score_cutoff,
       p.cutoff = p.cutoff,
       force = force,
       ncores = ncores,
@@ -1543,7 +1596,7 @@ run_complete <- function(data,
         signature = "data.frame",
         outprefix = outprefix,
         multivariate = multivariate,
-        roc = roc,
+        score_cutoff = score_cutoff,
         groupsize = groupsize,
         percentagefilter = percentagefilter,
         variancefilter = variancefilter,
