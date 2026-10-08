@@ -148,7 +148,7 @@ plot_histogram <- function(signature, outprefix = NULL, theme = theme_clinprog()
   if (is.null(binwidth))
   {
     coef_range <- max(tt$coefficient) - min(tt$coefficient)
-    TODO: is it necessary?
+    # TODO: is it necessary?
     n_obs <- nrow(tt)
 
     # Calculates optimal number of bins (Sturges' Rule)
