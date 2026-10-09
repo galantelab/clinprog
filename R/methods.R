@@ -15,7 +15,7 @@
 print.clinprog_signature <- function(x, ...) {
 
   # Checks if input object is of correct type
-  if (!inherits(x, "clinprog_signature")) {stop("Object must be of class 'clinprog_signature'")}
+  if (!inherits(x, "clinprog_signature")) {log_stop("Object must be of class 'clinprog_signature'")}
 
   cat("clinprog signature object\n")
   cat("Number of features:", nrow(x$signature), "\n\n")
@@ -56,7 +56,7 @@ print.clinprog_signature <- function(x, ...) {
 summary.clinprog_signature <- function(object, ...) {
 
   # Checks if input object is of correct type
-  if (!inherits(object, "clinprog_signature")) {stop("Object must be of class 'clinprog_signature'")}
+  if (!inherits(object, "clinprog_signature")) {log_stop("Object must be of class 'clinprog_signature'")}
 
   # Extracts only the coefficients
   coefs <- object$signature$coefficient
@@ -98,7 +98,7 @@ summary.clinprog_signature <- function(object, ...) {
 print.summary.clinprog_signature <- function(x, ...) {
 
   # Checks if input object is of correct type
-  if (!inherits(x, "summary.clinprog_signature")) {stop("Object must be of class 'summary.clinprog_signature'")}
+  if (!inherits(x, "summary.clinprog_signature")) {log_stop("Object must be of class 'summary.clinprog_signature'")}
 
   cat("clinprog signature summary\n")
   cat("Number of features:", x$n_features, "\n")
@@ -131,12 +131,12 @@ as.data.frame.clinprog_signature <- function(x, ...) {
   # Checks if input object is of correct type
   if (!inherits(x, c("clinprog_signature", "clinprog_survival")))
   {
-    stop("Object must be of class 'clinprog_signature' or 'clinprog_survival'")
+    log_stop("Object must be of class 'clinprog_signature' or 'clinprog_survival'")
   }
 
   # Checks if 'clinprog_signature' is valid
   if (is.null(x$signature) || !is.data.frame(x$signature)) {
-    stop("Invalid 'clinprog' class object: missing signature data")
+    log_stop("Invalid 'clinprog' class object: missing signature data")
   }
 
   # Converts signature to 'data.frame'
@@ -160,10 +160,10 @@ as.data.frame.clinprog_signature <- function(x, ...) {
 plot.clinprog_signature <- function(x, type = "all", ...)
 {
   # Checks if input object is of correct type
-  if (!inherits(x, "clinprog_signature")) {stop("Object must be of class 'clinprog_signature'")}
+  if (!inherits(x, "clinprog_signature")) {log_stop("Object must be of class 'clinprog_signature'")}
 
   # Validates type argument
-  if (!is.character(type) || length(type) != 1) {stop("'type' must be a single character string")}
+  if (!is.character(type) || length(type) != 1) {log_stop("'type' must be a single character string")}
 
   # Extracts signature
   sig <- x$signature
@@ -188,7 +188,7 @@ plot.clinprog_signature <- function(x, type = "all", ...)
     return(invisible(plot_list))
   }
 
-  stop("Invalid 'type'. Must be 'lolli', 'hist', or 'all' (default)")
+  log_stop("Invalid 'type'. Must be 'lolli', 'hist', or 'all' (default)")
 }
 
 #' Coefficients from clinprog signature
@@ -205,14 +205,14 @@ plot.clinprog_signature <- function(x, type = "all", ...)
 coef.clinprog_signature <- function(object, ...) {
 
   # Checks if input object is of correct type
-  if (!inherits(object, "clinprog_signature")) {stop("Object must be of class 'clinprog_signature'")}
+  if (!inherits(object, "clinprog_signature")) {log_stop("Object must be of class 'clinprog_signature'")}
 
   # Gets the signature
   sig <- object$signature
 
   # Checks if 'clinprog_signature' is valid
   if (is.null(sig) || !all(c("feature", "coefficient") %in% colnames(sig))) {
-    stop("Invalid 'clinprog_signature' object: missing signature data")
+    log_stop("Invalid 'clinprog_signature' object: missing signature data")
   }
 
   # Creates named vector of coefficients similar to what's seem in coef(glm) or coef(lm)
@@ -252,7 +252,7 @@ as.data.frame.clinprog_survival <- as.data.frame.clinprog_signature
 print.clinprog_survival <- function(x, ...) {
 
   # Checks if input object is of correct type
-  if (!inherits(x, "clinprog_survival")) {stop("Object must be of class 'clinprog_survival'")}
+  if (!inherits(x, "clinprog_survival")) {log_stop("Object must be of class 'clinprog_survival'")}
 
   cat("clinprog survival object\n")
   cat("-----------------------\n")
@@ -293,7 +293,7 @@ print.clinprog_survival <- function(x, ...) {
 summary.clinprog_survival <- function(object, ...) {
 
   # Checks if input object is of correct type
-  if (!inherits(object, "clinprog_survival")) {stop("Object must be of class 'clinprog_survival'")}
+  if (!inherits(object, "clinprog_survival")) {log_stop("Object must be of class 'clinprog_survival'")}
 
   # Basic information
   out <- list(
@@ -332,7 +332,7 @@ summary.clinprog_survival <- function(object, ...) {
 print.summary.clinprog_survival <- function(x, ...) {
 
   # Checks if input object is of correct type
-  if (!inherits(x, "summary.clinprog_survival")) {stop("Object must be of class 'summary.clinprog_survival'")}
+  if (!inherits(x, "summary.clinprog_survival")) {log_stop("Object must be of class 'summary.clinprog_survival'")}
 
   cat("clinprog survival summary\n")
   cat("------------------------\n")
@@ -372,14 +372,14 @@ print.summary.clinprog_survival <- function(x, ...) {
 coef.clinprog_survival <- function(object, ...) {
 
   # Checks if input object is of correct type
-  if (!inherits(object, "clinprog_survival")) {stop("Object must be of class 'clinprog_survival'")}
+  if (!inherits(object, "clinprog_survival")) {log_stop("Object must be of class 'clinprog_survival'")}
 
   sig <- object$signature
 
   # Checks signature structure
   if (is.null(sig) || !all(c("feature", "coefficient") %in% colnames(sig)))
   {
-    stop("Invalid 'clinprog_survival' object: missing signature data")
+    log_stop("Invalid 'clinprog_survival' object: missing signature data")
   }
 
   # Creates named coefficient vector
@@ -407,10 +407,10 @@ coef.clinprog_survival <- function(object, ...) {
 plot.clinprog_survival <- function(x, type = "all", ...)
 {
   # Checks object type
-  if (!inherits(x, "clinprog_survival")) {stop("Object must be of class 'clinprog_survival'")}
+  if (!inherits(x, "clinprog_survival")) {log_stop("Object must be of class 'clinprog_survival'")}
 
   # Validates type argument
-  if (!is.character(type) || length(type) != 1) {stop("'type' must be a single character string")}
+  if (!is.character(type) || length(type) != 1) {log_stop("'type' must be a single character string")}
 
   # Defines initial available plot types
   valid_types <- c("all", "km", "ph")
@@ -426,7 +426,7 @@ plot.clinprog_survival <- function(x, type = "all", ...)
   }
 
   # Validates requested plot type
-  if (!type %in% valid_types) {stop("Invalid 'type'. Must be one of: ", paste(valid_types, collapse = ", "))}
+  if (!type %in% valid_types) {log_stop("Invalid 'type'. Must be one of: ", paste(valid_types, collapse = ", "))}
 
   # KM plot
   if (type == "km")
@@ -621,7 +621,7 @@ coef.clinprog_complete <- function(object, ...)
 plot.clinprog_complete <- function(x, type = "all", ...)
 {
   valid <- c("all", "regression", "survival")
-  if (!all(type %in% valid)) {stop("Argument 'type' must be: 'all', 'regression', or 'survival'")}
+  if (!all(type %in% valid)) {log_stop("Argument 'type' must be: 'all', 'regression', or 'survival'")}
 
   plot_list <- list()
 
