@@ -920,7 +920,7 @@ run_survival <- function(data,
   }
   if (!is.numeric(p.cutoff) || length(p.cutoff) != 1 || p.cutoff <= 0 || p.cutoff >= 1)
   {
-    stop("'p.cutoff' must be a numeric value between 0 and 1")
+    log_stop("'p.cutoff' must be a numeric value between 0 and 1")
   }
   if (!is.numeric(bootstrap) || length(bootstrap) != 1 || bootstrap < 0 || bootstrap %% 1 != 0)
   {
