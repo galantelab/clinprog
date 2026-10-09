@@ -133,7 +133,7 @@ result <- run_complete(
   type = "gene",
   multivariate = TRUE,
   clindata = clinical_data,
-  roc = TRUE,
+  score_cutoff = "roc",
   p.cutoff = 0.2,
   force = TRUE,
   plots = TRUE,

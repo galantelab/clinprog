@@ -10,6 +10,7 @@ log_message(...)
 \item{...}{Character inputs to be concatenated into a message.}
 }
 \description{
-Writes a message to the console and, if enabled, to the log file.
+Records a message in the in-memory log and, if enabled, in the log file.
+Console output is controlled by the verbose setting.
 }
 \keyword{internal}

@@ -4,7 +4,7 @@
 \alias{clinprog_bootstrap}
 \title{Validate bootstrap resampled datasets for multivariate Cox regression}
 \usage{
-clinprog_bootstrap(raw_data, bootstrap_data, iteration, min.prop = 0.2)
+clinprog_bootstrap(raw_data, bootstrap_data, iteration, min.prop = 0.1)
 }
 \arguments{
 \item{raw_data}{Data.frame used as source for bootstrap resampling.}
@@ -13,7 +13,7 @@ clinprog_bootstrap(raw_data, bootstrap_data, iteration, min.prop = 0.2)
 
 \item{iteration}{Numeric. Bootstrap iteration index.}
 
-\item{min.prop}{Numeric. Minimum proportion for the least abundant category in binary variables (default: \code{0.2}).}
+\item{min.prop}{Numeric. Minimum proportion for the least abundant category in binary variables (default: \code{0.1}).}
 }
 \value{
 A bootstrap-resampled data.frame if valid, otherwise \code{NULL}.

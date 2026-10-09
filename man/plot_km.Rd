@@ -13,7 +13,7 @@ plot_km(
   ylab = "Survival probability",
   xlab = "Time",
   title = NULL,
-  legend.title = "clinprog groups",
+  legend.title = "Score cutoff",
   theme = survminer::theme_survminer(),
   tables.theme = survminer::theme_cleantable(),
   width = 8,

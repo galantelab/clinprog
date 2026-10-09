@@ -155,7 +155,7 @@ result <- run_survival(
   outprefix = "my_analysis",
   multivariate = TRUE,
   clindata = clinical_data,
-  roc = TRUE,
+  score_cutoff = "roc",
   variancefilter = 0.01,
   followup = NULL,
   p.cutoff = 0.2,

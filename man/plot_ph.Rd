@@ -8,6 +8,7 @@ plot_ph(
   x,
   is_multi = FALSE,
   outprefix = NULL,
+  individual = FALSE,
   theme = theme_clinprog(),
   width = NULL,
   height = NULL,
@@ -25,6 +26,8 @@ plot_ph(
 
 \item{outprefix}{Character. Output prefix for saving the plot (optional).
 If \code{NULL}, the plot is not written to disk.}
+
+\item{individual}{Logical. If \code{TRUE} and \code{outprefix} is provided, saves each Schoenfeld plot separately.}
 
 \item{theme}{A ggplot2 theme object. Defaults to \code{theme_clinprog()}.}
 

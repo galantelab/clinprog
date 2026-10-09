@@ -13,7 +13,7 @@ clinprog_multiCox_test(
   use.bootstrap = TRUE,
   bootstrap = 1,
   bootstrap.freq = 0.25,
-  multi.p.cutoff = 0.05
+  multi.p.cutoff = 0.1
 )
 }
 \arguments{
@@ -34,7 +34,7 @@ Must contain columns \code{OS}, \code{OS.time}, and \code{score_group}.}
 
 \item{bootstrap.freq}{Numeric. Minimum frequency to retain variables after bootstrap resampling (default: \code{0.25}).}
 
-\item{multi.p.cutoff}{Numeric. P-value used to define prognosis groups in multivariate models (default: \code{0.05}).}
+\item{multi.p.cutoff}{Numeric. P-value used to define prognosis groups in multivariate models (default: \code{0.1}).}
 }
 \value{
 A list containing:

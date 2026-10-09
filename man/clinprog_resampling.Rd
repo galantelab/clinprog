@@ -10,7 +10,7 @@ clinprog_resampling(
   all_covariates,
   bootstrap = 100,
   bootstrap.freq = 0.25,
-  boot.p.cutoff = 0.05
+  boot.p.cutoff = 0.1
 )
 }
 \arguments{

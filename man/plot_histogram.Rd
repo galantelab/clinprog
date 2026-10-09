@@ -8,6 +8,7 @@ plot_histogram(
   signature,
   outprefix = NULL,
   theme = theme_clinprog(),
+  binwidth = NULL,
   width = 8,
   height = 5,
   dpi = 300
@@ -19,6 +20,8 @@ plot_histogram(
 \item{outprefix}{Character. Output prefix for saving the plot (optional).}
 
 \item{theme}{A ggplot2 theme object. Defaults to \code{theme_clinprog()}.}
+
+\item{binwidth}{Numeric. Width of the histogram bins (Default: \code{NULL}).}
 
 \item{width}{Numeric. Plot width in inches (Default: \code{8})}
 

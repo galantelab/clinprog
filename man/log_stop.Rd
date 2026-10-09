@@ -7,9 +7,10 @@
 log_stop(...)
 }
 \arguments{
-\item{...}{Character inputs to be concatenated into an error message.}
+\item{...}{Character inputs to be concatenated into a message.}
 }
 \description{
-Writes an error message to the log file (if enabled) and stops execution.
+Records an error in the in-memory log and, if enabled, in the log file.
+Execution is then stopped.
 }
 \keyword{internal}
