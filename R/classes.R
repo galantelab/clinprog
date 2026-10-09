@@ -42,21 +42,21 @@
 new_clinprog_signature <- function(signature, plots = NULL, params = NULL, metadata = NULL, call = NULL) {
 
   # Checks if clinprog signature is a data frame
-  if (!is.data.frame(signature)) {stop("'signature' must be a data.frame")}
+  if (!is.data.frame(signature)) {log_stop("'signature' must be a data.frame")}
 
   # Checks if signature has the 2 required columns
   if (!all(c("feature", "coefficient") %in% colnames(signature))) {
-    stop("'signature' must contain 'feature' and 'coefficient' columns")
+    log_stop("'signature' must contain 'feature' and 'coefficient' columns")
   }
 
   # Removes NA coefficients
-  if (any(is.na(signature$coefficient))) {signature <- signature[!is.na(signature$coefficient), , drop = FALSE]}
+  if (anyNA(signature$coefficient)) {signature <- signature[!is.na(signature$coefficient), , drop = FALSE]}
 
   # Validates after NA removal
-  if (nrow(signature) == 0) {stop("No valid coefficients available after removing NA values")}
+  if (nrow(signature) == 0) {log_stop("No valid coefficients available after removing NA values")}
 
   # Ensures numeric coefficients
-  if (!is.numeric(signature$coefficient)) {stop("'coefficient' column must be numeric")}
+  if (!is.numeric(signature$coefficient)) {log_stop("'coefficient' column must be numeric")}
 
   # Orders by absolute coefficient (descending)
   signature <- signature[order(abs(signature$coefficient), decreasing = TRUE), , drop = FALSE]
@@ -134,22 +134,22 @@ new_clinprog_survival <- function(signature, score_cutoff, expression_data, surv
                                 roc_result = NULL, plots = NULL, params = NULL, metadata = NULL, call = NULL) {
 
   # Checks if signature is a data frame
-  if (!is.data.frame(signature)) {stop("'signature' must be a data.frame")}
+  if (!is.data.frame(signature)) {log_stop("'signature' must be a data.frame")}
 
   # Checks if expression data is a data frame
-  if (!is.data.frame(expression_data)) {stop("'expression_data' must be a data.frame")}
+  if (!is.data.frame(expression_data)) {log_stop("'expression_data' must be a data.frame")}
 
   # Checks if clinical data is valid
-  if (!is.null(clinical_data) && !is.data.frame(clinical_data)) {stop("'clinical_data' must be a data.frame or NULL")}
+  if (!is.null(clinical_data) && !is.data.frame(clinical_data)) {log_stop("'clinical_data' must be a data.frame or NULL")}
 
   # Checks if score cutoff is valid
-  if (!is.numeric(score_cutoff) || length(score_cutoff) != 1) {stop("'score_cutoff' must be a single numeric value")}
+  if (!is.numeric(score_cutoff) || length(score_cutoff) != 1) {log_stop("'score_cutoff' must be a single numeric value")}
 
   # Checks if survival object is valid
-  if (!is.list(survival)) {stop("'survival' must be a list")}
+  if (!is.list(survival)) {log_stop("'survival' must be a list")}
 
   # Checks if PH result is valid
-  if (is.null(ph_result)) {stop("'ph_result' cannot be NULL")}
+  if (is.null(ph_result)) {log_stop("'ph_result' cannot be NULL")}
 
   # Build S3 object
   obj <- structure(
@@ -190,14 +190,14 @@ new_clinprog_survival <- function(signature, score_cutoff, expression_data, surv
 new_clinprog_complete <- function(regression, survival, params = NULL, metadata = NULL, call = NULL) {
 
   # Validates regression object
-  if (!inherits(regression, "clinprog_signature")) {stop("'regression' must be a 'clinprog_signature' object")}
+  if (!inherits(regression, "clinprog_signature")) {log_stop("'regression' must be a 'clinprog_signature' object")}
 
   # Validates survival object
-  if (!inherits(survival, "clinprog_survival")) {stop("'survival' must be a 'clinprog_survival' object")}
+  if (!inherits(survival, "clinprog_survival")) {log_stop("'survival' must be a 'clinprog_survival' object")}
 
   # Validates params and metadata
-  if (!is.null(params) && !is.list(params)) {stop("'params' must be NULL or a list")}
-  if (!is.null(metadata) && !is.list(metadata)) {stop("'metadata' must be NULL or a list")}
+  if (!is.null(params) && !is.list(params)) {log_stop("'params' must be NULL or a list")}
+  if (!is.null(metadata) && !is.list(metadata)) {log_stop("'metadata' must be NULL or a list")}
 
   # Creates object
   structure(
