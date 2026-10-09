@@ -37,25 +37,25 @@ theme_clinprog <- function() {
 #' @export
 plot_lollipop <- function(signature, outprefix = NULL, theme = theme_clinprog(), width = 8, height = 5, dpi = 300) {
 
-  message("Building lollipop plot...")
+  log_message("Building lollipop plot...")
 
   # Validates input
-  if (!all(c("feature", "coefficient") %in% colnames(signature))) {stop("'signature' must contain 'feature' and 'coefficient' columns")}
+  if (!all(c("feature", "coefficient") %in% colnames(signature))) {log_stop("'signature' must contain 'feature' and 'coefficient' columns")}
 
   # Validates theme
-  if (!inherits(theme, "theme")) {stop("'theme' must be a valid ggplot2 theme object")}
+  if (!inherits(theme, "theme")) {log_stop("'theme' must be a valid ggplot2 theme object")}
 
   # Validates plot parameters
-  if (!is.numeric(dpi) || length(dpi) != 1 || dpi <= 0) {stop("'dpi' must be a single positive numeric value")}
-  if (!is.numeric(width) || length(width) != 1 || width <= 0) {stop("'width' must be a single positive numeric value")}
-  if (!is.numeric(height) || length(height) != 1 || height <= 0) {stop("'height' must be a single positive numeric value")}
+  if (!is.numeric(dpi) || length(dpi) != 1 || dpi <= 0) {log_stop("'dpi' must be a single positive numeric value")}
+  if (!is.numeric(width) || length(width) != 1 || width <= 0) {log_stop("'width' must be a single positive numeric value")}
+  if (!is.numeric(height) || length(height) != 1 || height <= 0) {log_stop("'height' must be a single positive numeric value")}
 
   # Prepares data
   tt <- signature[stats::complete.cases(signature[, c("feature", "coefficient"), drop = FALSE]), , drop = FALSE]
   tt <- tt[tt$coefficient != 0, , drop = FALSE]
 
   # Checks if signature is still valid
-  if (nrow(tt) == 0) {stop("No valid coefficients available for plotting")}
+  if (nrow(tt) == 0) {log_stop("No valid coefficients available for plotting")}
 
   # Selects top 10 features
   tt <- dplyr::slice_max(tt, order_by = abs(.data$coefficient), n = 10, with_ties = FALSE)
@@ -90,7 +90,7 @@ plot_lollipop <- function(signature, outprefix = NULL, theme = theme_clinprog(),
 
   # Saves if requested
   if (!is.null(outprefix)) {
-    if (!is.character(outprefix) || length(outprefix) != 1) {stop("'outprefix' must be a single character string")}
+    if (!is.character(outprefix) || length(outprefix) != 1) {log_stop("'outprefix' must be a single character string")}
     fname <- paste0(outprefix, "_lollipop.pdf")
     ggplot2::ggsave(filename = fname, plot = ll, device = "pdf", width = width, height = height, dpi = dpi)
   }
@@ -115,34 +115,34 @@ plot_lollipop <- function(signature, outprefix = NULL, theme = theme_clinprog(),
 plot_histogram <- function(signature, outprefix = NULL, theme = theme_clinprog(),
                              binwidth = NULL, width = 8, height = 5, dpi = 300) {
 
-  message("Building histogram plot...")
+  log_message("Building histogram plot...")
 
   # Validates input
-  if (!all(c("feature", "coefficient") %in% colnames(signature))) {stop("'signature' must contain 'feature' and 'coefficient' columns")}
+  if (!all(c("feature", "coefficient") %in% colnames(signature))) {log_stop("'signature' must contain 'feature' and 'coefficient' columns")}
 
   # Validates theme
-  if (!inherits(theme, "theme")) {stop("'theme' must be a valid ggplot2 theme object")}
+  if (!inherits(theme, "theme")) {log_stop("'theme' must be a valid ggplot2 theme object")}
 
   # Validates binwidth if provided by user
   if (!is.null(binwidth))
   {
     if (!is.numeric(binwidth) || length(binwidth) != 1 || binwidth <= 0)
     {
-      stop("'binwidth' must be a single positive numeric value.")
+      log_stop("'binwidth' must be a single positive numeric value.")
     }
   }
 
   # Validates plot sizes
-  if (!is.numeric(dpi) || length(dpi) != 1 || dpi <= 0) {stop("'dpi' must be a single positive numeric value")}
-  if (!is.numeric(width) || length(width) != 1 || width <= 0) {stop("'width' must be a single positive numeric value")}
-  if (!is.numeric(height) || length(height) != 1 || height <= 0) {stop("'height' must be a single positive numeric value")}
+  if (!is.numeric(dpi) || length(dpi) != 1 || dpi <= 0) {log_stop("'dpi' must be a single positive numeric value")}
+  if (!is.numeric(width) || length(width) != 1 || width <= 0) {log_stop("'width' must be a single positive numeric value")}
+  if (!is.numeric(height) || length(height) != 1 || height <= 0) {log_stop("'height' must be a single positive numeric value")}
 
   # Prepares data
   tt <- signature[stats::complete.cases(signature[, c("feature", "coefficient"), drop = FALSE]), , drop = FALSE]
   tt <- tt[tt$coefficient != 0, , drop = FALSE]
 
   # Checks if signature is still valid
-  if (nrow(tt) == 0) {stop("No valid coefficients available for plotting")}
+  if (nrow(tt) == 0) {log_stop("No valid coefficients available for plotting")}
 
   # Dynamically calculates binwidth if NULL (using Sturges' Rule for small N)
   if (is.null(binwidth))
@@ -172,7 +172,7 @@ plot_histogram <- function(signature, outprefix = NULL, theme = theme_clinprog()
 
   # Saves if requested
   if (!is.null(outprefix)) {
-    if (!is.character(outprefix) || length(outprefix) != 1) {stop("'outprefix' must be a single character string")}
+    if (!is.character(outprefix) || length(outprefix) != 1) {log_stop("'outprefix' must be a single character string")}
     fname <- paste0(outprefix, "_histogram.pdf")
     ggplot2::ggsave(filename = fname, plot = pl, device = "pdf", width = width, height = height, dpi = dpi)
   }
@@ -200,19 +200,19 @@ plot_histogram <- function(signature, outprefix = NULL, theme = theme_clinprog()
 #' @export
 plot_roc <- function(x, outprefix = NULL, width = 7, height = 6) {
 
-  message("Building ROC curve...")
+  log_message("Building ROC curve...")
 
   # Extracts optimal cutpoint object
   if (is.list(x) && "optimal_cutpoint" %in% names(x)) {roc_obj <- x$optimal_cutpoint} else {roc_obj <- x}
 
   # Validates plot sizes
-  if (!is.numeric(width) || length(width) != 1 || width <= 0) {stop("'width' must be a single positive numeric value")}
-  if (!is.numeric(height) || length(height) != 1 || height <= 0) {stop("'height' must be a single positive numeric value")}
+  if (!is.numeric(width) || length(width) != 1 || width <= 0) {log_stop("'width' must be a single positive numeric value")}
+  if (!is.numeric(height) || length(height) != 1 || height <= 0) {log_stop("'height' must be a single positive numeric value")}
 
   # Opens PDF device if requested
   if (!is.null(outprefix))
   {
-    if (!is.character(outprefix) || length(outprefix) != 1) {stop("'outprefix' must be a single character string")}
+    if (!is.character(outprefix) || length(outprefix) != 1) {log_stop("'outprefix' must be a single character string")}
     grDevices::pdf(file = paste0(outprefix, "_roc_curve.pdf"), width = width, height = height)
     on.exit(grDevices::dev.off(), add = TRUE)
   }
@@ -251,7 +251,7 @@ plot_roc <- function(x, outprefix = NULL, width = 7, height = 6) {
 plot_ph <- function(x, is_multi = FALSE, outprefix = NULL, individual = FALSE,
                           theme = theme_clinprog(), width = NULL, height = NULL, ...) {
 
-  message("Building proportional hazards plot...")
+  log_message("Building proportional hazards plot...")
 
   # Extracts cox.zph object
   if (inherits(x, "cox.zph"))
@@ -259,16 +259,16 @@ plot_ph <- function(x, is_multi = FALSE, outprefix = NULL, individual = FALSE,
     ph_object <- x
   } else if (is.list(x) && "object" %in% names(x)) {
     ph_object <- x$object
-  } else {stop("Input must be a 'cox.zph' object or a valid clinprog_schoenfeld() result")}
+  } else {log_stop("Input must be a 'cox.zph' object or a valid clinprog_schoenfeld() result")}
 
   # Validates theme
-  if (!inherits(theme, "theme")) {stop("'theme' must be a valid ggplot2 theme object")}
+  if (!inherits(theme, "theme")) {log_stop("'theme' must be a valid ggplot2 theme object")}
 
   # Validates arguments
-  if (!is.logical(is_multi) || length(is_multi) != 1) {stop("'is_multi' must be TRUE or FALSE")}
+  if (!is.logical(is_multi) || length(is_multi) != 1) {log_stop("'is_multi' must be TRUE or FALSE")}
   if (!is.logical(individual) || length(individual) != 1 || is.na(individual))
   {
-    stop("'individual' must be TRUE or FALSE")
+    log_stop("'individual' must be TRUE or FALSE")
   }
 
   # Validates outprefix
@@ -276,14 +276,14 @@ plot_ph <- function(x, is_multi = FALSE, outprefix = NULL, individual = FALSE,
   {
     if (!is.character(outprefix) || length(outprefix) != 1)
     {
-      stop("'outprefix' must be NULL or a single character string")
+      log_stop("'outprefix' must be NULL or a single character string")
     }
   }
 
   # Cross-validation: individual only makes sense with outprefix
   if (individual && is.null(outprefix))
   {
-    warning("'individual = TRUE' requires 'outprefix' to be provided. Ignoring 'individual'.")
+    log_warning("'individual = TRUE' requires 'outprefix' to be provided. Ignoring 'individual'.")
     individual <- FALSE
   }
 
@@ -292,7 +292,7 @@ plot_ph <- function(x, is_multi = FALSE, outprefix = NULL, individual = FALSE,
   {
     if (!is.numeric(width) || length(width) != 1 || width <= 0)
     {
-      stop("'width' must be NULL or a single positive numeric value")
+      log_stop("'width' must be NULL or a single positive numeric value")
     }
   }
 
@@ -300,7 +300,7 @@ plot_ph <- function(x, is_multi = FALSE, outprefix = NULL, individual = FALSE,
   {
     if (!is.numeric(height) || length(height) != 1 || height <= 0)
     {
-      stop("'height' must be NULL or a single positive numeric value")
+      log_stop("'height' must be NULL or a single positive numeric value")
     }
   }
 
@@ -397,7 +397,7 @@ clinprog_ggcoxzph <- function(fit, resid = T, se = T, df = 4, nsmo = 40, var, po
                             point.shape = 19, point.alpha = 1, caption = NULL,
                             ggtheme = survminer::theme_survminer(), ...) {
   x <- fit
-  if (!methods::is(x, "cox.zph")) {stop("Can't handle an object of class ", class(x))}
+  if (!methods::is(x, "cox.zph")) {log_stop("Can't handle an object of class ", class(x))}
 
   xx <- x$x
   yy <- x$y
@@ -411,7 +411,7 @@ clinprog_ggcoxzph <- function(fit, resid = T, se = T, df = 4, nsmo = 40, var, po
   xmat <- lmat[-(1:nsmo), ]
   qmat <- qr(xmat)
 
-  if (qmat$rank < df) {stop("Spline fit is singular, try a smaller degrees of freedom")}
+  if (qmat$rank < df) {log_stop("Spline fit is singular, try a smaller degrees of freedom")}
 
   if (se)
   {
@@ -427,7 +427,7 @@ clinprog_ggcoxzph <- function(fit, resid = T, se = T, df = 4, nsmo = 40, var, po
     var <- 1:nvar
   } else {
     if (is.character(var)) {var <- match(var, dimnames(yy)[[2]])}
-    if (any(is.na(var)) || max(var) > nvar || min(var) < 1) {stop("Invalid variable requested")}
+    if (any(is.na(var)) || max(var) > nvar || min(var) < 1) {log_stop("Invalid variable requested")}
   }
 
   if (x$transform == "log")
@@ -535,43 +535,43 @@ plot_km <- function(data, cutoff = NULL, outprefix = NULL, pval = FALSE, palette
                       theme = survminer::theme_survminer(), tables.theme = survminer::theme_cleantable(),
                       width = 8, height = 5) {
 
-  message("Building Kaplan-Meier curves...")
+  log_message("Building Kaplan-Meier curves...")
 
   # Validates input
   required_cols <- c("OS", "OS.time", "score_group")
-  if (!all(required_cols %in% colnames(data))) {stop("Input data must contain columns: 'OS', 'OS.time', and 'score_group'")}
+  if (!all(required_cols %in% colnames(data))) {log_stop("Input data must contain columns: 'OS', 'OS.time', and 'score_group'")}
 
   # Validates p-value parameter
-  if (!(is.logical(pval) || is.numeric(pval) || is.character(pval))) {stop("'pval' must be logical, numeric, or character")}
-  if (is.logical(pval) && length(pval) != 1) {stop("'pval' must be a single logical value")}
-  if (is.character(pval) && length(pval) != 1) {stop("'pval' must be a single character string")}
+  if (!(is.logical(pval) || is.numeric(pval) || is.character(pval))) {log_stop("'pval' must be logical, numeric, or character")}
+  if (is.logical(pval) && length(pval) != 1) {log_stop("'pval' must be a single logical value")}
+  if (is.character(pval) && length(pval) != 1) {log_stop("'pval' must be a single character string")}
   if (is.numeric(pval))
   {
-    if (length(pval) != 1 || pval < 0 || pval > 1) {stop("'pval' must be a single numeric value between 0 and 1")}
+    if (length(pval) != 1 || pval < 0 || pval > 1) {log_stop("'pval' must be a single numeric value between 0 and 1")}
   }
 
   # Validates plot parameters
-  if (!is.null(cutoff)) {if (!is.numeric(cutoff) || length(cutoff) != 1) {stop("'cutoff' must be a single numeric value")}}
-  if (!is.character(palette) || length(palette) != 2) {stop("'palette' must be a character vector of length 2")}
-  if (!is.character(ylab) || length(ylab) != 1) {stop("'ylab' must be a single character string")}
-  if (!is.character(xlab) || length(xlab) != 1) {stop("'xlab' must be a single character string")}
+  if (!is.null(cutoff)) {if (!is.numeric(cutoff) || length(cutoff) != 1) {log_stop("'cutoff' must be a single numeric value")}}
+  if (!is.character(palette) || length(palette) != 2) {log_stop("'palette' must be a character vector of length 2")}
+  if (!is.character(ylab) || length(ylab) != 1) {log_stop("'ylab' must be a single character string")}
+  if (!is.character(xlab) || length(xlab) != 1) {log_stop("'xlab' must be a single character string")}
   if (!is.null(title) && (!is.character(title) || length(title) != 1))
   {
-    stop("'title' must be NULL or a single character string")
+    log_stop("'title' must be NULL or a single character string")
   }
   if (!is.null(legend.title) && (!is.character(legend.title) || length(legend.title) != 1))
   {
-    stop("'legend.title' must be NULL or a single character string")
+    log_stop("'legend.title' must be NULL or a single character string")
   }
 
   # Validates plot sizes
-  if (!is.numeric(width) || length(width) != 1 || width <= 0) {stop("'width' must be a single positive numeric value")}
-  if (!is.numeric(height) || length(height) != 1 || height <= 0) {stop("'height' must be a single positive numeric value")}
+  if (!is.numeric(width) || length(width) != 1 || width <= 0) {log_stop("'width' must be a single positive numeric value")}
+  if (!is.numeric(height) || length(height) != 1 || height <= 0) {log_stop("'height' must be a single positive numeric value")}
 
   # Ensures at least two groups exist
   if (length(unique(stats::na.omit(data$score_group))) < 2)
   {
-    warning("Data could not be partitioned into low/high scores")
+    log_warning("Data could not be partitioned into low/high scores")
     return(NULL)
   }
 
@@ -629,7 +629,7 @@ plot_km <- function(data, cutoff = NULL, outprefix = NULL, pval = FALSE, palette
   # Saves plot
   if (!is.null(outprefix))
   {
-    if (!is.character(outprefix) || length(outprefix) != 1) {stop("'outprefix' must be a single character string")}
+    if (!is.character(outprefix) || length(outprefix) != 1) {log_stop("'outprefix' must be a single character string")}
     grDevices::pdf(file = paste0(outprefix, "_km_plot.pdf"), width = width, height = height, onefile = FALSE)
     on.exit(grDevices::dev.off(), add = TRUE)
     suppressMessages(suppressWarnings(print(km_plot)))
@@ -654,20 +654,20 @@ plot_km <- function(data, cutoff = NULL, outprefix = NULL, pval = FALSE, palette
 plot_forest <- function(model_object, outprefix = NULL, panels = NULL,
                           hr_breaks = c(0.25, 0.5, 1, 2, 4, 8), width = 8, height = 5) {
 
-  message("Building forest plot...")
+  log_message("Building forest plot...")
 
   # Validates model object
-  if (!inherits(model_object, "coxph")) {stop("'model_object' must be a valid 'survival::coxph' object")}
+  if (!inherits(model_object, "coxph")) {log_stop("'model_object' must be a valid 'survival::coxph' object")}
 
   # Validates custom panel
-  if (!is.null(panels) && !is.list(panels)) {stop("'panels' must be NULL or a list")}
+  if (!is.null(panels) && !is.list(panels)) {log_stop("'panels' must be NULL or a list")}
 
   # Validates HR breaks
-  if (!is.numeric(hr_breaks) || length(hr_breaks) < 1 || any(hr_breaks <= 0)) {stop("'hr_breaks' must contain positive numeric values")}
+  if (!is.numeric(hr_breaks) || length(hr_breaks) < 1 || any(hr_breaks <= 0)) {log_stop("'hr_breaks' must contain positive numeric values")}
 
   # Validates plot sizes
-  if (!is.numeric(width) || length(width) != 1 || width <= 0) {stop("'width' must be a single positive numeric value")}
-  if (!is.numeric(height) || length(height) != 1 || height <= 0) {stop("'height' must be a single positive numeric value")}
+  if (!is.numeric(width) || length(width) != 1 || width <= 0) {log_stop("'width' must be a single positive numeric value")}
+  if (!is.numeric(height) || length(height) != 1 || height <= 0) {log_stop("'height' must be a single positive numeric value")}
 
   # Uses default custom forestmodel panels if none provided
   if (is.null(panels))
@@ -719,7 +719,7 @@ plot_forest <- function(model_object, outprefix = NULL, panels = NULL,
   # Saves plot
   if (!is.null(outprefix))
   {
-    if (!is.character(outprefix) || length(outprefix) != 1) {stop("'outprefix' must be a single character string")}
+    if (!is.character(outprefix) || length(outprefix) != 1) {log_stop("'outprefix' must be a single character string")}
     grDevices::pdf(file = paste0(outprefix, "_forest_plot.pdf"), width = width, height = height, onefile = FALSE)
     on.exit(grDevices::dev.off(), add = TRUE)
   }
@@ -764,21 +764,21 @@ plot_barplot <- function(plot_df, outprefix = NULL, frequency.threshold = 25, ty
                            ylab = NULL, xlab = "", width = 8, height = 5)
 {
 
-  message("Building bar plot...")
+  log_message("Building bar plot...")
 
   # Resolves 'type' (validates that it is one of the accepted values)
   type <- match.arg(type)
 
   # Validates input data
-  if (!is.data.frame(plot_df)) {stop("'plot_df' must be a data.frame")}
+  if (!is.data.frame(plot_df)) {log_stop("'plot_df' must be a data.frame")}
   required_cols <- c("covariate", "frequency")
-  if (!all(required_cols %in% colnames(plot_df))) {stop("'plot_df' must contain columns: 'covariate' and 'frequency'")}
+  if (!all(required_cols %in% colnames(plot_df))) {log_stop("'plot_df' must contain columns: 'covariate' and 'frequency'")}
 
   # Validates frequency threshold (always in %)
   if (!is.numeric(frequency.threshold) || length(frequency.threshold) != 1 ||
       frequency.threshold < 0 || frequency.threshold > 100)
   {
-    stop("'frequency.threshold' must be a numeric value (percentage) between 0 and 100")
+    log_stop("'frequency.threshold' must be a numeric value (percentage) between 0 and 100")
   }
 
   # Validates bootstraps
@@ -786,37 +786,37 @@ plot_barplot <- function(plot_df, outprefix = NULL, frequency.threshold = 25, ty
   {
     if (!is.numeric(n_bootstraps) || length(n_bootstraps) != 1 || n_bootstraps < 2 || n_bootstraps %% 1 != 0)
     {
-      stop("'n_bootstraps' must be NULL or a single integer value >= 2")
+      log_stop("'n_bootstraps' must be NULL or a single integer value >= 2")
     }
   }
 
   # Enforces: type = "absolute" requires "n_bootstraps" (otherwise the threshold cannot be positioned on the axis)
   if (type == "absolute" && is.null(n_bootstraps))
   {
-    stop("'n_bootstraps' must be provided when 'type = absolute'.")
+    log_stop("'n_bootstraps' must be provided when 'type = absolute'.")
   }
 
   # Validates bar width
-  if (!is.numeric(bar.width) || length(bar.width) != 1 || bar.width <= 0) {stop("'bar.width' must be a single positive numeric value")}
+  if (!is.numeric(bar.width) || length(bar.width) != 1 || bar.width <= 0) {log_stop("'bar.width' must be a single positive numeric value")}
 
   # Validates theme
-  if (!inherits(theme, "theme")) {stop("'theme' must be a valid ggplot2 theme object")}
+  if (!inherits(theme, "theme")) {log_stop("'theme' must be a valid ggplot2 theme object")}
 
   # Validates axis labels (ylab NULL = auto; xlab must be a string)
-  if (!is.null(ylab) && (!is.character(ylab) || length(ylab) != 1)) {stop("'ylab' must be NULL or a single character string")}
-  if (!is.character(xlab) || length(xlab) != 1) {stop("'xlab' must be a single character string")}
+  if (!is.null(ylab) && (!is.character(ylab) || length(ylab) != 1)) {log_stop("'ylab' must be NULL or a single character string")}
+  if (!is.character(xlab) || length(xlab) != 1) {log_stop("'xlab' must be a single character string")}
 
   # Validates plot sizes
-  if (!is.numeric(width) || length(width) != 1 || width <= 0) {stop("'width' must be a single positive numeric value")}
-  if (!is.numeric(height) || length(height) != 1 || height <= 0) {stop("'height' must be a single positive numeric value")}
+  if (!is.numeric(width) || length(width) != 1 || width <= 0) {log_stop("'width' must be a single positive numeric value")}
+  if (!is.numeric(height) || length(height) != 1 || height <= 0) {log_stop("'height' must be a single positive numeric value")}
 
   # Substitutes 'score_group' by 'Score'
   plot_df$covariate <- gsub("^score_group$", "Score", plot_df$covariate)
 
   # Ensures frequency is numeric and non-negative
   plot_df$frequency <- as.numeric(plot_df$frequency)
-  if (anyNA(plot_df$frequency)) {stop("'frequency' column contains NA values")}
-  if (any(plot_df$frequency < 0)) {stop("'frequency' values must be non-negative")}
+  if (anyNA(plot_df$frequency)) {log_stop("'frequency' column contains NA values")}
+  if (any(plot_df$frequency < 0)) {log_stop("'frequency' values must be non-negative")}
 
   # Resolves units: computes 'freq_pct' (always in %) for ordering and threshold comparison, and 'freq_display' (Y axis)
   if (type == "relative")
@@ -825,7 +825,7 @@ plot_barplot <- function(plot_df, outprefix = NULL, frequency.threshold = 25, ty
     {
       # Converts absolute counts --> percentages
       freq_pct <- plot_df$frequency / n_bootstraps * 100
-      if (any(freq_pct > 100, na.rm = TRUE)) {stop("Computed relative frequencies > 100%. Check 'n_bootstraps'.")}
+      if (any(freq_pct > 100, na.rm = TRUE)) {log_stop("Computed relative frequencies > 100%. Check 'n_bootstraps'.")}
     }
     else
     {
@@ -833,7 +833,7 @@ plot_barplot <- function(plot_df, outprefix = NULL, frequency.threshold = 25, ty
       freq_pct <- plot_df$frequency
       if (any(freq_pct > 100, na.rm = TRUE))
       {
-        stop("'frequency' values exceed 100 but 'n_bootstraps' was not provided. ",
+        log_stop("'frequency' values exceed 100 but 'n_bootstraps' was not provided. ",
                  "Either pass 'n_bootstraps' or make sure 'frequency' is already a percentage.")
       }
     }
@@ -885,7 +885,7 @@ plot_barplot <- function(plot_df, outprefix = NULL, frequency.threshold = 25, ty
   # Saves plot
   if (!is.null(outprefix))
   {
-    if (!is.character(outprefix) || length(outprefix) != 1) {stop("'outprefix' must be a single character string")}
+    if (!is.character(outprefix) || length(outprefix) != 1) {log_stop("'outprefix' must be a single character string")}
     grDevices::pdf(file = paste0(outprefix, "_bootstrap_barplot.pdf"), width = width, height = height, onefile = FALSE)
     on.exit(grDevices::dev.off(), add = TRUE)
     print(final_plot)
