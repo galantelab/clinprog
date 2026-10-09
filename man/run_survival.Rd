@@ -21,6 +21,7 @@ run_survival(
   saveJSON = FALSE,
   saveRDS = FALSE,
   report = FALSE,
+  verbose = 1,
   log = FALSE
 )
 }

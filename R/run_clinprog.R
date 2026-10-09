@@ -175,6 +175,7 @@ run_regression <- function(data,
                            saveJSON = FALSE,
                            saveRDS = FALSE,
                            report = FALSE,
+                           verbose = 1,
                            log = FALSE,
                            ncores = 1,
                            seed = 123)
@@ -188,17 +189,38 @@ run_regression <- function(data,
   # Checks output prefix argument
   if (!is.character(outprefix) || length(outprefix) != 1) {log_stop("Argument 'outprefix' must be a string")}
 
+  # Checks verbosity and updates environment
+  if (length(verbose) != 1 ||
+      is.na(verbose) ||
+      !verbose %in% c(0, 1, FALSE, TRUE)) {
+    log_stop("Argument 'verbose' must be 0, 1, FALSE or TRUE")
+  }
+  .clinprog_env$verbose <- as.logical(verbose)
+
   # Logging setup - creating
+  start_msg <- paste0(
+    "[", .timestamp(), "] [INFO] clinprog regression log started"
+  )
+  .clinprog_env$log_messages <- c(.clinprog_env$log_messages, start_msg)
+
   if (log) {
     logfile <- paste0(outprefix, "_regression.log")
     .clinprog_env$log_con <- file(logfile, open = "wt")
-    writeLines(paste0("[", .timestamp(), "] [INFO] clinprog regression log started"), .clinprog_env$log_con)
+    writeLines(start_msg, .clinprog_env$log_con)
   }
 
   # Logging setup - closing
   on.exit({
-    if (!is.null(.clinprog_env$log_con) && isOpen(.clinprog_env$log_con)) {
-      writeLines(paste0("[", .timestamp(), "] [INFO] clinprog regression finished"), .clinprog_env$log_con)
+    finish_msg <- paste0(
+      "[", .timestamp(), "] [INFO] clinprog regression finished"
+    )
+    .clinprog_env$log_messages <- c(
+      .clinprog_env$log_messages, finish_msg
+    )
+
+    if (!is.null(.clinprog_env$log_con) &&
+        isOpen(.clinprog_env$log_con)) {
+      writeLines(finish_msg, .clinprog_env$log_con)
       close(.clinprog_env$log_con)
       .clinprog_env$log_con <- NULL
     }
@@ -208,7 +230,6 @@ run_regression <- function(data,
   if (!is.data.frame(data)) {log_stop("'data' must be a data.frame")}
 
   # Validates input parameters
-  if (!log) {log_message("clinprog regression log started")}
   log_message("Validating parameters...")
   if (!is.logical(norm_exp) || length(norm_exp) != 1) {
     log_stop("Argument 'norm_exp' must be a boolean [TRUE or FALSE]")
@@ -558,7 +579,6 @@ run_regression <- function(data,
   }
 
   # Returns the OBJ with the signature
-  if (!log) {log_message("clinprog regression finished")}
   return(result)
 }
 
@@ -770,6 +790,7 @@ run_survival <- function(data,
                          saveJSON = FALSE,
                          saveRDS = FALSE,
                          report = FALSE,
+                         verbose = 1,
                          log = FALSE)
 {
   # Start time counter
@@ -787,23 +808,43 @@ run_survival <- function(data,
   # Checks output prefix argument
   if (!is.character(outprefix) || length(outprefix) != 1) {log_stop("Argument 'outprefix' must be a string")}
 
+  # Checks verbosity and updates environment
+  if (length(verbose) != 1 ||
+      is.na(verbose) ||
+      !verbose %in% c(0, 1, FALSE, TRUE)) {
+    log_stop("Argument 'verbose' must be 0, 1, FALSE or TRUE")
+  }
+  .clinprog_env$verbose <- as.logical(verbose)
+
   # Logging setup - creating
+  start_msg <- paste0(
+    "[", .timestamp(), "] [INFO] clinprog survival log started"
+  )
+  .clinprog_env$log_messages <- c(.clinprog_env$log_messages, start_msg)
+
   if (log) {
     logfile <- paste0(outprefix, "_survival.log")
     .clinprog_env$log_con <- file(logfile, open = "wt")
-    writeLines(paste0("[", .timestamp(), "] [INFO] clinprog survival log started"), .clinprog_env$log_con)
+    writeLines(start_msg, .clinprog_env$log_con)
   }
 
   # Logging setup - closing
   on.exit({
-    if (!is.null(.clinprog_env$log_con) && isOpen(.clinprog_env$log_con)) {
-      writeLines(paste0("[", .timestamp(), "] [INFO] clinprog survival finished"), .clinprog_env$log_con)
+    finish_msg <- paste0(
+      "[", .timestamp(), "] [INFO] clinprog survival finished"
+    )
+    .clinprog_env$log_messages <- c(
+      .clinprog_env$log_messages, finish_msg
+    )
+
+    if (!is.null(.clinprog_env$log_con) &&
+        isOpen(.clinprog_env$log_con)) {
+      writeLines(finish_msg, .clinprog_env$log_con)
       close(.clinprog_env$log_con)
       .clinprog_env$log_con <- NULL
     }
   }, add = TRUE)
 
-  if (!log) {log_message("clinprog survival log started")}
   log_message("Validating input parameters...")
 
   # Validate R data.frame
@@ -1359,7 +1400,6 @@ run_survival <- function(data,
   }
 
   # Returns the OBJ with the signature and survival results
-  if (!log) {log_message("clinprog survival finished")}
   return(result)
 }
 
@@ -1499,13 +1539,25 @@ run_complete <- function(data,
                          saveJSON = FALSE,
                          saveRDS = FALSE,
                          report = FALSE,
+                         verbose = 1,
                          log = FALSE,
                          ncores = 1,
                          seed = 123)
 {
+  # Reset LOG
+  .clinprog_env$log_messages <- character()
+
+  # Checks verbosity and updates environment
+  if (length(verbose) != 1 ||
+      is.na(verbose) ||
+      !verbose %in% c(0, 1, FALSE, TRUE)) {
+    log_stop("Argument 'verbose' must be 0, 1, FALSE or TRUE")
+  }
+  .clinprog_env$verbose <- as.logical(verbose)
+
   # Start time counter
   start_time <- Sys.time()
-  if (!log) {log_message("clinprog complete log started")}
+  log_message("clinprog complete log started")
 
   # Runs module 1 (regression)
   log_message("=============== clinprog: module I - regression ===============")
@@ -1526,6 +1578,7 @@ run_complete <- function(data,
     saveJSON = FALSE,
     saveRDS = FALSE,
     report = FALSE,
+    verbose = verbose,
     log = log,
     ncores = ncores,
     seed = seed
@@ -1551,6 +1604,7 @@ run_complete <- function(data,
     saveJSON = FALSE,
     saveRDS = FALSE,
     report = FALSE,
+    verbose = verbose,
     log = log
   )
   log_message("============================================================")
@@ -1646,6 +1700,7 @@ run_complete <- function(data,
   } else {
     log_message(sprintf("Time to run [complete workflow]: %.2f seconds", elapsed_time))
   }
+  log_message("clinprog complete finished")
 
   # Returns object
   return(result)

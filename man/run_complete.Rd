@@ -25,6 +25,7 @@ run_complete(
   saveJSON = FALSE,
   saveRDS = FALSE,
   report = FALSE,
+  verbose = 1,
   log = FALSE,
   ncores = 1,
   seed = 123
