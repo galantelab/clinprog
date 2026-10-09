@@ -14,25 +14,25 @@ utils::globalVariables(c("variable"))
 #' @keywords internal
 clinprog_followup <- function(data, followup = NULL) {
   # Validates input data
-  if (!is.data.frame(data)) {stop("'data' must be a data.frame")}
+  if (!is.data.frame(data)) {log_stop("'data' must be a data.frame")}
   required_cols <- c("OS", "OS.time")
-  if (!all(required_cols %in% colnames(data))) {stop("Input data must contain columns: 'OS' and 'OS.time'")}
+  if (!all(required_cols %in% colnames(data))) {log_stop("Input data must contain columns: 'OS' and 'OS.time'")}
 
   # Returns original data if followup is NULL
   if (is.null(followup))
   {
-    message("Returning original data.frame (no followup max value passed)...")
+    log_message("Returning original data.frame (no followup max value passed)...")
     return(data)
   }
 
   # Validates followup
-  if (!is.numeric(followup) || length(followup) != 1 || followup <= 0) {stop("'followup' must be a positive numeric value")}
+  if (!is.numeric(followup) || length(followup) != 1 || followup <= 0) {log_stop("'followup' must be a positive numeric value")}
 
   # Skips filtering if followup exceeds maximum observed time
   max_followup <- max(data$OS.time, na.rm = TRUE)
   if (followup >= max_followup)
   {
-    message("Returning original data.frame (followup is greater than or equal to the max 'OS.time')...")
+    log_message("Returning original data.frame (followup is greater than or equal to the max 'OS.time')...")
     return(data)
   }
 
@@ -62,7 +62,7 @@ clinprog_varfun <- function(cmatrix, var_threshold, force) {
 
   # Handle missing values
   if (anyNA(cmatrix)) {
-    message("Checking NAs and imputing with mice...")
+    log_message("Checking NAs and imputing with mice...")
     impu <- mice::mice(cmatrix, print = FALSE)
     cmatrix <- mice::complete(impu)
   }
@@ -72,19 +72,19 @@ clinprog_varfun <- function(cmatrix, var_threshold, force) {
 
   # Handles cases where the user has only 1 feature
   if (ncol(cmatrix) == 3) {
-    if (any(cmatrix[[3]] == 0)) {stop("Feature column contains zero values, cannot normalize")}
+    if (any(cmatrix[[3]] == 0)) {log_stop("Feature column contains zero values, cannot normalize")}
     divisor <- max(cmatrix[[3]])
     dividendo <- cmatrix[[3]]
     normalized <- divisor / dividendo
     variance <- stats::var(normalized)
 
-    if (variance < var_threshold) {stop("All columns rejected by variance filter")}
-    message("No columns rejected by variance filter")
+    if (variance < var_threshold) {log_stop("All columns rejected by variance filter")}
+    log_message("No columns rejected by variance filter")
   } else {
     maxes <- apply(cmatrix[, 3:ncol(cmatrix), drop = FALSE], 2, max)
 
-    if (0 %in% maxes) {stop("Columns containing only zeros found in input data. Remove such columns and try again.")}
-    message("Calculating normalized variances")
+    if (0 %in% maxes) {log_stop("Columns containing only zeros found in input data. Remove such columns and try again.")}
+    log_message("Calculating normalized variances")
 
     divisor <- cmatrix[, 3:ncol(cmatrix), drop = FALSE]
     dividendo <- matrix(maxes, nrow = nrow(cmatrix), ncol = length(maxes), byrow = TRUE)
@@ -93,13 +93,13 @@ clinprog_varfun <- function(cmatrix, var_threshold, force) {
     filtered <- which(variances > var_threshold)
 
     if (length(filtered) == 0) {
-      stop("All columns rejected by variance filter")
+      log_stop("All columns rejected by variance filter")
     } else if (length(filtered) == length(variances)) {
-      message("No columns rejected by variance filter")
+      log_message("No columns rejected by variance filter")
     } else {
       losers <- names(variances)[-filtered]
       cmatrix <- cmatrix[, c(1, 2, filtered + 2), drop = FALSE]
-      message(length(losers), " columns removed by variance filter: ", paste(losers, collapse = ", "))
+      log_message(length(losers), " columns removed by variance filter: ", paste(losers, collapse = ", "))
     }
 
     # Survival checks
@@ -107,14 +107,14 @@ clinprog_varfun <- function(cmatrix, var_threshold, force) {
       OSstatus <- cmatrix[, 1]
       percentage <- sum(OSstatus) / length(OSstatus)
 
-      if (percentage < 0.2 || percentage > 0.8) {stop("Survival status proportion is not adequate for analysis")}
+      if (percentage < 0.2 || percentage > 0.8) {log_stop("Survival status proportion is not adequate for analysis")}
 
       followup <- cmatrix[, 2]
       uplimit <- max(followup)
       normalized <- followup / uplimit
       fvar <- stats::var(normalized)
 
-      if (fvar < var_threshold) {stop("Follow-up variance did not pass the threshold")}
+      if (fvar < var_threshold) {log_stop("Follow-up variance did not pass the threshold")}
     }
   }
 
@@ -148,21 +148,21 @@ clinprog_ph_assumptions <- function(full_data) {
         if (!is.na(pval) && pval > 0.05) {filt <- c(filt, i)}
       }
     },
-    warning = function(w) {message("Warning in feature ", i, ": ", conditionMessage(w))},
-    error = function(e) {message("Skipping feature ", i, " due to error: ", conditionMessage(e))})
+    warning = function(w) {log_message("Warning in feature ", i, ": ", conditionMessage(w))},
+    error = function(e) {log_message("Skipping feature ", i, " due to error: ", conditionMessage(e))})
   }
 
   losers <- setdiff(attributes, filt)
 
   # Controls user output to avoid pollution
   if (length(losers) > 50) {
-    message(length(losers), " columns removed by Schoenfeld test (showing first 50): ",
+    log_message(length(losers), " columns removed by Schoenfeld test (showing first 50): ",
             paste(utils::head(losers, 50), collapse = ", "))
   } else {
-    message(length(losers), " columns removed by Schoenfeld test: ", paste(losers, collapse = ", "))
+    log_message(length(losers), " columns removed by Schoenfeld test: ", paste(losers, collapse = ", "))
   }
 
-  if (length(filt) == 0) {stop("No features passed the Schoenfeld test")}
+  if (length(filt) == 0) {log_stop("No features passed the Schoenfeld test")}
 
   cols <- match(filt, colnames(full_data))
   cols <- cols[!is.na(cols)]
@@ -188,15 +188,15 @@ clinprog_feature_check <- function(dataf, g, seed = NULL) {
   n_features <- ncol(dataf) - 2
 
   # Extreme case: no features
-  if (n_features <= 0) {stop("No features remaining after filtering steps")}
+  if (n_features <= 0) {log_stop("No features remaining after filtering steps")}
 
   # Low features case: direct regression
   if (n_features < g) {
-    message("Number of features is smaller than group size. Performing single multivariate regression...")
+    log_message("Number of features is smaller than group size. Performing single multivariate regression...")
     coefs <- clinprog_regression(dataf, seed = seed)
 
     if (is.null(coefs) || length(coefs) == 0 || all(coefs == 0)) {
-      stop("No signature found: all coefficients are zero")
+      log_stop("No signature found: all coefficients are zero")
     }
 
     signature <- data.frame(
@@ -245,7 +245,7 @@ clinprog_bootstrapfun <- function(full_data,
                                   ncores = 1,
                                   seed = 123) {
 
-  message("Starting bootstrap with ", n_boot, " iterations...")
+  log_message("Starting bootstrap with ", n_boot, " iterations...")
 
   features <- colnames(full_data)[-c(1, 2)]
   results <- stats::setNames(vector("list", length(features)), features)
@@ -264,7 +264,7 @@ clinprog_bootstrapfun <- function(full_data,
       }
 
       if (is.null(names(coefs))) {
-        stop("Regression result must be a named vector")
+        log_stop("Regression result must be a named vector")
       }
 
       for (j in seq_along(coefs)) {
@@ -350,12 +350,12 @@ clinprog_bootstrapfun <- function(full_data,
       attempts <- attempts + 1
 
       if (attempts > max_attempts) {
-        stop("Too many failed bootstrap attempts (correlation filter too strict?)")
+        log_stop("Too many failed bootstrap attempts (correlation filter too strict?)")
       }
 
       # Avoids spam messages
       if (i %% 10 == 0) {
-        message("Processing iteration: ", i)
+        log_message("Processing iteration: ", i)
       }
 
       coefs <- run_attempt(
@@ -422,7 +422,7 @@ clinprog_bootstrapfun <- function(full_data,
       }
 
       if (batch_size <= 0) {
-        stop("Too many failed bootstrap attempts (correlation filter too strict?)")
+        log_stop("Too many failed bootstrap attempts (correlation filter too strict?)")
       }
 
       batch_seeds <- seed_counter:(seed_counter + batch_size - 1)
@@ -446,7 +446,7 @@ clinprog_bootstrapfun <- function(full_data,
         break
       }
 
-      message(
+      log_message(
         "Bootstrap progress: ",
         min(length(valid_results), n_boot),
         "/",
@@ -488,11 +488,11 @@ clinprog_bootstrapfun <- function(full_data,
 
   # Checks validity of results
   if (is.null(tt) || nrow(tt) == 0) {
-    stop("No coefficients estimated during bootstrap")
+    log_stop("No coefficients estimated during bootstrap")
   }
 
   if (anyNA(tt$coefficient)) {
-    warning("NA coefficients detected. Consider increasing bootstrap iterations.")
+    log_warning("NA coefficients detected. Consider increasing bootstrap iterations.")
   }
 
   # Applies coefficient threshold
@@ -503,12 +503,12 @@ clinprog_bootstrapfun <- function(full_data,
   ]
 
   if (nrow(tt) == 0 || all(tt$coefficient == 0)) {
-    stop("No signature found: coefficients below threshold")
+    log_stop("No signature found: coefficients below threshold")
   }
 
   tt$feature <- gsub("__", "-", tt$feature)
 
-  message("Bootstrap completed successfully.")
+  log_message("Bootstrap completed successfully.")
 
   return(tt)
 }
@@ -570,8 +570,8 @@ clinprog_corfun <- function(cmatrix, cor_threshold) {
   proportion <- sum(high_corr) / length(pvals)
 
   if (proportion >= cor_threshold) {
-    message("Iteration skipped due to high correlation among features.")
-    if (any(high_corr)) {message("High correlation pairs: ", paste(pair_names[high_corr], collapse = ", "))}
+    log_message("Iteration skipped due to high correlation among features.")
+    if (any(high_corr)) {log_message("High correlation pairs: ", paste(pair_names[high_corr], collapse = ", "))}
     return(1)
   }
 
@@ -593,14 +593,14 @@ clinprog_corfun <- function(cmatrix, cor_threshold) {
 clinprog_subsample <- function(full_data, group_size, seed = NULL) {
 
   # Checks validity of input
-  if (ncol(full_data) <= 2) {stop("No features available for subsampling")}
+  if (ncol(full_data) <= 2) {log_stop("No features available for subsampling")}
   if (!is.null(seed)) {set.seed(seed)}
   feature_cols <- colnames(full_data)[3:ncol(full_data)]
-  if (group_size > length(feature_cols)) {stop("'group_size' is larger than available features")}
+  if (group_size > length(feature_cols)) {log_stop("'group_size' is larger than available features")}
 
   # Makes bootstrap resampling with no replacement
   shuffle <- sample(feature_cols, size = group_size, replace = FALSE)
-  message("Picked ", length(shuffle), " features: ", paste(shuffle, collapse = ", "))
+  log_message("Picked ", length(shuffle), " features: ", paste(shuffle, collapse = ", "))
   surv_cols <- colnames(full_data)[1:2]
   cmatrix <- full_data[, c(surv_cols, shuffle), drop = FALSE]
   return(cmatrix)
@@ -632,7 +632,7 @@ clinprog_regcall <- function(cmatrix, group_size, full_data, seed = NULL) {
 
     error = function(e) {
 
-      message("Regression timeout/error: retrying with new subsample...")
+      log_message("Regression timeout/error: retrying with new subsample...")
 
       new_matrix <- clinprog_subsample(
         full_data,
@@ -649,7 +649,7 @@ clinprog_regcall <- function(cmatrix, group_size, full_data, seed = NULL) {
         ),
 
         error = function(e2) {
-          message("Retry failed: ", conditionMessage(e2))
+          log_message("Retry failed: ", conditionMessage(e2))
           return(NULL)
         }
       )
@@ -679,7 +679,7 @@ clinprog_regression <- function(cmatrix, seed = NULL) {
 
   # Ensures data has OS and OS.time data
   if (!all(c("OS", "OS.time") %in% colnames(cmatrix))) {
-    stop("'cmatrix' must contain 'OS' and 'OS.time' names")
+    log_stop("'cmatrix' must contain 'OS' and 'OS.time' names")
   }
 
   # Ensures survival formula exists correctly
@@ -695,7 +695,7 @@ clinprog_regression <- function(cmatrix, seed = NULL) {
       trace = FALSE
     ),
     error = function(e) {
-      stop("'profL1' failed: ", conditionMessage(e))
+      log_stop("'profL1' failed: ", conditionMessage(e))
     }
   )
 
@@ -708,7 +708,7 @@ clinprog_regression <- function(cmatrix, seed = NULL) {
       trace = FALSE
     ),
     error = function(e) {
-      stop("'optL1' failed: ", conditionMessage(e))
+      log_stop("'optL1' failed: ", conditionMessage(e))
     }
   )
 
@@ -721,14 +721,14 @@ clinprog_regression <- function(cmatrix, seed = NULL) {
       trace = FALSE
     ),
     error = function(e) {
-      stop("'penalized' model failed: ", conditionMessage(e))
+      log_stop("'penalized' model failed: ", conditionMessage(e))
     }
   )
 
   coefs <- penalized::coefficients(fit, "all")
 
   if (is.null(coefs) || length(coefs) == 0) {
-    stop("No coefficients returned by penalized regression model")
+    log_stop("No coefficients returned by penalized regression model")
   }
 
   return(coefs)
@@ -760,17 +760,17 @@ clinprog_regression <- function(cmatrix, seed = NULL) {
 clinprog_cutoff_roc <- function(data, direction = NULL)
 {
   # Checks input type
-  if (!is.data.frame(data)) {stop("Argument 'data' must be a data.frame")}
+  if (!is.data.frame(data)) {log_stop("Argument 'data' must be a data.frame")}
 
   # Validates input
   required_cols <- c("score", "OS", "OS.time")
   missing_cols <- setdiff(required_cols, colnames(data))
-  if (length(missing_cols) > 0) {stop("Missing required columns: ", paste(missing_cols, collapse = ", "))}
+  if (length(missing_cols) > 0) {log_stop("Missing required columns: ", paste(missing_cols, collapse = ", "))}
 
   # Checks direction
   if (!is.null(direction) && (!is.character(direction) || length(direction) != 1 || !direction %in% c("<", ">")))
   {
-    stop("Argument 'direction' must be NULL, '<', or '>'")
+    log_stop("Argument 'direction' must be NULL, '<', or '>'")
   }
 
   # Determines ROC direction automatically if not provided
@@ -844,12 +844,12 @@ clinprog_cutoff_roc <- function(data, direction = NULL)
 clinprog_uniCox_model <- function(data)
 {
   # Checks input type
-  if (!is.data.frame(data)) {stop("Argument 'data' must be a data.frame")}
+  if (!is.data.frame(data)) {log_stop("Argument 'data' must be a data.frame")}
 
   # Validates input
   required_cols <- c("OS", "OS.time", "score_group")
   missing_cols <- setdiff(required_cols, colnames(data))
-  if (length(missing_cols) > 0) {stop("Missing required columns: ", paste(missing_cols, collapse = ", "))}
+  if (length(missing_cols) > 0) {log_stop("Missing required columns: ", paste(missing_cols, collapse = ", "))}
 
   # Runs analysis
   tryCatch({
@@ -898,7 +898,7 @@ clinprog_uniCox_model <- function(data)
     # Returns structured result
     return(list(table = result_table, model = uni_model, fit = fit, ph = ph_test))
   }, error = function(e) {
-    warning("Univariate Cox model failed: ", conditionMessage(e))
+    log_warning("Univariate Cox model failed: ", conditionMessage(e))
     return(NULL)
   })
 }
@@ -941,7 +941,7 @@ clinprog_min_signature <- function(
 {
   # Validate signature
   if (!is.data.frame(signature)) {
-    log_stop("Argument 'signature' must be a data.frame")
+    log_log_stop("Argument 'signature' must be a data.frame")
   }
 
   required_signature_cols <- c("feature", "coefficient")
@@ -951,7 +951,7 @@ clinprog_min_signature <- function(
   )
 
   if (length(missing_signature_cols) > 0) {
-    log_stop(
+    log_log_stop(
       "Signature is missing required columns: ",
       paste(missing_signature_cols, collapse = ", ")
     )
@@ -959,14 +959,14 @@ clinprog_min_signature <- function(
 
   # Validate data
   if (!is.data.frame(data)) {
-    log_stop("Argument 'data' must be a data.frame")
+    log_log_stop("Argument 'data' must be a data.frame")
   }
 
   required_data_cols <- c("OS", "OS.time")
   missing_data_cols <- setdiff(required_data_cols, colnames(data))
 
   if (length(missing_data_cols) > 0) {
-    log_stop(
+    log_log_stop(
       "Data is missing required columns: ",
       paste(missing_data_cols, collapse = ", ")
     )
@@ -978,7 +978,7 @@ clinprog_min_signature <- function(
       is.na(min_size) ||
       min_size < 1 ||
       min_size != as.integer(min_size)) {
-    log_stop(
+    log_log_stop(
       "Argument 'min_size' must be a positive integer"
     )
   }
@@ -992,7 +992,7 @@ clinprog_min_signature <- function(
       length(score_cutoff) != 1 ||
       is.na(score_cutoff) ||
       !score_cutoff %in% valid_cutoffs) {
-    log_stop(
+    log_log_stop(
       "Argument 'score_cutoff' must be one of: ",
       paste(valid_cutoffs, collapse = ", ")
     )
@@ -1033,7 +1033,7 @@ clinprog_min_signature <- function(
   missing_features <- setdiff(signature$feature, colnames(data))
 
   if (length(missing_features) > 0) {
-    log_stop(
+    log_log_stop(
       "Signature features not found in data: ",
       paste(gsub("__", "-", missing_features), collapse = ", ")
     )
@@ -1095,7 +1095,7 @@ clinprog_min_signature <- function(
       roc_result <- tryCatch(
         clinprog_cutoff_roc(temp_data),
         error = function(e) {
-          log_warning(
+          log_log_warning(
             "ROC cutoff failed for signature size ",
             k,
             ". Falling back to median cutoff."
@@ -1181,7 +1181,7 @@ clinprog_min_signature <- function(
       (nrow(tested) == 0 ||
        is.na(selected_pvalue) ||
        !any(tested$pvalue < 0.05, na.rm = TRUE))) {
-    log_warning(
+    log_log_warning(
       "No minimum signature smaller than the complete signature ",
       "reached the significance threshold. Returning the full signature."
     )
@@ -1211,18 +1211,18 @@ clinprog_uniCox_test <- function(data, covariates, p.cutoff = 0.2)
 {
   # Validates input data
   required_cols <- c("OS", "OS.time")
-  if (!all(required_cols %in% colnames(data))) {stop("Input data must contain columns: 'OS' and 'OS.time'")}
+  if (!all(required_cols %in% colnames(data))) {log_stop("Input data must contain columns: 'OS' and 'OS.time'")}
 
   # Validates covariates
-  if (!is.character(covariates) || length(covariates) < 1) {stop("'covariates' must be a character vector")}
+  if (!is.character(covariates) || length(covariates) < 1) {log_stop("'covariates' must be a character vector")}
   missing_covariates <- covariates[!covariates %in% colnames(data)]
-  if (length(missing_covariates) > 0) {stop(paste("Covariates not found in data:",
+  if (length(missing_covariates) > 0) {log_stop(paste("Covariates not found in data:",
                                                   paste(missing_covariates, collapse = ", ")))}
 
   # Validates p-value cutoff
   if (!is.numeric(p.cutoff) || length(p.cutoff) != 1 || p.cutoff <= 0 || p.cutoff >= 1)
   {
-    stop("'p.cutoff' must be a numeric value between 0 and 1")
+    log_stop("'p.cutoff' must be a numeric value between 0 and 1")
   }
 
   # Runs multiple univariate Cox models for each variable
@@ -1278,7 +1278,7 @@ clinprog_uniCox_test <- function(data, covariates, p.cutoff = 0.2)
   # Checks if any final result is valid
   if (length(results) == 0)
   {
-    warning("No valid univariate Cox models could be fitted")
+    log_warning("No valid univariate Cox models could be fitted")
     return(NULL)
   }
 
@@ -1320,33 +1320,33 @@ clinprog_multiCox_test <- function(data, univ_result, logrank_result, covariates
 {
   # Validates input data
   required_cols <- c("OS", "OS.time", "score_group")
-  if (!is.data.frame(data)) {stop("'data' must be a data.frame")}
-  if (!all(required_cols %in% colnames(data))) {stop("Input data must contain columns: 'OS', 'OS.time', and 'score_group'")}
+  if (!is.data.frame(data)) {log_stop("'data' must be a data.frame")}
+  if (!all(required_cols %in% colnames(data))) {log_stop("Input data must contain columns: 'OS', 'OS.time', and 'score_group'")}
 
   # Validates univariate results for clinical variables
-  if (!is.data.frame(univ_result)) {stop("'univ_result' must be a data.frame")}
+  if (!is.data.frame(univ_result)) {log_stop("'univ_result' must be a data.frame")}
   required_univ_cols <- c("variable", "hazard.ratio", "Cox.pvalue", "prognosis")
-  if (!all(required_univ_cols %in% colnames(univ_result))) {stop("'univ_result' is missing required columns")}
+  if (!all(required_univ_cols %in% colnames(univ_result))) {log_stop("'univ_result' is missing required columns")}
 
   # Validates log-rank results for score
-  if (!is.data.frame(logrank_result)) {stop("'logrank_result' must be a data.frame")}
+  if (!is.data.frame(logrank_result)) {log_stop("'logrank_result' must be a data.frame")}
   required_logrank_cols <- c("feature", "coefficient", "hazard.ratio", "log.rank.pvalue", "prognosis")
-  if (!all(required_logrank_cols %in% colnames(logrank_result))) {stop("'logrank_result' is missing required columns")}
+  if (!all(required_logrank_cols %in% colnames(logrank_result))) {log_stop("'logrank_result' is missing required columns")}
 
   # Validates covariates
-  if (!is.character(covariates) || length(covariates) < 1) {stop("'covariates' must be a character vector")}
-  if (!is.character(all_covariates) || length(all_covariates) < 1) {stop("'all_covariates' must be a character vector")}
+  if (!is.character(covariates) || length(covariates) < 1) {log_stop("'covariates' must be a character vector")}
+  if (!is.character(all_covariates) || length(all_covariates) < 1) {log_stop("'all_covariates' must be a character vector")}
 
   # Validates bootstrap parameters
-  if (!is.logical(use.bootstrap) || length(use.bootstrap) != 1) {stop("'use.bootstrap' must be either TRUE or FALSE")}
-  if (!is.numeric(bootstrap) || length(bootstrap) != 1 || bootstrap < 1) {stop("'bootstrap' must be a positive numeric value")}
+  if (!is.logical(use.bootstrap) || length(use.bootstrap) != 1) {log_stop("'use.bootstrap' must be either TRUE or FALSE")}
+  if (!is.numeric(bootstrap) || length(bootstrap) != 1 || bootstrap < 1) {log_stop("'bootstrap' must be a positive numeric value")}
   if (!is.numeric(bootstrap.freq) || length(bootstrap.freq) != 1 || bootstrap.freq <= 0 || bootstrap.freq > 1)
   {
-    stop("'bootstrap.freq' must be a numeric value between 0 and 1")
+    log_stop("'bootstrap.freq' must be a numeric value between 0 and 1")
   }
   if (!is.numeric(multi.p.cutoff) || length(multi.p.cutoff) != 1 || multi.p.cutoff <= 0 || multi.p.cutoff >= 1)
   {
-    stop("'multi.p.cutoff' must be a numeric value between 0 and 1")
+    log_stop("'multi.p.cutoff' must be a numeric value between 0 and 1")
   }
 
   # Harmonizes score naming between univariate and multivariate analyses
@@ -1394,7 +1394,7 @@ clinprog_multiCox_test <- function(data, univ_result, logrank_result, covariates
   if (use.bootstrap)
   {
     # Runs bootstrap resampling
-    message(paste0("Running bootstrap resampling with ", bootstrap, " iterations..."))
+    log_message(paste0("Running bootstrap resampling with ", bootstrap, " iterations..."))
     resampling_results <- clinprog_resampling(data = data, covariates = covariates, all_covariates = all_covariates,
                                             bootstrap = bootstrap, bootstrap.freq = bootstrap.freq,
                                             boot.p.cutoff = multi.p.cutoff)
@@ -1492,19 +1492,19 @@ clinprog_schoenfeld <- function(model_object, covariates, is_multi = FALSE)
   {
     if (is_multi)
     {
-      warning("Multivariate Cox model could not be fitted due to convergence issues.")
-    } else {warning("Univariate Cox model could not be fitted due to convergence issues.")}
+      log_warning("Multivariate Cox model could not be fitted due to convergence issues.")
+    } else {log_warning("Univariate Cox model could not be fitted due to convergence issues.")}
     return(NULL)
   }
 
   # Validates model object
-  if (!inherits(model_object, "coxph")) {stop("'model_object' must be a valid survival::coxph model")}
+  if (!inherits(model_object, "coxph")) {log_stop("'model_object' must be a valid survival::coxph model")}
 
   # Validates covariates
-  if (!is.character(covariates) || length(covariates) < 1) {stop("'covariates' must be a non-empty character vector")}
+  if (!is.character(covariates) || length(covariates) < 1) {log_stop("'covariates' must be a non-empty character vector")}
 
   # Validates multivariate flag
-  if (!is.logical(is_multi) || length(is_multi) != 1) {stop("'is_multi' must be either TRUE or FALSE")}
+  if (!is.logical(is_multi) || length(is_multi) != 1) {log_stop("'is_multi' must be either TRUE or FALSE")}
 
   # Runs Schoenfeld residuals test
   test_ph <- survival::cox.zph(fit = model_object, global = TRUE)
@@ -1525,7 +1525,7 @@ clinprog_schoenfeld <- function(model_object, covariates, is_multi = FALSE)
 
   # Validates recovered covariate names
   expected_n <- nrow(test_ph$table) - 1
-  if (length(tmp_covariates) != expected_n) {stop("Mismatch between recovered covariate names and Schoenfeld test output")}
+  if (length(tmp_covariates) != expected_n) {log_stop("Mismatch between recovered covariate names and Schoenfeld test output")}
 
   # Updates labels
   rownames(test_ph$table) <- c(tmp_covariates, "GLOBAL")
@@ -1541,13 +1541,13 @@ clinprog_schoenfeld <- function(model_object, covariates, is_multi = FALSE)
   # Evaluates global PH assumptions
   if (global_p <= 0.05)
   {
-    warning(paste0("Global proportional hazards assumptions not met (Global p = ", round(global_p, 4), ")."))
-  } else {message(paste0("Global proportional hazards assumptions met (Global p = ", round(global_p, 4), ")."))}
+    log_warning(paste0("Global proportional hazards assumptions not met (Global p = ", round(global_p, 4), ")."))
+  } else {log_message(paste0("Global proportional hazards assumptions met (Global p = ", round(global_p, 4), ")."))}
 
   # Reports dropped covariates
   if (length(dropped) > 0)
   {
-    warning(paste0("The following covariates failed proportional hazards assumptions and will be removed: ",
+    log_warning(paste0("The following covariates failed proportional hazards assumptions and will be removed: ",
                    paste(dropped, collapse = ", ")))
   }
 
@@ -1589,28 +1589,28 @@ clinprog_hazard_ratio <- function(x, surv.time, surv.event, alpha = 0.05,
   # Validates x
   if (length(x) != length(surv.time) || length(x) != length(surv.event))
   {
-    stop("Arguments 'x', 'surv.time', and 'surv.event' must have the same length")
+    log_stop("Arguments 'x', 'surv.time', and 'surv.event' must have the same length")
   }
 
   # Validates survival times
   if (!is.numeric(surv.time) || any(surv.time < 0, na.rm = TRUE))
   {
-    stop("'surv.time' must be a numeric vector containing non-negative values")
+    log_stop("'surv.time' must be a numeric vector containing non-negative values")
   }
 
   # Validates survival event
-  if (!is.numeric(surv.event)) {stop("Argument 'surv.event' must be numeric")}
+  if (!is.numeric(surv.event)) {log_stop("Argument 'surv.event' must be numeric")}
   unique_events <- sort(unique(stats::na.omit(surv.event)))
-  if (!setequal(unique_events, c(0, 1))) {stop("Argument 'surv.event' must contain only 0 and 1 values")}
+  if (!setequal(unique_events, c(0, 1))) {log_stop("Argument 'surv.event' must contain only 0 and 1 values")}
 
   # Validates alpha
   if (!is.numeric(alpha) || length(alpha) != 1 || alpha <= 0 || alpha >= 1)
   {
-    stop("Argument 'alpha' must be a numeric value between 0 and 1")
+    log_stop("Argument 'alpha' must be a numeric value between 0 and 1")
   }
 
   # Validates na.rm
-  if (!is.logical(na.rm) || length(na.rm) != 1) {stop("Argument 'na.rm' must be TRUE or FALSE")}
+  if (!is.logical(na.rm) || length(na.rm) != 1) {log_stop("Argument 'na.rm' must be TRUE or FALSE")}
 
   # Matches statistical test argument
   method.test <- match.arg(method.test)
@@ -1624,7 +1624,7 @@ clinprog_hazard_ratio <- function(x, surv.time, surv.event, alpha = 0.05,
   # Validates remaining observations
   if (nrow(df) < 3)
   {
-    warning("Insufficient observations to fit Cox model")
+    log_warning("Insufficient observations to fit Cox model")
     return(NULL)
   }
 
@@ -1689,43 +1689,43 @@ clinprog_resampling <- function(data, covariates, all_covariates,
     parts <- do.call(rbind, strsplit(rejection_reasons, "\t", fixed = TRUE))
     df <- data.frame(col = parts[, 1], val = parts[, 2], stringsAsFactors = FALSE)
 
-    warning("Some covariates caused bootstrap iterations to be dropped (review 'clinics' input):")
+    log_warning("Some covariates caused bootstrap iterations to be dropped (review 'clinics' input):")
     for (col in unique(df$col))
     {
       sub <- df[df$col == col, , drop = FALSE]
       n <- nrow(sub)
 
       if (all(sub$val == "non-binary")) {
-        warning("    '", col, "' non-binary (", n, " iterations)")
+        log_warning("    '", col, "' non-binary (", n, " iterations)")
       } else {
         vals <- suppressWarnings(as.numeric(sub$val))
         min_val <- min(vals, na.rm = TRUE)
-        warning("    '", col, "' min.prop = ", min_val, " (< cutoff: ", min.prop, ")  [", n, " iterations]")
+        log_warning("    '", col, "' min.prop = ", min_val, " (< cutoff: ", min.prop, ")  [", n, " iterations]")
       }
     }
   }
 
   # Validates input data
   required_cols <- c("OS", "OS.time", "score_group")
-  if (!all(required_cols %in% colnames(data))) {stop("Input data must contain columns: 'OS' and 'OS.time'")}
+  if (!all(required_cols %in% colnames(data))) {log_stop("Input data must contain columns: 'OS' and 'OS.time'")}
 
   # Validates covariates
-  if (!is.character(covariates) || length(covariates) < 1) {stop("'covariates' must be a character vector")}
-  if (!is.character(all_covariates) || length(all_covariates) < 1) {stop("'all_covariates' must be a character vector")}
+  if (!is.character(covariates) || length(covariates) < 1) {log_stop("'covariates' must be a character vector")}
+  if (!is.character(all_covariates) || length(all_covariates) < 1) {log_stop("'all_covariates' must be a character vector")}
 
   # Validates bootstrap iterations
-  if (!is.numeric(bootstrap) || length(bootstrap) != 1 || bootstrap < 1) {stop("'bootstrap' must be a positive numeric value")}
+  if (!is.numeric(bootstrap) || length(bootstrap) != 1 || bootstrap < 1) {log_stop("'bootstrap' must be a positive numeric value")}
 
   # Validates bootstrap frequency threshold
   if (!is.numeric(bootstrap.freq) || length(bootstrap.freq) != 1 || bootstrap.freq <= 0 || bootstrap.freq > 1)
   {
-    stop("'bootstrap.freq' must be a numeric value between 0 and 1")
+    log_stop("'bootstrap.freq' must be a numeric value between 0 and 1")
   }
 
   # Validates p-value cutoff
   if (!is.numeric(boot.p.cutoff) || length(boot.p.cutoff) != 1 || boot.p.cutoff <= 0 || boot.p.cutoff >= 1)
   {
-    stop("'boot.p.cutoff' must be a numeric value between 0 and 1")
+    log_stop("'boot.p.cutoff' must be a numeric value between 0 and 1")
   }
 
   # Builds Cox formula
@@ -1783,9 +1783,9 @@ clinprog_resampling <- function(data, covariates, all_covariates,
   # Ensures valid bootstrap results exist
   if (length(tables_list) == 0)
   {
-    warning("Bootstrap resampling failed.")
+    log_warning("Bootstrap resampling failed.")
     .summarize_rejections(rejection_reasons, min.prop = 0.1)
-    warning("Returning original covariates.")
+    log_warning("Returning original covariates.")
     return(list(table = NULL, covariates = covariates, bootstrap.used = FALSE))
   }
 
@@ -1820,24 +1820,24 @@ clinprog_resampling <- function(data, covariates, all_covariates,
 clinprog_bootstrap <- function(raw_data, bootstrap_data, iteration, min.prop = 0.1)
 {
   # Validates input data
-  if (!is.data.frame(raw_data)) {stop("'raw_data' must be a data.frame")}
+  if (!is.data.frame(raw_data)) {log_stop("'raw_data' must be a data.frame")}
   required_cols <- c("OS", "OS.time")
-  if (!all(required_cols %in% colnames(raw_data))) {stop("'raw_data' must contain columns: 'OS' and 'OS.time'")}
+  if (!all(required_cols %in% colnames(raw_data))) {log_stop("'raw_data' must contain columns: 'OS' and 'OS.time'")}
 
   # Validates bootstrap data
   if (!is.list(bootstrap_data) || is.null(bootstrap_data$strap))
   {
-    stop("'bootstrap_data' must be a valid bootstrap object generated by sjstats::bootstrap()")
+    log_stop("'bootstrap_data' must be a valid bootstrap object generated by sjstats::bootstrap()")
   }
 
   # Validates iteration
-  if (!is.numeric(iteration) || length(iteration) != 1 || iteration < 1) {stop("'iteration' must be a positive numeric value")}
-  if (iteration > length(bootstrap_data$strap)) {stop("'iteration' exceeds the number of available bootstrap samples")}
+  if (!is.numeric(iteration) || length(iteration) != 1 || iteration < 1) {log_stop("'iteration' must be a positive numeric value")}
+  if (iteration > length(bootstrap_data$strap)) {log_stop("'iteration' exceeds the number of available bootstrap samples")}
 
   # Validates minimum proportion
   if (!is.numeric(min.prop) || length(min.prop) != 1 || min.prop <= 0 || min.prop >= 0.5)
   {
-    stop("'min.prop' must be a numeric value between 0 and 0.5")
+    log_stop("'min.prop' must be a numeric value between 0 and 0.5")
   }
 
   # Extracts bootstrap sample indices
@@ -1885,15 +1885,15 @@ clinprog_bootstrap <- function(raw_data, bootstrap_data, iteration, min.prop = 0
 clinprog_merge <- function(tables_list, covariates)
 {
   # Validates tables list
-  if (!is.list(tables_list) || length(tables_list) == 0) {stop("'tables_list' must be a non-empty list")}
+  if (!is.list(tables_list) || length(tables_list) == 0) {log_stop("'tables_list' must be a non-empty list")}
 
   # Validates covariates
-  if (!is.character(covariates) || length(covariates) < 1) {stop("'covariates' must be a character vector")}
+  if (!is.character(covariates) || length(covariates) < 1) {log_stop("'covariates' must be a character vector")}
 
   # Extracts significant variables from each iteration
   cox_tables <- lapply(tables_list, function(result_table)
   {
-    if (!"prognosis" %in% colnames(result_table)) {stop("All tables in 'tables_list' must contain a 'prognosis' column")}
+    if (!"prognosis" %in% colnames(result_table)) {log_stop("All tables in 'tables_list' must contain a 'prognosis' column")}
     result_table <- result_table[!is.na(result_table$prognosis), , drop = FALSE]
     if (nrow(result_table) == 0) {return(NULL)}
     dplyr::count(result_table, variable)
@@ -1904,7 +1904,7 @@ clinprog_merge <- function(tables_list, covariates)
 
   if (length(cox_tables) == 0)
   {
-    warning("No valid bootstrap iterations available")
+    log_warning("No valid bootstrap iterations available")
     return(NULL)
   }
 
