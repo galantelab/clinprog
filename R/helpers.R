@@ -864,8 +864,8 @@ clinprog_uniCox_model <- function(data)
                                     alpha = 0.05, method.test = "logrank", na.rm = TRUE)
 
     # Extracts statistics
-    hazard_ratio <- paste0(round(hr_model$hazard.ratio, 4), " (95% CI, ", round(hr_model$lower, 4),
-                           " - ", round(hr_model$upper, 4), ")")
+    hazard_ratio <- paste0(signif(hr_model$hazard.ratio, 2), " (95% CI, ", signif(hr_model$lower, 2),
+                           " - ", signif(hr_model$upper, 2), ")")
     coef <- hr_model$coef
     logrank_pvalue <- hr_model$p.value
 
@@ -889,8 +889,8 @@ clinprog_uniCox_model <- function(data)
     } else {prognosis <- "---"}
 
     # Builds results table
-    result_table <- data.frame(feature = "score", control = "high", condition = "low", coefficient = round(coef, 4),
-                               hazard.ratio = hazard_ratio, log.rank.pvalue = round(logrank_pvalue, 4),
+    result_table <- data.frame(feature = "score", control = "high", condition = "low", coefficient = signif(coef, 2),
+                               hazard.ratio = hazard_ratio, log.rank.pvalue = signif(logrank_pvalue, 2),
                                low.high.samples = low_high_samples, median.survival.low = median_survival_low,
                                median.survival.high = median_survival_high, prognosis = prognosis,
                                stringsAsFactors = FALSE)
@@ -1303,7 +1303,7 @@ clinprog_uniCox_test <- function(data, covariates, p.cutoff = 0.2)
 #' @param use.bootstrap Logical. Whether bootstrap resampling should be used before final model fitting (default: \code{TRUE}).
 #' @param bootstrap Numeric. Number of bootstrap iterations (default: \code{1}).
 #' @param bootstrap.freq Numeric. Minimum frequency to retain variables after bootstrap resampling (default: \code{0.25}).
-#' @param multi.p.cutoff Numeric. P-value used to define prognosis groups in multivariate models (default: \code{0.05}).
+#' @param multi.p.cutoff Numeric. P-value used to define prognosis groups in multivariate models (default: \code{0.1}).
 #'
 #' @return A list containing:
 #' \describe{
@@ -1316,7 +1316,7 @@ clinprog_uniCox_test <- function(data, covariates, p.cutoff = 0.2)
 #'
 #' @keywords internal
 clinprog_multiCox_test <- function(data, univ_result, logrank_result, covariates, all_covariates,
-                                 use.bootstrap = TRUE, bootstrap = 1, bootstrap.freq = 0.25, multi.p.cutoff = 0.05)
+                                 use.bootstrap = TRUE, bootstrap = 1, bootstrap.freq = 0.25, multi.p.cutoff = 0.1)
 {
   # Validates input data
   required_cols <- c("OS", "OS.time", "score_group")
@@ -1674,8 +1674,37 @@ clinprog_hazard_ratio <- function(x, surv.time, surv.event, alpha = 0.05,
 #'
 #' @keywords internal
 clinprog_resampling <- function(data, covariates, all_covariates,
-                              bootstrap = 100, bootstrap.freq = 0.25, boot.p.cutoff = 0.05)
+                                bootstrap = 100, bootstrap.freq = 0.25, boot.p.cutoff = 0.1)
 {
+  # Internal helper to summarize why bootstrap iterations were dropped
+  .summarize_rejections <- function(rejection_reasons, min.prop)
+  {
+    if (length(rejection_reasons) == 0) return(invisible(NULL))
+
+    # Makes sure every reason gets exactly 2 fields separated by tab
+    rejection_reasons <- vapply(rejection_reasons, function(x) {
+      if (grepl("\t", x, fixed = TRUE)) x else paste0(x, "\tNA")
+    }, character(1))
+
+    parts <- do.call(rbind, strsplit(rejection_reasons, "\t", fixed = TRUE))
+    df <- data.frame(col = parts[, 1], val = parts[, 2], stringsAsFactors = FALSE)
+
+    warning("Some covariates caused bootstrap iterations to be dropped (review 'clinics' input):")
+    for (col in unique(df$col))
+    {
+      sub <- df[df$col == col, , drop = FALSE]
+      n <- nrow(sub)
+
+      if (all(sub$val == "non-binary")) {
+        warning("    '", col, "' non-binary (", n, " iterations)")
+      } else {
+        vals <- suppressWarnings(as.numeric(sub$val))
+        min_val <- min(vals, na.rm = TRUE)
+        warning("    '", col, "' min.prop = ", min_val, " (< cutoff: ", min.prop, ")  [", n, " iterations]")
+      }
+    }
+  }
+
   # Validates input data
   required_cols <- c("OS", "OS.time", "score_group")
   if (!all(required_cols %in% colnames(data))) {stop("Input data must contain columns: 'OS' and 'OS.time'")}
@@ -1727,6 +1756,7 @@ clinprog_resampling <- function(data, covariates, all_covariates,
   tables_list <- list()
   valid_iterations <- 0
   current_iteration <- 1
+  rejection_reasons <- character()
 
   while (valid_iterations < bootstrap && current_iteration <= length(bootstrap_data$strap))
   {
@@ -1734,7 +1764,12 @@ clinprog_resampling <- function(data, covariates, all_covariates,
     current_iteration <- current_iteration + 1
 
     # Skips invalid bootstrap samples
-    if (is.null(boot_df)) {next}
+    if (length(boot_df) == 0)
+    {
+      reason <- attr(boot_df, "reason")
+      if (!is.null(reason)) rejection_reasons <- c(rejection_reasons, reason)
+      next
+    }
 
     # Fits multivariate Cox model
     model <- tryCatch(survival::coxph(multi_formula, data = boot_df), error = function(e) NULL)
@@ -1748,7 +1783,9 @@ clinprog_resampling <- function(data, covariates, all_covariates,
   # Ensures valid bootstrap results exist
   if (length(tables_list) == 0)
   {
-    warning("Bootstrap resampling failed. Returning original covariates.")
+    warning("Bootstrap resampling failed.")
+    .summarize_rejections(rejection_reasons, min.prop = 0.1)
+    warning("Returning original covariates.")
     return(list(table = NULL, covariates = covariates, bootstrap.used = FALSE))
   }
 
@@ -1762,6 +1799,9 @@ clinprog_resampling <- function(data, covariates, all_covariates,
   # Ensures score_group remains included
   selected_covariates <- unique(c("score_group", selected_covariates))
 
+  # Prints 1x at the end the variables that made iterations fail
+  .summarize_rejections(rejection_reasons, min.prop = 0.1)
+
   return(list(table = merged_table, covariates = selected_covariates, bootstrap.used = TRUE))
 }
 
@@ -1772,12 +1812,12 @@ clinprog_resampling <- function(data, covariates, all_covariates,
 #' @param raw_data Data.frame used as source for bootstrap resampling.
 #' @param bootstrap_data Bootstrap object generated by \code{sjstats::bootstrap()}.
 #' @param iteration Numeric. Bootstrap iteration index.
-#' @param min.prop Numeric. Minimum proportion for the least abundant category in binary variables (default: \code{0.2}).
+#' @param min.prop Numeric. Minimum proportion for the least abundant category in binary variables (default: \code{0.1}).
 #'
 #' @return A bootstrap-resampled data.frame if valid, otherwise \code{NULL}.
 #'
 #' @keywords internal
-clinprog_bootstrap <- function(raw_data, bootstrap_data, iteration, min.prop = 0.2)
+clinprog_bootstrap <- function(raw_data, bootstrap_data, iteration, min.prop = 0.1)
 {
   # Validates input data
   if (!is.data.frame(raw_data)) {stop("'raw_data' must be a data.frame")}
@@ -1813,13 +1853,19 @@ clinprog_bootstrap <- function(raw_data, bootstrap_data, iteration, min.prop = 0
     current_var <- stats::na.omit(bootstrap_df[[col]])
 
     # Ensures binary variables
-    if (length(current_var) == 0 || length(unique(current_var)) != 2) {return(NULL)}
+    if (length(current_var) == 0 || length(unique(current_var)) != 2)
+    {
+      return(structure(list(), reason = paste0("'", col, "' non-binary")))
+    }
 
     # Computes category proportions
     proportions <- prop.table(table(current_var))
 
     # Ensures minimum category proportion
-    if (min(proportions) < min.prop) {return(NULL)}
+    if (min(proportions) < min.prop)
+    {
+      return(structure(list(), reason = paste0(col, "\t", round(min(proportions), 4))))
+    }
   }
 
   return(bootstrap_df)
