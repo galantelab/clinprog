@@ -13,11 +13,11 @@
 #' @export
 read_table <- function(file, sep = "\t", row.names = TRUE) {
   # Validates input file
-  if (!is.character(file) || length(file) != 1) {stop("'file' must be a single character string with the table PATH")}
-  if (!file.exists(file)) {stop("Input file does not exist")}
+  if (!is.character(file) || length(file) != 1) {log_stop("'file' must be a single character string with the table PATH")}
+  if (!file.exists(file)) {log_stop("Input file does not exist")}
 
   # Validates row.names parameter
-  if (!is.logical(row.names) || length(row.names) != 1) {stop("'row.names' must be TRUE or FALSE")}
+  if (!is.logical(row.names) || length(row.names) != 1) {log_stop("'row.names' must be TRUE or FALSE")}
 
   # Reads table
   if (isTRUE(row.names))
@@ -40,10 +40,10 @@ read_table <- function(file, sep = "\t", row.names = TRUE) {
 #' @export
 read_rds <- function(file) {
   # Validates file
-  if (!is.character(file) || length(file) != 1 || nchar(file) == 0) {stop("'file' must be a single non-empty character string")}
+  if (!is.character(file) || length(file) != 1 || nchar(file) == 0) {log_stop("'file' must be a single non-empty character string")}
 
   # Checks file existence
-  if (!file.exists(file)) {stop("File does not exist: ", file)}
+  if (!file.exists(file)) {log_stop("File does not exist: ", file)}
 
   # Loads object
   object <- readRDS(file)
@@ -52,7 +52,7 @@ read_rds <- function(file) {
   valid_classes <- c("clinprog_signature", "clinprog_survival", "clinprog_complete")
   if (!inherits(object, valid_classes))
   {
-    stop("The loaded file is not a valid clinprog object. Expected classes: ", paste(valid_classes, collapse = ", "))
+    log_stop("The loaded file is not a valid clinprog object. Expected classes: ", paste(valid_classes, collapse = ", "))
   }
 
   return(object)
@@ -74,15 +74,15 @@ write_rds <- function(object, file, compress = "xz") {
   valid_classes <- c("clinprog_signature", "clinprog_survival", "clinprog_complete")
   if (!inherits(object, valid_classes))
   {
-    stop("'object' must be a valid clinprog object of class: ", paste(valid_classes, collapse = ", "))
+    log_stop("'object' must be a valid clinprog object of class: ", paste(valid_classes, collapse = ", "))
   }
 
   # Validates file
-  if (!is.character(file) || length(file) != 1 || nchar(file) == 0) {stop("'file' must be a single non-empty character string")}
+  if (!is.character(file) || length(file) != 1 || nchar(file) == 0) {log_stop("'file' must be a single non-empty character string")}
 
   # Validates compression method
   valid_compress <- c("gzip", "bzip2", "xz", FALSE)
-  if (!compress %in% valid_compress) {stop("'compress' must be one of: ", paste(valid_compress, collapse = ", "))}
+  if (!compress %in% valid_compress) {log_stop("'compress' must be one of: ", paste(valid_compress, collapse = ", "))}
 
   # Adds .rds extension if missing
   if (!grepl("\\.rds$", file, ignore.case = TRUE)) {file <- paste0(file, ".rds")}
@@ -113,16 +113,16 @@ write_signature <- function(x, file, sep = "\t", row.names = FALSE, quote = FALS
     df <- as.data.frame(x)
   } else if (is.data.frame(x)) {
     required_cols <- c("feature", "coefficient")
-    if (!all(required_cols %in% colnames(x))) {stop("Data.frame must contain columns: 'feature' and 'coefficient'")}
+    if (!all(required_cols %in% colnames(x))) {log_stop("Data.frame must contain columns: 'feature' and 'coefficient'")}
     df <- x
-  } else {stop("Object must be of class 'clinprog_signature' or 'clinprog_survival' or be a valid data.frame")}
+  } else {log_stop("Object must be of class 'clinprog_signature' or 'clinprog_survival' or be a valid data.frame")}
 
   # Deals with file parameter
   if (missing(file) || is.null(file)) {
-    message("No filename provided. Using 'clinprog_signature.txt'...")
+    log_message("No filename provided. Using 'clinprog_signature.txt'...")
     file <- "clinprog_signature.txt"
   } else if (!is.character(file) || length(file) != 1) {
-    stop("`file` must be a single character string")
+    log_stop("`file` must be a single character string")
   }
 
   # Checks file extension
@@ -130,16 +130,16 @@ write_signature <- function(x, file, sep = "\t", row.names = FALSE, quote = FALS
 
   # Adds default extension if missing
   if (ext == "") {
-    warning("No file extension detected. Using '.txt' with tab separator...")
+    log_warning("No file extension detected. Using '.txt' with tab separator...")
     ext <- "txt"
     file <- paste0(file, ".", ext)
   }
 
   # Checks compatibility between extension and separator
   if (ext %in% c("txt", "tsv") && sep != "\t") {
-    warning(sprintf("File extension '%s' suggests tab-separated format, but 'sep' is not '\\t'.", ext))
+    log_warning(sprintf("File extension '%s' suggests tab-separated format, but 'sep' is not '\\t'.", ext))
   } else if (ext == "csv" && sep != ",") {
-    warning(sprintf("File extension '%s' usually uses comma separator, but 'sep' is not ','.", ext))
+    log_warning(sprintf("File extension '%s' usually uses comma separator, but 'sep' is not ','.", ext))
   }
 
   # Writes signature
@@ -165,19 +165,19 @@ write_metadata <- function(module, outprefix, parameters, command = NULL)
 {
   # Validates module
   valid_modules <- c("run_regression", "run_survival", "run_complete")
-  if (!is.character(module) || length(module) != 1) {stop("'module' must be a character string")}
-  if (!module %in% valid_modules) {stop("'module' must be one of: ", paste(valid_modules, collapse = ", "))}
+  if (!is.character(module) || length(module) != 1) {log_stop("'module' must be a character string")}
+  if (!module %in% valid_modules) {log_stop("'module' must be one of: ", paste(valid_modules, collapse = ", "))}
 
   # Validates output prefix
-  if (!is.character(outprefix) || length(outprefix) != 1) {stop("'outprefix' must be a character string")}
+  if (!is.character(outprefix) || length(outprefix) != 1) {log_stop("'outprefix' must be a character string")}
 
   # Validates parameters
-  if (!is.list(parameters)) {stop("'parameters' must be a named list")}
+  if (!is.list(parameters)) {log_stop("'parameters' must be a named list")}
 
   # Validates command
   if (!is.null(command) && (!is.character(command) || length(command) != 1))
   {
-    stop("'command' must be NULL, 'none', or a character string")
+    log_stop("'command' must be NULL, 'none', or a character string")
   }
 
   # Captures command automatically
@@ -186,8 +186,17 @@ write_metadata <- function(module, outprefix, parameters, command = NULL)
   # Disables command export
   if (identical(command, "none")) {command <- NULL}
 
-  # Extracts installed packages
-  installed_packages <- as.data.frame(utils::installed.packages()[, c("Package", "Version")], stringsAsFactors = FALSE)
+  # Captures active session packages efficiently (CRAN safe)
+  sess_info <- utils::sessionInfo()
+  all_pkgs <- c(sess_info$otherPkgs, sess_info$loadedOnly)
+  
+  if (length(all_pkgs) > 0) {
+    installed_packages <- data.frame(Package = names(all_pkgs),
+                                     Version = vapply(all_pkgs, function(p) as.character(p$Version), character(1)),
+                                     stringsAsFactors = FALSE, row.names = NULL)
+  } else {
+    installed_packages <- data.frame(Package = character(0), Version = character(0), stringsAsFactors = FALSE)
+  }
 
   # Builds metadata object
   metadata <- list(
@@ -236,25 +245,27 @@ write_metadata <- function(module, outprefix, parameters, command = NULL)
 #' @return Invisibly returns output report path.
 #' @export
 write_report <- function(object, format = TRUE, file = NULL,
-                                title = "clinprog Report", author = Sys.info()[["user"]])
+                         title = "clinprog Report", author = Sys.info()[["user"]])
 {
   # Validates object
-  valid_object <- any(class(object) %in% c("clinprog_signature", "clinprog_survival", "clinprog_complete"))
-  if (!valid_object) {stop("'object' must be a valid 'clinprog_signature', 'clinprog_survival' or 'clinprog_complete' object")}
+  if (!inherits(object, c("clinprog_signature", "clinprog_survival", "clinprog_complete")))
+  {
+    log_stop("'object' must be a valid 'clinprog_signature', 'clinprog_survival' or 'clinprog_complete' object")
+  }
 
   # Validates title
-  if (!is.character(title) || length(title) != 1) {stop("'title' must be a single character string")}
+  if (!is.character(title) || length(title) != 1) {log_stop("'title' must be a single character string")}
 
   # Validates author
-  if (!is.character(author) || length(author) != 1) {stop("'author' must be a single character string")}
+  if (!is.character(author) || length(author) != 1) {log_stop("'author' must be a single character string")}
 
   # Standardizes format
   if (isTRUE(format)) {format <- "PDF"}
-  if (!is.character(format) || length(format) != 1) {stop("'format' must be TRUE, 'PDF', or 'HTML'")}
+  if (!is.character(format) || length(format) != 1) {log_stop("'format' must be TRUE, 'PDF', or 'HTML'")}
   format <- toupper(format)
   if (!format %in% c("PDF", "HTML"))
   {
-    warning(paste0("Invalid report format: ", format, " detected. Using 'PDF' instead."))
+    log_warning(paste0("Invalid report format: ", format, " detected. Using 'PDF' instead."))
     format <- "PDF"
   }
 
@@ -262,18 +273,18 @@ write_report <- function(object, format = TRUE, file = NULL,
   expected_ext <- ifelse(format == "PDF", ".pdf", ".html")
 
   # Defines output file
-  if (is.null(file))
-  {
-    file <- switch(
-      class(object)[1],
-      clinprog_signature = paste0("clinprog_report_regression", expected_ext),
-      clinprog_survival  = paste0("clinprog_report_survival", expected_ext),
-      clinprog_complete  = paste0("clinprog_report_complete", expected_ext)
-    )
+  if (is.null(file)) {
+    if (inherits(object, "clinprog_signature")) {
+      file <- paste0("clinprog_report_regression", expected_ext)
+    } else if (inherits(object, "clinprog_survival")) {
+      file <- paste0("clinprog_report_survival", expected_ext)
+    } else if (inherits(object, "clinprog_complete")) {
+      file <- paste0("clinprog_report_complete", expected_ext)
+    }
   }
 
   # Validates file
-  if (!is.character(file) || length(file) != 1) {stop("'file' must be a single character string")}
+  if (!is.character(file) || length(file) != 1) {log_stop("'file' must be a single character string")}
 
   # Detects extension
   current_ext <- tolower(tools::file_ext(file))
@@ -285,7 +296,7 @@ write_report <- function(object, format = TRUE, file = NULL,
   }
   else if (!current_ext %in% c("pdf", "html"))
   {
-    warning(paste0("Invalid file extension: '", current_ext, "' detected. Using '",
+    log_warning(paste0("Invalid file extension: '", current_ext, "' detected. Using '",
                    sub("^\\.", "", expected_ext), "' instead."))
     file <- paste0(tools::file_path_sans_ext(file), expected_ext)
   }
@@ -296,15 +307,15 @@ write_report <- function(object, format = TRUE, file = NULL,
   if (!dir.exists(output_dir)) {dir.create(output_dir, recursive = TRUE)}
 
   # Checks Quarto
-  if (!requireNamespace("quarto", quietly = TRUE)) {stop("Package 'quarto' must be installed to generate reports")}
+  if (!requireNamespace("quarto", quietly = TRUE)) {log_stop("Package 'quarto' must be installed to generate reports")}
 
   # Checks Quarto installation
   quarto_path <- quarto::quarto_path()
-  if (is.null(quarto_path) || !nzchar(quarto_path)) {stop("Quarto executable was not found in the system")}
+  if (is.null(quarto_path) || !nzchar(quarto_path)) {log_stop("Quarto executable was not found in the system")}
 
   # Retrieves report template
   template <- system.file("quarto/clinprog_report.qmd", package = "clinprog")
-  if (!file.exists(template)) {stop("Report template file 'clinprog_report.qmd' was not found")}
+  if (!file.exists(template)) {log_stop("Report template file 'clinprog_report.qmd' was not found")}
 
   # Creates temporary RDS object
   temp_rds <- tempfile(fileext = ".rds")
@@ -321,7 +332,7 @@ write_report <- function(object, format = TRUE, file = NULL,
 
   # Moves generated report to user-defined directory
   success <- file.rename(from = file.path(dirname(template), output_file), to = file)
-  if (!success) {stop("Failed to move generated report to destination directory")}
+  if (!success) {log_stop("Failed to move generated report to destination directory")}
 
   return(invisible(normalizePath(file, mustWork = FALSE)))
 }
@@ -365,18 +376,18 @@ write_score <- function(x, file, clinics = FALSE, sep = "\t", row.names = TRUE, 
     required_cols <- c("OS", "OS.time", "score")
     if (!all(required_cols %in% colnames(x)))
     {
-      stop("Data.frame must contain at least the columns: 'OS', 'OS.time', and 'score'")
+      log_stop("Data.frame must contain at least the columns: 'OS', 'OS.time', and 'score'")
     }
     df <- x
-  } else {stop("Object must be of class 'clinprog_survival' or a valid data.frame")}
+  } else {log_stop("Object must be of class 'clinprog_survival' or a valid data.frame")}
 
   # Deals with file parameter
   if (missing(file) || is.null(file))
   {
-    message("No filename provided. Using 'clinprog_score.txt'...")
+    log_message("No filename provided. Using 'clinprog_score.txt'...")
     file <- "clinprog_score.txt"
   } else if (!is.character(file) || length(file) != 1) {
-    stop("'file' must be a single character string")
+    log_stop("'file' must be a single character string")
   }
 
   # Checks file extension
@@ -385,7 +396,7 @@ write_score <- function(x, file, clinics = FALSE, sep = "\t", row.names = TRUE, 
   # Adds default extension if missing
   if (ext == "")
   {
-    warning("No file extension detected. Using '.txt' with tab separator...")
+    log_warning("No file extension detected. Using '.txt' with tab separator...")
     ext <- "txt"
     file <- paste0(file, ".", ext)
   }
@@ -393,9 +404,9 @@ write_score <- function(x, file, clinics = FALSE, sep = "\t", row.names = TRUE, 
   # Checks compatibility between extension and separator
   if (ext %in% c("txt", "tsv") && sep != "\t")
   {
-    warning(sprintf("File extension '%s' suggests tab-separated format, but 'sep' is not '\\t'.", ext))
+    log_warning(sprintf("File extension '%s' suggests tab-separated format, but 'sep' is not '\\t'.", ext))
   } else if (ext == "csv" && sep != ",") {
-    warning(sprintf("File extension '%s' usually uses comma separator, but 'sep' is not ','.", ext))
+    log_warning(sprintf("File extension '%s' usually uses comma separator, but 'sep' is not ','.", ext))
   }
 
   # Writes table
@@ -435,17 +446,17 @@ write_univariate <- function(x, file, sep = "\t", row.names = FALSE, quote = FAL
 
     if (!all(required_cols %in% colnames(x)))
     {
-      stop("Data.frame must contain at least the following columns: 'feature', 'hazard.ratio', and 'log.rank.pvalue'")
+      log_stop("Data.frame must contain at least the following columns: 'feature', 'hazard.ratio', and 'log.rank.pvalue'")
     }
     df <- x
-  } else {stop("Input must be a 'clinprog_survival' object, a valid univariate result list, or a compatible data.frame")}
+  } else {log_stop("Input must be a 'clinprog_survival' object, a valid univariate result list, or a compatible data.frame")}
 
   # Deals with file parameter
   if (missing(file) || is.null(file))
   {
-    message("No filename provided. Using 'clinprog_uniCox.txt'...")
+    log_message("No filename provided. Using 'clinprog_uniCox.txt'...")
     file <- "clinprog_uniCox.txt"
-  } else if (!is.character(file) || length(file) != 1) {stop("'file' must be a single character string")}
+  } else if (!is.character(file) || length(file) != 1) {log_stop("'file' must be a single character string")}
 
   # Checks file extension
   ext <- tolower(tools::file_ext(file))
@@ -453,7 +464,7 @@ write_univariate <- function(x, file, sep = "\t", row.names = FALSE, quote = FAL
   # Adds default extension if missing
   if (ext == "")
   {
-    warning("No file extension detected. Using '.txt' with tab separator...")
+    log_warning("No file extension detected. Using '.txt' with tab separator...")
     ext <- "txt"
     file <- paste0(file, ".", ext)
   }
@@ -461,9 +472,9 @@ write_univariate <- function(x, file, sep = "\t", row.names = FALSE, quote = FAL
   # Checks compatibility between extension and separator
   if (ext %in% c("txt", "tsv") && sep != "\t")
   {
-    warning(sprintf("File extension '%s' suggests tab-separated format, but 'sep' is not '\\t'.", ext))
+    log_warning(sprintf("File extension '%s' suggests tab-separated format, but 'sep' is not '\\t'.", ext))
   } else if (ext == "csv" && sep != ",") {
-    warning(sprintf("File extension '%s' usually uses comma separator, but 'sep' is not ','.", ext))
+    log_warning(sprintf("File extension '%s' usually uses comma separator, but 'sep' is not ','.", ext))
   }
 
   # Writes table
@@ -501,16 +512,16 @@ write_multivariate <- function(x, file, sep = "\t", row.names = FALSE, quote = F
   } else if (is.data.frame(x)) {
     required_cols <- c("variable", "condition", "univariate.hazard.ratio", "univariate.Cox.pvalue", "univariate.prognosis",
                        "multivariate.hazard.ratio", "multivariate.Cox.pvalue", "multivariate.prognosis")
-    if (!all(required_cols %in% colnames(x))) {stop("Data.frame must contain valid multivariate survival analysis columns")}
+    if (!all(required_cols %in% colnames(x))) {log_stop("Data.frame must contain valid multivariate survival analysis columns")}
     df <- x
-  } else {stop("Input must be a 'clinprog_survival' object, a valid multivariate result list, or a compatible data.frame")}
+  } else {log_stop("Input must be a 'clinprog_survival' object, a valid multivariate result list, or a compatible data.frame")}
 
   # Deals with file parameter
   if (missing(file) || is.null(file))
   {
-    message("No filename provided. Using 'clinprog_multiCox.txt'...")
+    log_message("No filename provided. Using 'clinprog_multiCox.txt'...")
     file <- "clinprog_multiCox.txt"
-  } else if (!is.character(file) || length(file) != 1) {stop("'file' must be a single character string")}
+  } else if (!is.character(file) || length(file) != 1) {log_stop("'file' must be a single character string")}
 
   # Checks file extension
   ext <- tolower(tools::file_ext(file))
@@ -518,7 +529,7 @@ write_multivariate <- function(x, file, sep = "\t", row.names = FALSE, quote = F
   # Adds default extension if missing
   if (ext == "")
   {
-    warning("No file extension detected. Using '.txt' with tab separator...")
+    log_warning("No file extension detected. Using '.txt' with tab separator...")
     ext <- "txt"
     file <- paste0(file, ".", ext)
   }
@@ -526,9 +537,9 @@ write_multivariate <- function(x, file, sep = "\t", row.names = FALSE, quote = F
   # Checks compatibility between extension and separator
   if (ext %in% c("txt", "tsv") && sep != "\t")
   {
-    warning(sprintf("File extension '%s' suggests tab-separated format, but 'sep' is not '\\t'.", ext))
+    log_warning(sprintf("File extension '%s' suggests tab-separated format, but 'sep' is not '\\t'.", ext))
   } else if (ext == "csv" && sep != ",") {
-    warning(sprintf("File extension '%s' usually uses comma separator, but 'sep' is not ','.", ext))
+    log_warning(sprintf("File extension '%s' usually uses comma separator, but 'sep' is not ','.", ext))
   }
 
   # Writes table
