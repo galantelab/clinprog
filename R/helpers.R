@@ -387,13 +387,17 @@ clinprog_bootstrapfun <- function(full_data,
         "group_size",
         "cor_threshold",
         "seed",
-        "clinprog_subsample",
-        "clinprog_corfun",
-        "clinprog_regcall",
-        "clinprog_regression",
         "run_attempt"
       ),
       envir = environment()
+    )
+
+    # Export ALL internal package functions (including dependencies like .timestamp)
+    # directly from the package namespace environment
+    parallel::clusterExport(
+      cl = cl,
+      varlist = names(asNamespace("clinprog")),
+      envir = asNamespace("clinprog")
     )
 
     parallel::clusterEvalQ(
@@ -941,7 +945,7 @@ clinprog_min_signature <- function(
 {
   # Validate signature
   if (!is.data.frame(signature)) {
-    log_log_stop("Argument 'signature' must be a data.frame")
+    log_stop("Argument 'signature' must be a data.frame")
   }
 
   required_signature_cols <- c("feature", "coefficient")
@@ -951,7 +955,7 @@ clinprog_min_signature <- function(
   )
 
   if (length(missing_signature_cols) > 0) {
-    log_log_stop(
+    log_stop(
       "Signature is missing required columns: ",
       paste(missing_signature_cols, collapse = ", ")
     )
@@ -959,14 +963,14 @@ clinprog_min_signature <- function(
 
   # Validate data
   if (!is.data.frame(data)) {
-    log_log_stop("Argument 'data' must be a data.frame")
+    log_stop("Argument 'data' must be a data.frame")
   }
 
   required_data_cols <- c("OS", "OS.time")
   missing_data_cols <- setdiff(required_data_cols, colnames(data))
 
   if (length(missing_data_cols) > 0) {
-    log_log_stop(
+    log_stop(
       "Data is missing required columns: ",
       paste(missing_data_cols, collapse = ", ")
     )
@@ -978,7 +982,7 @@ clinprog_min_signature <- function(
       is.na(min_size) ||
       min_size < 1 ||
       min_size != as.integer(min_size)) {
-    log_log_stop(
+    log_stop(
       "Argument 'min_size' must be a positive integer"
     )
   }
@@ -992,7 +996,7 @@ clinprog_min_signature <- function(
       length(score_cutoff) != 1 ||
       is.na(score_cutoff) ||
       !score_cutoff %in% valid_cutoffs) {
-    log_log_stop(
+    log_stop(
       "Argument 'score_cutoff' must be one of: ",
       paste(valid_cutoffs, collapse = ", ")
     )
@@ -1033,7 +1037,7 @@ clinprog_min_signature <- function(
   missing_features <- setdiff(signature$feature, colnames(data))
 
   if (length(missing_features) > 0) {
-    log_log_stop(
+    log_stop(
       "Signature features not found in data: ",
       paste(gsub("__", "-", missing_features), collapse = ", ")
     )
@@ -1095,7 +1099,7 @@ clinprog_min_signature <- function(
       roc_result <- tryCatch(
         clinprog_cutoff_roc(temp_data),
         error = function(e) {
-          log_log_warning(
+          log_warning(
             "ROC cutoff failed for signature size ",
             k,
             ". Falling back to median cutoff."
@@ -1181,7 +1185,7 @@ clinprog_min_signature <- function(
       (nrow(tested) == 0 ||
        is.na(selected_pvalue) ||
        !any(tested$pvalue < 0.05, na.rm = TRUE))) {
-    log_log_warning(
+    log_warning(
       "No minimum signature smaller than the complete signature ",
       "reached the significance threshold. Returning the full signature."
     )
