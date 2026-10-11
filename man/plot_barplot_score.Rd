@@ -2,7 +2,7 @@
 % Please edit documentation in R/plots.R
 \name{plot_barplot_score}
 \alias{plot_barplot_score}
-\title{Generate score barplot by OS group}
+\title{Generate single barplot comparing scores across OS groups with cutoff coloring}
 \usage{
 plot_barplot_score(
   data,
@@ -21,18 +21,15 @@ plot_barplot_score(
 \arguments{
 \item{data}{Data.frame containing clinical/survival data.}
 
-\item{palette}{Character vector of length at least 2. Colors for below and
-above cutoff (default: \code{c("#1A9850", "#D73027")}).}
+\item{palette}{Character vector of length 2. Colors for below and above cutoff (default: \code{c("#1A9850", "#D73027")}).}
 
 \item{outprefix}{Character. Output prefix for saving the plot (optional).}
 
-\item{score_cutoff}{Numeric. Threshold used to define low/high score groups
-(default: \code{0}).}
+\item{score_cutoff}{Numeric. Threshold to define low/high score color scheme (default: \code{0}).}
 
 \item{os_col}{Character. Column name for OS status (default: \code{"OS"}).}
 
-\item{score_col}{Character. Column name for score values
-(default: \code{"score"}).}
+\item{score_col}{Character. Column name for score values (default: \code{"score"}).}
 
 \item{theme}{A ggplot2 theme object. Defaults to \code{theme_clinprog()}.}
 
@@ -48,8 +45,5 @@ above cutoff (default: \code{c("#1A9850", "#D73027")}).}
 A \code{ggplot} object.
 }
 \description{
-Creates a barplot of patient scores grouped by overall
-survival status. Bars are colored according to whether the score is below
-or above the specified cutoff. A Pearson's chi-square test is used to
-assess the association between OS status and score group.
+Generate single barplot comparing scores across OS groups with cutoff coloring
 }

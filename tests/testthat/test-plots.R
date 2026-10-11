@@ -89,7 +89,7 @@ test_that("plot_swimmer accepts patient labels", {
     data = data,
     cutoff = 0,
     id_col = "patient",
-    show_labels = TRUE
+    show.labels = TRUE
   )
 
   expect_s3_class(result, "ggplot")

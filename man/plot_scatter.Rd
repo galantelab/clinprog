@@ -26,51 +26,43 @@ plot_scatter(
 \arguments{
 \item{data}{Data.frame containing expression and clinical/survival data.}
 
-\item{signature}{A data.frame with \code{feature} and \code{coefficient}
-(Default: \code{NULL}).}
+\item{signature}{A data.frame with 'feature' and 'coefficient' (default: \code{NULL}).}
 
-\item{os_col}{Character. Column name for OS status (Default: \code{"OS"}).}
+\item{os_col}{Character. Column name for OS status (default: \code{"OS"}).}
 
-\item{time_col}{Character. Column name for follow-up time
-(Default: \code{"OS.time"}).}
+\item{time_col}{Character. Column name for followup time (default: \code{"OS.time"}).}
 
 \item{outprefix}{Character. Output prefix for saving the plot (optional).}
 
 \item{theme}{A ggplot2 theme object. Defaults to \code{theme_clinprog()}.}
 
-\item{exclude_cols}{Character vector. Columns to exclude from the feature
-list (Default: \code{c("OS", "OS.time", "score", "score_group")}).}
+\item{exclude_cols}{Character vector. Columns to exclude from the feature list (default: \code{c("OS", "OS.time", "score", "score_group")}).}
 
-\item{palette}{Character vector. Color palette for OS groups
-(Default: \code{c("#1A9850", "#D73027")}).}
+\item{palette}{Character vector. Color palette for OS groups (default: \code{c("#1A9850", "#D73027")}).}
 
-\item{add_stat}{Logical. Whether to perform and display Spearman
-correlation test (Default: \code{TRUE}).}
+\item{add_stat}{Logical. Whether to perform and display Spearman correlation test (default: \code{TRUE}).}
 
-\item{max_features}{Numeric. Maximum number of features to plot
-(Default: \code{NULL}).}
+\item{max_features}{Numeric. Max features to plot (default: \code{NULL}).}
 
-\item{norm_exp}{Logical. Whether to apply log2 normalization on expression
-data (Default: \code{FALSE}).}
+\item{norm_exp}{Logical. Whether to apply log2 normalization on expression data (default: \code{FALSE}).}
 
-\item{width}{Numeric. Plot width in inches (Default: \code{NULL}).}
+\item{width}{Numeric. Plot width in inches (default: \code{NULL}).}
 
-\item{height}{Numeric. Plot height in inches (Default: \code{NULL}).}
+\item{height}{Numeric. Plot height in inches (default: \code{NULL}).}
 
-\item{ylab}{Character. Title for the Y-axis (Default: \code{NULL}).}
+\item{ylab}{Character. Title for the Y-axis (default: \code{NULL}).}
 
-\item{xlab}{Character. Title for the X-axis (Default: \code{"Followup"}).}
+\item{xlab}{Character. Title for the X-axis (default: \code{"Follow-up Time"}).}
 
-\item{individual}{Logical. If \code{TRUE} and \code{outprefix} is provided, saves
-each feature scatter plot as its own PDF file. The combined grid is still
-saved as \verb{<outprefix>_feature_scatter.pdf} (Default: \code{FALSE}).}
+\item{individual}{Logical. If \code{TRUE} and \code{outprefix} is provided, saves each feature scatter
+plot as its own PDF file named \code{{outprefix}_feature_scatter_{feature}.pdf}. The combined grid is
+still saved as \code{{outprefix}_feature_scatter.pdf} (default: \code{FALSE}).}
 }
 \value{
-A patchwork object containing the feature scatter plots.
+A \code{ggplot} object.
 }
 \description{
-Creates a single-page PDF containing a grid of scatter plots
-for multiple features showing expression vs follow-up time, faceted by OS
-status. Spearman correlation coefficients and p-values are automatically
-calculated and displayed.
+Creates a single-page PDF containing a grid of scatter plots for multiple features
+showing expression vs follow-up time, faceted by OS status.
+Spearman correlation coefficients and p-values are automatically calculated and displayed.
 }

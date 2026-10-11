@@ -21,7 +21,7 @@ plot_histogram(
 
 \item{theme}{A ggplot2 theme object. Defaults to \code{theme_clinprog()}.}
 
-\item{binwidth}{Numeric. Width of the histogram bins (Default: \code{NULL}).}
+\item{binwidth}{Numeric. Width of the histogram bins (Default: \code{NULL})}
 
 \item{width}{Numeric. Plot width in inches (Default: \code{8})}
 

@@ -7,6 +7,7 @@
 run_complete(
   data,
   outprefix = "clinprog",
+  norm_exp = FALSE,
   bootstrap = 1,
   groupsize = 10,
   percentagefilter = 0.3,

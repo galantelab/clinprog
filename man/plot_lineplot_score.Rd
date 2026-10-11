@@ -2,7 +2,7 @@
 % Please edit documentation in R/plots.R
 \name{plot_lineplot_score}
 \alias{plot_lineplot_score}
-\title{Generate line plots for score vs follow-up time by OS status}
+\title{Generate line plots for score vs follow-up time (OS.time) by OS status}
 \usage{
 plot_lineplot_score(
   data,
@@ -22,35 +22,31 @@ plot_lineplot_score(
 \arguments{
 \item{data}{Data.frame containing clinical/survival data.}
 
-\item{palette}{Character vector of length 2. Colors for below and above
-cutoff (Default: \code{c("#1A9850", "#D73027")}).}
+\item{palette}{Character vector of length 2. Colors for below and above cutoff (default: \code{c("#1A9850", "#D73027")}).}
 
 \item{outprefix}{Character. Output prefix for saving the plot (optional).}
 
-\item{score_cutoff}{Numeric. Threshold to define low/high score color scheme
-(Default: \code{0}).}
+\item{score_cutoff}{Numeric. Threshold to define low/high score color scheme (default: \code{0}).}
 
-\item{os_col}{Character. Column name for OS status (Default: \code{"OS"}).}
+\item{os_col}{Character. Column name for OS status (default: \code{"OS"}).}
 
-\item{time_col}{Character. Column name for follow-up time
-(Default: \code{"OS.time"}).}
+\item{time_col}{Character. Column name for followup time (default: \code{"OS.time"}).}
 
-\item{score_col}{Character. Column name for score values
-(Default: \code{"score"}).}
+\item{score_col}{Character. Column name for score values (default: \code{"score"}).}
 
 \item{theme}{A ggplot2 theme object. Defaults to \code{theme_clinprog()}.}
 
-\item{xlab}{Character. Title for the X-axis (Default: \code{"Followup"}).}
+\item{xlab}{Character. Title for the X-axis (default: \code{"Follow-up Time"}).}
 
-\item{ylab}{Character. Title for the Y-axis (Default: \code{"Score"}).}
+\item{ylab}{Character. Title for the Y-axis (default: \code{"Score"}).}
 
-\item{width}{Numeric. Plot width in inches (Default: \code{12}).}
+\item{width}{Numeric. Plot width in inches (default: \code{12}).}
 
-\item{height}{Numeric. Plot height in inches (Default: \code{6}).}
+\item{height}{Numeric. Plot height in inches (default: \code{6}).}
 }
 \value{
 A \code{ggplot} object.
 }
 \description{
-Generate line plots for score vs follow-up time by OS status
+Generate line plots for score vs follow-up time (OS.time) by OS status
 }

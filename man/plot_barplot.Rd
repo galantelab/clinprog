@@ -27,18 +27,21 @@ bootstrap results. Must contain columns \code{covariate} and \code{frequency}.}
 \item{frequency.threshold}{Numeric. Frequency threshold (in \\%) displayed as a horizontal dashed
 line (default: \code{25}). Always interpreted as a percentage between 0-100, regardless of \code{type}.}
 
-\item{type}{Character. How to display frequencies: \code{\"relative\"} (percentage, default) or
-\code{\"absolute\"} (raw counts). Only these two values are accepted.}
+\item{type}{Character. How to display frequencies: \code{"relative"} (percentage, default) or
+\code{"absolute"} (raw counts). Only these two values are accepted.}
 
 \item{n_bootstraps}{Integer. Total number of bootstrap iterations (minimum value: 2). Required when
-\code{type = \"absolute\"}. When \code{type = \"relative\"} and supplied, absolute frequencies are
-converted to percentages via \code{frequency / n_bootstraps * 100}.}
+\code{type = "absolute"}. When \code{type = "relative"} and \code{n_bootstraps} is provided, absolute
+frequencies are converted to percentages via \code{frequency / n_bootstraps * 100}. When
+\code{type = "relative"} and \code{n_bootstraps} is \code{NULL} (default),
+\code{frequency} is assumed to already be a percentage.}
 
 \item{theme}{A ggplot2 theme object. Defaults to \code{theme_clinprog()}.}
 
 \item{bar.width}{Numeric. Width of bars (default: \code{0.5}).}
 
-\item{ylab}{Character. Title for the Y-axis. If \code{NULL}, a sensible label is chosen automatically based on \code{type}.}
+\item{ylab}{Character. Title for the Y-axis. If \code{NULL} (default),
+a sensible label is chosen automatically based on \code{type}.}
 
 \item{xlab}{Character. Title for the X-axis (default: empty string).}
 
@@ -50,5 +53,6 @@ converted to percentages via \code{frequency / n_bootstraps * 100}.}
 A \code{ggplot} object.
 }
 \description{
-Creates a barplot with the frequency of covariates selected in multivariate Cox regression with bootstrap.
+Creates a barplot with the frequency of covariates selected in multivariate Cox regression
+with bootstrap. Frequencies can be displayed as relative (percentage, default) or absolute (count) values.
 }

@@ -27,7 +27,9 @@ plot_ph(
 \item{outprefix}{Character. Output prefix for saving the plot (optional).
 If \code{NULL}, the plot is not written to disk.}
 
-\item{individual}{Logical. If \code{TRUE} and \code{outprefix} is provided, saves each Schoenfeld plot separately.}
+\item{individual}{Logical. If \code{TRUE} and \code{outprefix} is provided, saves each Schoenfeld
+plot as its own PDF file named \code{{outprefix}_ph_assumptions_{variable}.pdf}. The combined grid
+is still saved as \code{{outprefix}_ph_assumptions_plot.pdf} (default: \code{FALSE}).}
 
 \item{theme}{A ggplot2 theme object. Defaults to \code{theme_clinprog()}.}
 
@@ -42,6 +44,6 @@ a list of \code{ggplot} objects.
 }
 \description{
 Creates Schoenfeld residual plots from proportional hazards assumption tests.
-For multivariate Cox models, the custom internal \code{clinprog_ggcoxzph()} is used to additionally display
+For multivariate Cox models, the custom internal \code{plot_ggcoxzph()} is used to additionally display
 global and individual Schoenfeld test p-values.
 }

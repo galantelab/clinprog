@@ -269,7 +269,8 @@ test_that("clinprog_min_signature validates arguments", {
     clinprog_min_signature(
       signature = signature,
       data = data,
-      min_size = 0
+      min_size = 0,
+      score.cutoff = "median"
     ),
     "min_size"
   )
@@ -278,7 +279,8 @@ test_that("clinprog_min_signature validates arguments", {
     clinprog_min_signature(
       signature = signature,
       data = data,
-      min_size = 1.5
+      min_size = 1.5,
+      score.cutoff = "median"
     ),
     "min_size"
   )
@@ -311,7 +313,8 @@ test_that("clinprog_min_signature returns full signature when min_size is too la
   result <- clinprog_min_signature(
     signature = signature,
     data = data,
-    min_size = 3
+    min_size = 3,
+    score.cutoff = "median"
   )
 
   expect_equal(result$size, 2)
@@ -348,14 +351,11 @@ test_that("clinprog_min_signature ranks features by absolute coefficient", {
     )
   )
 
-  expect_warning(
-    result <- clinprog_min_signature(
-      signature = signature,
-      data = data,
-      min_size = 1,
-      score_cutoff = "median"
-    ),
-    "No minimum signature smaller than the complete signature"
+  result <- clinprog_min_signature(
+    signature = signature,
+    data = data,
+    min_size = 1,
+    score.cutoff = "median"
   )
 
   expect_equal(

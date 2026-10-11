@@ -8,6 +8,7 @@ run_survival(
   data,
   signature,
   outprefix = "clinprog",
+  norm_exp = FALSE,
   multivariate = FALSE,
   clindata = NULL,
   score_cutoff = "median",

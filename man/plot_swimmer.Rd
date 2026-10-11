@@ -17,11 +17,11 @@ plot_swimmer(
   ylab = "Patients",
   xlab = "Follow-up time",
   title = NULL,
-  legend_title = "Score cutoff",
+  legend.title = "Score cutoff",
   theme = theme_clinprog(),
   width = 8,
   height = 6,
-  show_labels = NULL,
+  show.labels = NULL,
   sort_by = c("time", "score", "none"),
   time_cutoff = NULL,
   facet_by = NULL,
@@ -35,98 +35,77 @@ plot_swimmer(
 )
 }
 \arguments{
-\item{data}{Data.frame containing clinical/survival information. Must
-contain at least the columns referenced by \code{group_col},
-\code{score_col}, \code{os_col}, and \code{time_col}.}
+\item{data}{Data.frame containing clinical/survival information. Must contain at least the columns
+referenced by \code{group_col}, \code{score_col}, \code{os_col}, and \code{time_col}.}
 
-\item{cutoff}{Numeric. Cutoff used to dichotomize the score into
-\code{"Low"} and \code{"High"}.}
+\item{cutoff}{Numeric. Cutoff used to dichotomize the score into \code{"Low"} and \code{"High"}.}
 
-\item{group_col}{Character. Column name with the dichotomized score group.
-Validated for existence, but the actual coloring is derived from
-\code{score_col} and \code{cutoff} (Default: \code{"score_group"}).}
+\item{group_col}{Character. Column name with the dichotomized score group. Validated for existence, but the
+actual coloring is derived from \code{score_col} and \code{cutoff} (default: \code{"score_group"}).}
 
-\item{score_col}{Character. Column name with the numeric score (Default:
-\code{"score"}). Used together with \code{cutoff} to define the Low/High
-color group.}
+\item{score_col}{Character. Column name with the numeric score (default: \code{"score"}). Used together with
+\code{cutoff} to define the Low/High color group.}
 
-\item{os_col}{Character. Column name for OS status (Default: \code{"OS"}).
-Values are expected to be 0/1 (0 = Alive/censored, 1 = Dead/event).}
+\item{os_col}{Character. Column name for OS status (default: \code{"OS"}). Values are expected to be
+0/1 (0 = Alive/censored, 1 = Dead/event).}
 
-\item{time_col}{Character. Column name for follow-up time (Default:
-\code{"OS.time"}).}
+\item{time_col}{Character. Column name for follow-up time (default: \code{"OS.time"}).}
 
-\item{id_col}{Character or NULL. Column name used as patient ID for the
-Y-axis. If \code{NULL} (Default), row names are used when they differ
-from the default integer sequence; otherwise an internal index is
-generated.}
+\item{id_col}{Character or \code{NULL}. Column name used as patient ID for the Y axis. If \code{NULL} (default),
+row names are used when they differ from the default integer sequence; otherwise an internal index is generated.}
 
-\item{outprefix}{Character. Output prefix for saving the plot (Default:
-\code{NULL}). If \code{NULL}, the plot is not written to disk.}
+\item{outprefix}{Character. Output prefix for saving the plot (optional).
+If \code{NULL}, the plot is not written to disk.}
 
-\item{palette}{Character vector of length 2. Colors for below/equal and
-above cutoff (Default: \code{c("#1A9850", "#D73027")}).}
+\item{palette}{Character vector of length 2.
+Colors for below/equal and above cutoff (default: \code{c("#1A9850", "#D73027")}).}
 
-\item{ylab}{Character. Title for the Y-axis (Default: \code{"Patients"}).}
+\item{ylab}{Character. Title for the Y-axis (default: \code{"Patients"}).}
 
-\item{xlab}{Character. Title for the X-axis (Default:
-\code{"Follow-up time"}).}
+\item{xlab}{Character. Title for the X-axis (default: \code{"Follow-up time"}).}
 
-\item{title}{Character. Plot title (Default: \code{NULL}).}
+\item{title}{Character. Plot title (default: \code{NULL}).}
 
-\item{legend_title}{Character. Title for the color legend (Default:
-\code{"Score cutoff"}).}
+\item{legend.title}{Character. Title for the color legend (default: \code{"Score cutoff"}).}
 
 \item{theme}{A ggplot2 theme object. Defaults to \code{theme_clinprog()}.}
 
-\item{width}{Numeric. Plot width in inches (Default: \code{8}).}
+\item{width}{Numeric. Plot width in inches (default: \code{8}).}
 
-\item{height}{Numeric. Plot height in inches (Default: \code{6}).}
+\item{height}{Numeric. Plot height in inches (default: \code{6}).}
 
-\item{show_labels}{Logical or character vector. If \code{NULL} (Default)
-or \code{FALSE}, no patient labels are shown on the Y-axis. If
-\code{TRUE}, all patients are labeled. If a character vector, only the
-matching patient IDs are labeled (others are blank).}
+\item{show.labels}{Logical or character vector. If \code{NULL} (default) or \code{FALSE}, no patient labels are
+shown on the Y axis. If \code{TRUE}, all patients are labeled. If a character vector, only the matching
+patient IDs are labeled (others are blank).}
 
-\item{sort_by}{Character. Order patients along the Y-axis by follow-up
-\code{"time"} (Default), \code{"score"}, or keep original order
-\code{"none"}.}
+\item{sort_by}{Character. Order patients along the Y axis by follow-up \code{"time"} (default),
+\code{"score"}, or keep original order \code{"none"}.}
 
-\item{time_cutoff}{Numeric or \code{NULL} (Default). Optional vertical
-dashed line at a given follow-up time.}
+\item{time_cutoff}{Numeric or \code{NULL} (default). Optional vertical dashed line at a given follow-up time.}
 
-\item{facet_by}{Character or \code{NULL} (Default). Optional column name
-used to facet the plot.}
+\item{facet_by}{Character or \code{NULL} (default). Optional column name used to facet the plot.}
 
-\item{alive_shape}{Numeric. Point shape for alive/censored patients
-(Default: \code{16}, filled circle).}
+\item{alive_shape}{Numeric. Point shape for alive/censored patients (default: \code{16}, filled circle).}
 
-\item{dead_shape}{Numeric. Point shape for dead/event patients (Default:
-\code{17}, filled triangle).}
+\item{dead_shape}{Numeric. Point shape for dead/event patients (default: \code{17}, filled triangle).}
 
-\item{alive_color}{Character. Color for alive/censored patients
-(Default: \code{"#2C7FB8"}, blue).}
+\item{alive_color}{Character. Color for alive/censored patients (default: \code{"#2C7FB8"}, blue).}
 
-\item{dead_color}{Character. Color for dead/event patients
-(Default: \code{"#F28E2B"}, orange).}
+\item{dead_color}{Character. Color for dead/event patients (default: \code{"#F28E2B"}, orange).}
 
-\item{point_size}{Numeric. Size of the status symbols (Default: \code{1}).}
+\item{point_size}{Numeric. Size of the status symbols (default: \code{1}).}
 
-\item{bar_height}{Numeric. Height of the swimmer bars, between 0 and 1
-(Default: \code{0.7}).}
+\item{bar_height}{Numeric. Height of the swimmer bars, between 0 and 1 (default: \code{0.7}).}
 
-\item{show_legend}{Logical. Whether to display the legend (Default:
-\code{TRUE}).}
+\item{show_legend}{Logical. Whether to display the legend (default: \code{TRUE}).}
 }
 \value{
 A \code{ggplot} object.
 }
 \description{
-Creates a swimmer plot (a.k.a. swimlane plot) where each
-horizontal bar represents one patient. The bar length corresponds to the
-follow-up time (from time = 0 up to the observed \code{time_col}), and the
-bar color encodes whether the patient's score is below or equal (low) or
-strictly above (high) the specified \code{cutoff}. At the end of each bar,
-a symbol indicates the patient's status at last follow-up: a circle for
-alive/censored and a triangle for dead/event (shapes are configurable).
+Creates a swimmer plot (a.k.a. swimlane plot) where each horizontal bar represents one patient.
+The bar length corresponds to the follow-up time (from time = 0 up to the observed \code{time_col}), and the
+bar color encodes whether the patient's clinprog score is below or equal (low) or strictly above (high) the
+specified \code{cutoff}. At the end of each bar, a symbol indicates the patient's status at last follow-up:
+a circle for alive/censored and a triangle for dead/event (shapes are configurable).
 }

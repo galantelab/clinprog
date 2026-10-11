@@ -39,7 +39,7 @@ If \code{NULL}, the plot is not written to disk.}
 
 \item{title}{Character. Title for the plot (default: \code{NULL}).}
 
-\item{legend.title}{Character. Title for the legend (default: \code{"clinprog groups"}).}
+\item{legend.title}{Character. Title for the legend (default: \code{"Score cutoff"}).}
 
 \item{theme}{ggplot2 theme used in the Kaplan-Meier plot (default: \code{survminer::theme_survminer()}).}
 

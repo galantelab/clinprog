@@ -2,38 +2,47 @@
 % Please edit documentation in R/helpers.R
 \name{clinprog_min_signature}
 \alias{clinprog_min_signature}
-\title{Identify a minimum prognostic signature}
+\title{Search for the minimum signature size with significant univariate survival}
 \usage{
-clinprog_min_signature(signature, data, min_size, score_cutoff = "median")
+clinprog_min_signature(signature, data, min_size, score.cutoff)
 }
 \arguments{
-\item{signature}{Data.frame containing at least \code{feature} and
-\code{coefficient} columns.}
+\item{signature}{A data.frame with columns \code{feature} and \code{coefficient}, as produced by the bootstrap step
+of \code{run_regression()}.}
 
-\item{data}{Data.frame containing \code{OS}, \code{OS.time}, and all
-features included in \code{signature}.}
+\item{data}{A data.frame containing at least the columns \code{OS}, \code{OS.time}, and all features listed in
+\code{signature$feature}.}
 
-\item{min_size}{Integer. Minimum number of features to test.}
+\item{min_size}{Integer. Minimum signature size to test (must be >= 1 and <= \code{nrow(signature)}).}
 
-\item{score_cutoff}{Character. Strategy used to categorize the molecular
-score. Accepted values are \code{"median"}, \code{"mean"},
-\code{"signal"}, and \code{"roc"}.}
+\item{score.cutoff}{Character. Strategy used to split scores into low/high groups.
+One of \code{"median"}, \code{"mean"}, \code{"signal"}, or \code{"roc"}.}
 }
 \value{
-A list containing:
+A list with:
 \itemize{
-\item \code{signature}: selected minimum signature.
-\item \code{size}: number of features in the selected signature.
-\item \code{pvalue}: log-rank p-value for the selected signature.
-\item \code{tested}: data.frame containing the results for each tested
-signature size.
+\item \code{signature}: the selected (possibly truncated) signature data.frame
+\item \code{size}: the effective size of the selected signature
+\item \code{pvalue}: the log-rank p-value for the selected signature
+\item \code{tested}: a data.frame with all tested sizes and their p-values
 }
 }
 \description{
-Tests progressively larger subsets of a molecular signature to identify
-the smallest subset associated with patient survival. Features are ranked
-by decreasing absolute coefficient, and each candidate signature is
-evaluated using a univariate Cox regression after categorizing the
-resulting molecular score.
+Internal helper used by \code{run_regression()} to automatically search for the smallest signature
+(subset of the top-ranked features by absolute coefficient) that still yields a significant univariate log-rank test.
+}
+\details{
+The function ranks features by decreasing absolute coefficient then tests progressively larger cuts,
+starting from \code{min_size} up to the full signature size.
+
+For each cut, the following steps are performed:
+\enumerate{
+\item A clinprog score is computed for the provided survival dataset using only the features in the current cut.
+\item Patients are split into low/high groups using the strategy defined by \code{score.cutoff}.
+\item A univariate Cox model with log-rank test is fitted via \code{clinprog_uniCox_model()}.
+}
+
+The search stops at the first cut whose log-rank p-value is below \code{0.05}. If no cut reaches significance,
+the full signature is returned with a warning.
 }
 \keyword{internal}

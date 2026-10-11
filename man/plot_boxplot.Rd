@@ -31,14 +31,12 @@ plot_boxplot(
 \arguments{
 \item{data}{Data.frame containing expression data and metadata columns.}
 
-\item{signature}{A data.frame with \code{feature} and \code{coefficient}
-(default: \code{NULL}).}
+\item{signature}{A data.frame with 'feature' and 'coefficient' (default: \code{NULL}).}
 
-\item{group_col}{Character. The name of the column used for grouping
-(default: \code{"score_group"}).}
+\item{group_col}{Character. The name of the column used for grouping (default: \code{score_group}).}
 
-\item{facet_by}{Character or \code{NULL} (default). Optional column name
-used to facet each panel (e.g. \code{"OS"}).}
+\item{facet_by}{Character or \code{NULL} (default).
+Optional column name used to facet each panel (e.g. \code{"OS"}).}
 
 \item{outprefix}{Character. Output prefix for saving the plot (optional).}
 
@@ -50,37 +48,29 @@ used to facet each panel (e.g. \code{"OS"}).}
 \item{palette}{Character vector. Colors for the \code{group_col} levels
 (default: \code{c("#D73027", "#1A9850")}).}
 
-\item{test}{Character. Statistical test to compare expression between the
-two \code{group_col} levels: \code{"wilcox"} (Mann-Whitney, default),
-\code{"t.test"}, or \code{"none"}.}
+\item{test}{Character. Statistical test to compare expression between the two \code{group_col} levels:
+\code{"wilcox"} (Mann-Whitney, default), \code{"t.test"}, or \code{"none"}.}
 
-\item{paired}{Logical. Whether to perform a paired test (default:
-\code{FALSE}). Ignored when \code{test = "none"}.}
+\item{paired}{Logical. Whether to perform a paired test (default: \code{FALSE}).
+Ignored when \code{test = "none"}.}
 
-\item{pvalue_position}{Character. Where to place the p-value:
-\code{"subtitle"} (default) or \code{"inside"}. When \code{facet_by} is
-set, \code{"inside"} draws the p-value of each facet level inside its
-own panel.}
+\item{pvalue_position}{Character. Where to place the p-value: \code{"subtitle"} (default) or \code{"inside"}.
+When \code{facet_by} is set, \code{"inside"} draws the p-value of each facet level inside its own panel.}
 
-\item{add_pvalue}{Logical. Whether to compute and display the p-value
-(default: \code{TRUE}).}
+\item{add_pvalue}{Logical. Whether to compute and display the p-value (default: \code{TRUE}).}
 
-\item{show_points}{Logical. Whether to show jittered points over the
-boxplots (default: \code{FALSE}).}
+\item{show_points}{Logical. Whether to show jittered points over the boxplots (default: \code{FALSE}).}
 
-\item{show_n}{Logical. Whether to print the sample size per group inside
-each panel, just above the x axis (default: \code{FALSE}).}
+\item{show_n}{Logical. Whether to print the sample size per group inside each panel,
+just above the x axis (default: \code{FALSE}).}
 
 \item{max_features}{Numeric. Max features to plot (default: \code{NULL}).}
 
-\item{norm_exp}{Logical. Whether to apply log2 normalization on expression
-data (default: \code{FALSE}).}
+\item{norm_exp}{Logical. Whether to apply log2 normalization on expression data (default: \code{FALSE}).}
 
-\item{individual}{Logical. If \code{TRUE} and \code{outprefix} is provided,
-saves each feature boxplot as its own PDF file named
-\code{{outprefix}_feature_{feature}.pdf}. The combined grid is still
-saved as \code{{outprefix}_feature_expression.pdf} (default:
-\code{FALSE}).}
+\item{individual}{Logical. If \code{TRUE} and \code{outprefix} is provided, saves each feature boxplot
+as its own PDF file named \code{{outprefix}_feature_{feature}.pdf}. The combined grid is still saved as
+\code{{outprefix}_feature_expression.pdf} (default: \code{FALSE}).}
 
 \item{width}{Numeric. Plot width in inches (default: \code{NULL}).}
 
@@ -94,8 +84,7 @@ saved as \code{{outprefix}_feature_expression.pdf} (default:
 A \code{ggplot} object.
 }
 \description{
-Creates a single-page PDF containing a grid of boxplots for
-multiple genes/transcripts. Optionally, each panel can be faceted by an
-external grouping variable. Individual per-feature PDFs can also be written
-to disk.
+Creates a single-page PDF containing a grid of boxplots for multiple genes/transcripts.
+Optionally, each panel can be faceted by an external grouping variable.
+Individual per-feature PDFs can also be written to disk.
 }
