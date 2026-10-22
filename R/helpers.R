@@ -8,40 +8,40 @@ utils::globalVariables(c("variable"))
 #' maximum value. Samples with survival times greater than the specified follow-up are censored.
 #'
 #' @param data Data.frame containing survival information.
-#' @param followup Numeric. Maximum follow-up time. If \code{NULL} (default), no filtering is applied.
+#' @param max_follow_up Numeric. Maximum follow-up time. If \code{NULL} (default), no filtering is applied.
 #'
 #' @return A filtered data.frame with adjusted \code{OS} and \code{OS.time}.
 #' @keywords internal
-clinprog_followup <- function(data, followup = NULL) {
+clinprog_followup <- function(data, max_follow_up = NULL) {
   # Validates input data
   if (!is.data.frame(data)) {log_stop("'data' must be a data.frame")}
   required_cols <- c("OS", "OS.time")
   if (!all(required_cols %in% colnames(data))) {log_stop("Input data must contain columns: 'OS' and 'OS.time'")}
 
-  # Returns original data if followup is NULL
-  if (is.null(followup))
+  # Returns original data if max_follow_up is NULL
+  if (is.null(max_follow_up))
   {
-    log_message("Returning original data.frame (no followup max value passed)...")
+    log_message("Returning original data.frame (no max_follow_up max value passed)...")
     return(data)
   }
 
-  # Validates followup
-  if (!is.numeric(followup) || length(followup) != 1 || followup <= 0) {log_stop("'followup' must be a positive numeric value")}
+  # Validates max_follow_up
+  if (!is.numeric(max_follow_up) || length(max_follow_up) != 1 || max_follow_up <= 0) {log_stop("'max_follow_up' must be a positive numeric value")}
 
-  # Skips filtering if followup exceeds maximum observed time
-  max_followup <- max(data$OS.time, na.rm = TRUE)
-  if (followup >= max_followup)
+  # Skips filtering if max_follow_up exceeds maximum observed time
+  max_observed_time <- max(data$OS.time, na.rm = TRUE)
+  if (max_follow_up >= max_observed_time)
   {
-    log_message("Returning original data.frame (followup is greater than or equal to the max 'OS.time')...")
+    log_message("Returning original data.frame (max_follow_up is greater than or equal to the max 'OS.time')...")
     return(data)
   }
 
-  # Identifies samples exceeding followup threshold
-  idx <- which(data$OS.time > followup)
+  # Identifies samples exceeding max_follow_up threshold
+  idx <- which(data$OS.time > max_follow_up)
 
   # Applies administrative censoring
   data$OS[idx] <- 0
-  data$OS.time[idx] <- followup
+  data$OS.time[idx] <- max_follow_up
 
   return(data)
 }
@@ -54,11 +54,11 @@ clinprog_followup <- function(data, followup = NULL) {
 #'
 #' @param cmatrix A data.frame with survival data (first two columns) and expression values.
 #' @param var_threshold Numeric. Variance threshold for filtering.
-#' @param force Logical. Whether to bypass survival-related checks.
+#' @param skip_survival_checks Logical. Whether to bypass survival-related checks.
 #'
 #' @return A filtered data.frame.
 #' @keywords internal
-clinprog_varfun <- function(cmatrix, var_threshold, force) {
+clinprog_varfun <- function(cmatrix, var_threshold, skip_survival_checks) {
 
   # Handle missing values
   if (anyNA(cmatrix)) {
@@ -102,15 +102,15 @@ clinprog_varfun <- function(cmatrix, var_threshold, force) {
     }
 
     # Survival checks
-    if (!force) {
+    if (!skip_survival_checks) {
       OSstatus <- cmatrix[, 1]
       percentage <- sum(OSstatus) / length(OSstatus)
 
       if (percentage < 0.2 || percentage > 0.8) {log_stop("Survival status proportion is not adequate for analysis")}
 
-      followup <- cmatrix[, 2]
-      uplimit <- max(followup)
-      normalized <- followup / uplimit
+      max_follow_up <- cmatrix[, 2]
+      uplimit <- max(max_follow_up)
+      normalized <- max_follow_up / uplimit
       fvar <- stats::var(normalized)
 
       if (fvar < var_threshold) {log_stop("Follow-up variance did not pass the threshold")}
@@ -220,11 +220,11 @@ clinprog_feature_check <- function(dataf, g, seed = NULL) {
 #' and aggregates coefficients across iterations to derive a final signature.
 #'
 #' @param full_data A data.frame with survival data and features.
-#' @param n_boot Integer. Number of bootstrap iterations.
+#' @param bootstrap Integer. Number of bootstrap iterations.
 #' @param group_size Integer. Number of features sampled per iteration.
 #' @param cor_threshold Numeric. Correlation filter threshold.
 #' @param coef_threshold Numeric. Minimum absolute coefficient value to retain features.
-#' @param ncores Integer. Number of CPU cores used for parallel bootstrap
+#' @param n_cores Integer. Number of CPU cores used for parallel bootstrap
 #'   regression (Default: \code{1}).
 #' @param seed Integer. Random seed used for reproducible bootstrap regression
 #'   (Default: \code{123}).
@@ -237,21 +237,21 @@ clinprog_feature_check <- function(dataf, g, seed = NULL) {
 #' }
 #' @keywords internal
 clinprog_bootstrapfun <- function(full_data,
-                                  n_boot,
+                                  bootstrap,
                                   group_size,
                                   cor_threshold,
                                   coef_threshold,
-                                  ncores = 1,
+                                  n_cores = 1,
                                   seed = 123) {
 
-  log_message("Starting bootstrap with ", n_boot, " iterations...")
+  log_message("Starting bootstrap with ", bootstrap, " iterations...")
 
   features <- colnames(full_data)[-c(1, 2)]
   results <- stats::setNames(vector("list", length(features)), features)
 
   # Avoids infinite loop
   attempts <- 0
-  max_attempts <- n_boot * 10
+  max_attempts <- bootstrap * 10
 
   # Collects coefficients returned by one or more bootstrap attempts
   collect_coefficients <- function(results_list) {
@@ -339,12 +339,12 @@ clinprog_bootstrapfun <- function(full_data,
     }
   }
 
-  if (ncores == 1) {
+  if (n_cores == 1) {
 
     # Serial path
     i <- 1
 
-    while (i <= n_boot) {
+    while (i <= bootstrap) {
 
       attempts <- attempts + 1
 
@@ -371,7 +371,7 @@ clinprog_bootstrapfun <- function(full_data,
   } else {
 
     # Parallel path
-    cl <- parallel::makeCluster(ncores)
+    cl <- parallel::makeCluster(n_cores)
 
     on.exit(
       parallel::stopCluster(cl),
@@ -412,13 +412,13 @@ clinprog_bootstrapfun <- function(full_data,
     valid_results <- list()
     seed_counter <- 1
 
-    while (length(valid_results) < n_boot) {
+    while (length(valid_results) < bootstrap) {
 
-      attempts_needed <- n_boot - length(valid_results)
+      attempts_needed <- bootstrap - length(valid_results)
 
       # Preserve the master implementation's batching behavior:
-      # each batch contains at least ncores attempts.
-      batch_size <- max(attempts_needed, ncores)
+      # each batch contains at least n_cores attempts.
+      batch_size <- max(attempts_needed, n_cores)
 
       if (attempts + batch_size > max_attempts) {
         batch_size <- max_attempts - attempts
@@ -445,22 +445,22 @@ clinprog_bootstrapfun <- function(full_data,
 
       valid_results <- c(valid_results, valid_batch)
 
-      if (length(valid_results) >= n_boot) {
+      if (length(valid_results) >= bootstrap) {
         break
       }
 
       log_message(
         "Bootstrap progress: ",
-        min(length(valid_results), n_boot),
+        min(length(valid_results), bootstrap),
         "/",
-        n_boot,
+        bootstrap,
         " valid iterations"
       )
     }
 
     # Only the requested number of successful iterations contribute.
     collect_coefficients(
-      valid_results[seq_len(n_boot)]
+      valid_results[seq_len(bootstrap)]
     )
   }
 
@@ -762,7 +762,7 @@ clinprog_regression <- function(cmatrix, seed = NULL) {
 #' @keywords internal
 clinprog_cutoff_roc <- function(data, direction = NULL)
 {
-  # Checks input type
+  # Checks input feature_type
   if (!is.data.frame(data)) {log_stop("Argument 'data' must be a data.frame")}
 
   # Validates input
@@ -846,7 +846,7 @@ clinprog_cutoff_roc <- function(data, direction = NULL)
 #' @keywords internal
 clinprog_uniCox_model <- function(data)
 {
-  # Checks input type
+  # Checks input feature_type
   if (!is.data.frame(data)) {log_stop("Argument 'data' must be a data.frame")}
 
   # Validates input
@@ -863,8 +863,8 @@ clinprog_uniCox_model <- function(data)
     ph_test <- clinprog_schoenfeld(model_object = uni_model, covariates = "score_group", is_multi = FALSE)
 
     # Computes hazard ratio statistics
-    hr_model <- clinprog_hazard_ratio(x = data$score_group, surv.time = data$OS.time, surv.event = data$OS,
-                                      alpha = 0.05, method.test = "logrank", na.rm = TRUE)
+    hr_model <- clinprog_hazard_ratio(x = data$score_group, surv_time = data$OS.time, surv_event = data$OS,
+                                      alpha = 0.05, method_test = "logrank", na.rm = TRUE)
 
     # Extracts statistics
     hazard_ratio <- paste0(signif(hr_model$hazard.ratio, 2), " (95% CI, ", signif(hr_model$lower, 2),
@@ -917,7 +917,7 @@ clinprog_uniCox_model <- function(data)
 #' For each cut, the following steps are performed:
 #' \enumerate{
 #'   \item A clinprog score is computed for the provided survival dataset using only the features in the current cut.
-#'   \item Patients are split into low/high groups using the strategy defined by \code{score.cutoff}.
+#'   \item Patients are split into low/high groups using the strategy defined by \code{score_cutoff}.
 #'   \item A univariate Cox model with log-rank test is fitted via \code{clinprog_uniCox_model()}.
 #' }
 #'
@@ -929,7 +929,7 @@ clinprog_uniCox_model <- function(data)
 #' @param data A data.frame containing at least the columns \code{OS}, \code{OS.time}, and all features listed in
 #'   \code{signature$feature}.
 #' @param min_size Integer. Minimum signature size to test (must be >= 1 and <= \code{nrow(signature)}).
-#' @param score.cutoff Character. Strategy used to split scores into low/high groups.
+#' @param score_cutoff Character. Strategy used to split scores into low/high groups.
 #'   One of \code{"median"}, \code{"mean"}, \code{"signal"}, or \code{"roc"}.
 #'
 #' @return A list with:
@@ -941,7 +941,7 @@ clinprog_uniCox_model <- function(data)
 #' }
 #'
 #' @keywords internal
-clinprog_min_signature <- function(signature, data, min_size, score.cutoff) {
+clinprog_min_signature <- function(signature, data, min_size, score_cutoff) {
 
   # Validates signature
   if (!is.data.frame(signature)) {log_stop("'signature' must be a data.frame")}
@@ -965,11 +965,11 @@ clinprog_min_signature <- function(signature, data, min_size, score.cutoff) {
     log_stop("'min_size' must be a single positive integer")
   }
 
-  # Validates score.cutoff
-  if (!is.character(score.cutoff) || length(score.cutoff) != 1 ||
-      !score.cutoff %in% c("median", "mean", "signal", "roc"))
+  # Validates score_cutoff
+  if (!is.character(score_cutoff) || length(score_cutoff) != 1 ||
+      !score_cutoff %in% c("median", "mean", "signal", "roc"))
   {
-    log_stop("'score.cutoff' must be one of: 'median', 'mean', 'signal', 'roc'")
+    log_stop("'score_cutoff' must be one of: 'median', 'mean', 'signal', 'roc'")
   }
 
   # Ranks features by decreasing absolute coefficient (same as new_clinprog_signature)
@@ -995,7 +995,7 @@ clinprog_min_signature <- function(signature, data, min_size, score.cutoff) {
 
   # Header log
   log_message("Searching for the minimum signature with significant univariate survival (min_size = ",
-              min_size, ", cutoff = ", score.cutoff, ", p.cutoff = 0.05)...")
+              min_size, ", cutoff = ", score_cutoff, ", p_value_cutoff = 0.05)...")
 
   # Iterates over signature sizes
   tested <- data.frame(size = integer(0), pvalue = numeric(0))
@@ -1016,11 +1016,11 @@ clinprog_min_signature <- function(signature, data, min_size, score.cutoff) {
     temp_df <- data.frame(OS = data$OS, OS.time = data$OS.time, score = score, stringsAsFactors = FALSE)
 
     # Categorizes into low/high according to the selected strategy
-    if (score.cutoff == "median") {
+    if (score_cutoff == "median") {
       cut_val <- stats::median(temp_df$score, na.rm = TRUE)
-    } else if (score.cutoff == "mean") {
+    } else if (score_cutoff == "mean") {
       cut_val <- mean(temp_df$score, na.rm = TRUE)
-    } else if (score.cutoff == "signal") {
+    } else if (score_cutoff == "signal") {
       cut_val <- 0
     } else {  # "roc"
       # ROC-based cutoff, mirroring run_survival() behavior
@@ -1102,12 +1102,12 @@ clinprog_min_signature <- function(signature, data, min_size, score.cutoff) {
 #' @param data Data.frame containing survival and binary clinical information.
 #' Must contain columns \code{OS} and \code{OS.time}.
 #' @param covariates Character. Vector containing clinical covariate names.
-#' @param p.cutoff Numeric. P-value threshold used to define prognosis groups (default: \code{0.2}).
+#' @param p_value_cutoff Numeric. P-value threshold used to define prognosis groups (default: \code{0.2}).
 #'
 #' @return A data.frame containing univariate Cox regression statistics for all tested covariates.
 #'
 #' @keywords internal
-clinprog_uniCox_test <- function(data, covariates, p.cutoff = 0.2)
+clinprog_uniCox_test <- function(data, covariates, p_value_cutoff = 0.2)
 {
   # Validates input data
   required_cols <- c("OS", "OS.time")
@@ -1120,9 +1120,9 @@ clinprog_uniCox_test <- function(data, covariates, p.cutoff = 0.2)
                                                   paste(missing_covariates, collapse = ", ")))}
 
   # Validates p-value cutoff
-  if (!is.numeric(p.cutoff) || length(p.cutoff) != 1 || p.cutoff <= 0 || p.cutoff >= 1)
+  if (!is.numeric(p_value_cutoff) || length(p_value_cutoff) != 1 || p_value_cutoff <= 0 || p_value_cutoff >= 1)
   {
-    log_stop("'p.cutoff' must be a numeric value between 0 and 1")
+    log_stop("'p_value_cutoff' must be a numeric value between 0 and 1")
   }
 
   # Runs multiple univariate Cox models for each variable
@@ -1165,8 +1165,8 @@ clinprog_uniCox_test <- function(data, covariates, p.cutoff = 0.2)
 
     # Defines prognosis
     res$prognosis <- "---"
-    res$prognosis[!is.na(res$Cox.pvalue) & res$Cox.pvalue < p.cutoff & res$coefficient < 0] <- "better"
-    res$prognosis[!is.na(res$Cox.pvalue) & res$Cox.pvalue < p.cutoff & res$coefficient > 0] <- "worse"
+    res$prognosis[!is.na(res$Cox.pvalue) & res$Cox.pvalue < p_value_cutoff & res$coefficient < 0] <- "better"
+    res$prognosis[!is.na(res$Cox.pvalue) & res$Cox.pvalue < p_value_cutoff & res$coefficient > 0] <- "worse"
 
     # Returns final columns
     res[, c("variable", "hazard.ratio", "Cox.pvalue", "prognosis")]
@@ -1200,10 +1200,10 @@ clinprog_uniCox_test <- function(data, covariates, p.cutoff = 0.2)
 #' @param logrank_result Data.frame generated by \code{clinprog_uniCox_model()}.
 #' @param covariates Character. Vector containing covariates selected for multivariate analysis.
 #' @param all_covariates Character. Vector containing all available clinical covariates.
-#' @param use.bootstrap Logical. Whether bootstrap resampling should be used before final model fitting (default: \code{TRUE}).
+#' @param use_bootstrap Logical. Whether bootstrap resampling should be used before final model fitting (default: \code{TRUE}).
 #' @param bootstrap Numeric. Number of bootstrap iterations (default: \code{1}).
-#' @param bootstrap.freq Numeric. Minimum frequency to retain variables after bootstrap resampling (default: \code{0.25}).
-#' @param multi.p.cutoff Numeric. P-value used to define prognosis groups in multivariate models (default: \code{0.1}).
+#' @param bootstrap_freq Numeric. Minimum frequency to retain variables after bootstrap resampling (default: \code{0.25}).
+#' @param multi_p_value_cutoff Numeric. P-value used to define prognosis groups in multivariate models (default: \code{0.1}).
 #'
 #' @return A list containing:
 #' \describe{
@@ -1216,7 +1216,7 @@ clinprog_uniCox_test <- function(data, covariates, p.cutoff = 0.2)
 #'
 #' @keywords internal
 clinprog_multiCox_test <- function(data, univ_result, logrank_result, covariates, all_covariates,
-                                   use.bootstrap = TRUE, bootstrap = 1, bootstrap.freq = 0.25, multi.p.cutoff = 0.1)
+                                   use_bootstrap = TRUE, bootstrap = 1, bootstrap_freq = 0.25, multi_p_value_cutoff = 0.1)
 {
   # Validates input data
   required_cols <- c("OS", "OS.time", "score_group")
@@ -1238,15 +1238,15 @@ clinprog_multiCox_test <- function(data, univ_result, logrank_result, covariates
   if (!is.character(all_covariates) || length(all_covariates) < 1) {log_stop("'all_covariates' must be a character vector")}
 
   # Validates bootstrap parameters
-  if (!is.logical(use.bootstrap) || length(use.bootstrap) != 1) {log_stop("'use.bootstrap' must be either TRUE or FALSE")}
+  if (!is.logical(use_bootstrap) || length(use_bootstrap) != 1) {log_stop("'use_bootstrap' must be either TRUE or FALSE")}
   if (!is.numeric(bootstrap) || length(bootstrap) != 1 || bootstrap < 1) {log_stop("'bootstrap' must be a positive numeric value")}
-  if (!is.numeric(bootstrap.freq) || length(bootstrap.freq) != 1 || bootstrap.freq <= 0 || bootstrap.freq > 1)
+  if (!is.numeric(bootstrap_freq) || length(bootstrap_freq) != 1 || bootstrap_freq <= 0 || bootstrap_freq > 1)
   {
-    log_stop("'bootstrap.freq' must be a numeric value between 0 and 1")
+    log_stop("'bootstrap_freq' must be a numeric value between 0 and 1")
   }
-  if (!is.numeric(multi.p.cutoff) || length(multi.p.cutoff) != 1 || multi.p.cutoff <= 0 || multi.p.cutoff >= 1)
+  if (!is.numeric(multi_p_value_cutoff) || length(multi_p_value_cutoff) != 1 || multi_p_value_cutoff <= 0 || multi_p_value_cutoff >= 1)
   {
-    log_stop("'multi.p.cutoff' must be a numeric value between 0 and 1")
+    log_stop("'multi_p_value_cutoff' must be a numeric value between 0 and 1")
   }
 
   # Harmonizes score naming between univariate and multivariate analyses
@@ -1278,8 +1278,8 @@ clinprog_multiCox_test <- function(data, univ_result, logrank_result, covariates
 
     # Defines prognosis
     res$prognosis <- NA
-    res$prognosis[!is.na(res$Cox.pvalue) & res$Cox.pvalue < multi.p.cutoff & res$coefficient < 0] <- "better"
-    res$prognosis[!is.na(res$Cox.pvalue) & res$Cox.pvalue < multi.p.cutoff & res$coefficient > 0] <- "worse"
+    res$prognosis[!is.na(res$Cox.pvalue) & res$Cox.pvalue < multi_p_value_cutoff & res$coefficient < 0] <- "better"
+    res$prognosis[!is.na(res$Cox.pvalue) & res$Cox.pvalue < multi_p_value_cutoff & res$coefficient > 0] <- "worse"
     res[, c("variable", "hazard.ratio", "Cox.pvalue", "prognosis")]
   }
 
@@ -1291,13 +1291,13 @@ clinprog_multiCox_test <- function(data, univ_result, logrank_result, covariates
   bootstrap_used <- FALSE
 
   # Optional bootstrap resampling
-  if (use.bootstrap)
+  if (use_bootstrap)
   {
     # Runs bootstrap resampling
     log_message(paste0("Running bootstrap resampling with ", bootstrap, " iterations..."))
     resampling_results <- clinprog_resampling(data = data, covariates = covariates, all_covariates = all_covariates,
-                                              bootstrap = bootstrap, bootstrap.freq = bootstrap.freq,
-                                              boot.p.cutoff = multi.p.cutoff)
+                                              bootstrap = bootstrap, bootstrap_freq = bootstrap_freq,
+                                              boot_p_value_cutoff = multi_p_value_cutoff)
 
     # Extracts main results from iterations
     covariates <- resampling_results$covariates
@@ -1314,7 +1314,7 @@ clinprog_multiCox_test <- function(data, univ_result, logrank_result, covariates
   # Extracts multivariate statistics
   multi_res <- extract_cox_results(model)
 
-  # Merges univariate (score) and multivariate (clinics) results
+  # Merges univariate (score) and multivariate (clinical_data) results
   final <- merge(univ_result, multi_res, by = "variable", all = TRUE)
 
   # Replaces score_group univariate values
@@ -1461,10 +1461,10 @@ clinprog_schoenfeld <- function(model_object, covariates, is_multi = FALSE)
 #' hazards model and extract hazard ratio statistics, confidence intervals, coefficients, and p-values.
 #'
 #' @param x Predictor variable.
-#' @param surv.time Numeric vector containing follow-up times.
-#' @param surv.event Numeric or logical vector containing survival events.
+#' @param surv_time Numeric vector containing follow-up times.
+#' @param surv_event Numeric or logical vector containing survival events.
 #' @param alpha Numeric. Significance level used for confidence intervals (default: \code{0.05}).
-#' @param method.test Character. Statistical test used to compute p-values.
+#' @param method_test Character. Statistical test used to compute p-values.
 #' One of \code{"logrank"}, \code{"likelihood.ratio"}, or \code{"wald"}.
 #' @param na.rm Logical. Whether to remove incomplete observations (default: \code{FALSE}).
 #'
@@ -1483,25 +1483,25 @@ clinprog_schoenfeld <- function(model_object, covariates, is_multi = FALSE)
 #' Returns \code{NULL} if the Cox model cannot be fitted.
 #'
 #' @keywords internal
-clinprog_hazard_ratio <- function(x, surv.time, surv.event, alpha = 0.05,
-                                  method.test = c("logrank", "likelihood.ratio", "wald"), na.rm = FALSE)
+clinprog_hazard_ratio <- function(x, surv_time, surv_event, alpha = 0.05,
+                                  method_test = c("logrank", "likelihood.ratio", "wald"), na.rm = FALSE)
 {
   # Validates x
-  if (length(x) != length(surv.time) || length(x) != length(surv.event))
+  if (length(x) != length(surv_time) || length(x) != length(surv_event))
   {
-    log_stop("Arguments 'x', 'surv.time', and 'surv.event' must have the same length")
+    log_stop("Arguments 'x', 'surv_time', and 'surv_event' must have the same length")
   }
 
   # Validates survival times
-  if (!is.numeric(surv.time) || any(surv.time < 0, na.rm = TRUE))
+  if (!is.numeric(surv_time) || any(surv_time < 0, na.rm = TRUE))
   {
-    log_stop("'surv.time' must be a numeric vector containing non-negative values")
+    log_stop("'surv_time' must be a numeric vector containing non-negative values")
   }
 
   # Validates survival event
-  if (!is.numeric(surv.event)) {log_stop("Argument 'surv.event' must be numeric")}
-  unique_events <- sort(unique(stats::na.omit(surv.event)))
-  if (!setequal(unique_events, c(0, 1))) {log_stop("Argument 'surv.event' must contain only 0 and 1 values")}
+  if (!is.numeric(surv_event)) {log_stop("Argument 'surv_event' must be numeric")}
+  unique_events <- sort(unique(stats::na.omit(surv_event)))
+  if (!setequal(unique_events, c(0, 1))) {log_stop("Argument 'surv_event' must contain only 0 and 1 values")}
 
   # Validates alpha
   if (!is.numeric(alpha) || length(alpha) != 1 || alpha <= 0 || alpha >= 1)
@@ -1513,10 +1513,10 @@ clinprog_hazard_ratio <- function(x, surv.time, surv.event, alpha = 0.05,
   if (!is.logical(na.rm) || length(na.rm) != 1) {log_stop("Argument 'na.rm' must be TRUE or FALSE")}
 
   # Matches statistical test argument
-  method.test <- match.arg(method.test)
+  method_test <- match.arg(method_test)
 
   # Builds temporary dataset
-  df <- data.frame(x = x, surv.time = surv.time, surv.event = surv.event)
+  df <- data.frame(x = x, surv_time = surv_time, surv_event = surv_event)
 
   # Removes missing values if requested
   if (na.rm) {df <- stats::na.omit(df)}
@@ -1529,7 +1529,7 @@ clinprog_hazard_ratio <- function(x, surv.time, surv.event, alpha = 0.05,
   }
 
   # Fits Cox model safely
-  model <- tryCatch(survival::coxph(survival::Surv(surv.time, surv.event) ~ x, data = df), error = function(e) NULL)
+  model <- tryCatch(survival::coxph(survival::Surv(surv_time, surv_event) ~ x, data = df), error = function(e) NULL)
 
   # Stops if model fitting failed
   if (is.null(model)) {return(NULL)}
@@ -1539,7 +1539,7 @@ clinprog_hazard_ratio <- function(x, surv.time, surv.event, alpha = 0.05,
   se <- sqrt(diag(stats::vcov(model)))[1]
 
   # Selects statistical test
-  stat <- switch(method.test, logrank = model$score, likelihood.ratio = 2 * diff(model$loglik), wald = model$wald.test)
+  stat <- switch(method_test, logrank = model$score, likelihood.ratio = 2 * diff(model$loglik), wald = model$wald.test)
 
   # Calculates p-value
   p.value <- stats::pchisq(stat, df = 1, lower.tail = FALSE)
@@ -1562,8 +1562,8 @@ clinprog_hazard_ratio <- function(x, surv.time, surv.event, alpha = 0.05,
 #' @param covariates Character. Vector containing selected covariates.
 #' @param all_covariates Character. Vector containing all available clinical covariates.
 #' @param bootstrap Numeric. Number of bootstrap iterations (default: \code{100}).
-#' @param bootstrap.freq Numeric. Minimum frequency to retain variables after bootstrap resampling (default: \code{0.25}).
-#' @param boot.p.cutoff Numeric. P-value threshold used to define prognosis groups (default: \code{0.05}).
+#' @param bootstrap_freq Numeric. Minimum frequency to retain variables after bootstrap resampling (default: \code{0.25}).
+#' @param boot_p_value_cutoff Numeric. P-value threshold used to define prognosis groups (default: \code{0.05}).
 #'
 #' @return A list containing:
 #' \itemize{
@@ -1574,10 +1574,10 @@ clinprog_hazard_ratio <- function(x, surv.time, surv.event, alpha = 0.05,
 #'
 #' @keywords internal
 clinprog_resampling <- function(data, covariates, all_covariates,
-                                bootstrap = 100, bootstrap.freq = 0.25, boot.p.cutoff = 0.1)
+                                bootstrap = 100, bootstrap_freq = 0.25, boot_p_value_cutoff = 0.1)
 {
   # Internal helper to summarize why bootstrap iterations were dropped
-  .summarize_rejections <- function(rejection_reasons, min.prop)
+  .summarize_rejections <- function(rejection_reasons, min_prop)
   {
     if (length(rejection_reasons) == 0) return(invisible(NULL))
 
@@ -1589,7 +1589,7 @@ clinprog_resampling <- function(data, covariates, all_covariates,
     parts <- do.call(rbind, strsplit(rejection_reasons, "\t", fixed = TRUE))
     df <- data.frame(col = parts[, 1], val = parts[, 2], stringsAsFactors = FALSE)
 
-    log_warning("Some covariates caused bootstrap iterations to be dropped (review 'clinics' input):")
+    log_warning("Some covariates caused bootstrap iterations to be dropped (review 'clinical_data' input):")
     for (col in unique(df$col))
     {
       sub <- df[df$col == col, , drop = FALSE]
@@ -1600,7 +1600,7 @@ clinprog_resampling <- function(data, covariates, all_covariates,
       } else {
         vals <- suppressWarnings(as.numeric(sub$val))
         min_val <- min(vals, na.rm = TRUE)
-        log_warning("    '", col, "' min.prop = ", min_val, " (< cutoff: ", min.prop, ")  [", n, " iterations]")
+        log_warning("    '", col, "' min_prop = ", min_val, " (< cutoff: ", min_prop, ")  [", n, " iterations]")
       }
     }
   }
@@ -1617,22 +1617,22 @@ clinprog_resampling <- function(data, covariates, all_covariates,
   if (!is.numeric(bootstrap) || length(bootstrap) != 1 || bootstrap < 1) {log_stop("'bootstrap' must be a positive numeric value")}
 
   # Validates bootstrap frequency threshold
-  if (!is.numeric(bootstrap.freq) || length(bootstrap.freq) != 1 || bootstrap.freq <= 0 || bootstrap.freq > 1)
+  if (!is.numeric(bootstrap_freq) || length(bootstrap_freq) != 1 || bootstrap_freq <= 0 || bootstrap_freq > 1)
   {
-    log_stop("'bootstrap.freq' must be a numeric value between 0 and 1")
+    log_stop("'bootstrap_freq' must be a numeric value between 0 and 1")
   }
 
   # Validates p-value cutoff
-  if (!is.numeric(boot.p.cutoff) || length(boot.p.cutoff) != 1 || boot.p.cutoff <= 0 || boot.p.cutoff >= 1)
+  if (!is.numeric(boot_p_value_cutoff) || length(boot_p_value_cutoff) != 1 || boot_p_value_cutoff <= 0 || boot_p_value_cutoff >= 1)
   {
-    log_stop("'boot.p.cutoff' must be a numeric value between 0 and 1")
+    log_stop("'boot_p_value_cutoff' must be a numeric value between 0 and 1")
   }
 
   # Builds Cox formula
   multi_formula <- stats::as.formula(paste("survival::Surv(OS.time, OS) ~", paste(covariates, collapse = " + ")))
 
   # Internal helper to extract Cox results
-  extract_boot_cox_results <- function(model, boot.p.cutoff)
+  extract_boot_cox_results <- function(model, boot_p_value_cutoff)
   {
     coef_df <- as.data.frame(stats::coef(summary(model)))
     ci_df <- as.data.frame(summary(model)$conf.int)
@@ -1644,8 +1644,8 @@ clinprog_resampling <- function(data, covariates, all_covariates,
     res$coefficient <- as.numeric(res$coefficient)
     res$Cox.pvalue <- as.numeric(res$Cox.pvalue)
     res$prognosis <- NA
-    res$prognosis[!is.na(res$Cox.pvalue) & res$Cox.pvalue < boot.p.cutoff & res$coefficient < 0] <- "better"
-    res$prognosis[!is.na(res$Cox.pvalue) & res$Cox.pvalue < boot.p.cutoff & res$coefficient > 0] <- "worse"
+    res$prognosis[!is.na(res$Cox.pvalue) & res$Cox.pvalue < boot_p_value_cutoff & res$coefficient < 0] <- "better"
+    res$prognosis[!is.na(res$Cox.pvalue) & res$Cox.pvalue < boot_p_value_cutoff & res$coefficient > 0] <- "worse"
 
     return(res[, c("variable", "prognosis")])
   }
@@ -1660,7 +1660,7 @@ clinprog_resampling <- function(data, covariates, all_covariates,
   rejection_reasons <- character()
   while (valid_iterations < bootstrap && current_iteration <= length(bootstrap_data$strap))
   {
-    boot_df <- clinprog_bootstrap(raw_data = data, bootstrap_data = bootstrap_data, iteration = current_iteration, min.prop = 0.1)
+    boot_df <- clinprog_bootstrap(raw_data = data, bootstrap_data = bootstrap_data, iteration = current_iteration, min_prop = 0.1)
     current_iteration <- current_iteration + 1
 
     # Skips invalid bootstrap samples
@@ -1676,7 +1676,7 @@ clinprog_resampling <- function(data, covariates, all_covariates,
     if (is.null(model)) {next}
 
     # Extracts iteration results
-    tables_list[[length(tables_list) + 1]] <- extract_boot_cox_results(model = model, boot.p.cutoff = boot.p.cutoff)
+    tables_list[[length(tables_list) + 1]] <- extract_boot_cox_results(model = model, boot_p_value_cutoff = boot_p_value_cutoff)
     valid_iterations <- valid_iterations + 1
   }
 
@@ -1684,7 +1684,7 @@ clinprog_resampling <- function(data, covariates, all_covariates,
   if (length(tables_list) == 0)
   {
     log_warning("Bootstrap resampling failed.")
-    .summarize_rejections(rejection_reasons, min.prop = 0.1)
+    .summarize_rejections(rejection_reasons, min_prop = 0.1)
     log_warning("Returning original covariates.")
     return(list(table = NULL, covariates = covariates, bootstrap.used = FALSE))
   }
@@ -1693,14 +1693,14 @@ clinprog_resampling <- function(data, covariates, all_covariates,
   merged_table <- clinprog_merge(tables_list = tables_list, covariates = all_covariates)
 
   # Selects frequent covariates
-  frequency_cutoff <- bootstrap * bootstrap.freq
+  frequency_cutoff <- bootstrap * bootstrap_freq
   selected_covariates <- merged_table$covariate[merged_table$frequency >= frequency_cutoff]
 
   # Ensures score_group remains included
   selected_covariates <- unique(c("score_group", selected_covariates))
 
   # Prints 1x at the end the variables that made iterations fail
-  .summarize_rejections(rejection_reasons, min.prop = 0.1)
+  .summarize_rejections(rejection_reasons, min_prop = 0.1)
 
   return(list(table = merged_table, covariates = selected_covariates, bootstrap.used = TRUE))
 }
@@ -1712,12 +1712,12 @@ clinprog_resampling <- function(data, covariates, all_covariates,
 #' @param raw_data Data.frame used as source for bootstrap resampling.
 #' @param bootstrap_data Bootstrap object generated by \code{sjstats::bootstrap()}.
 #' @param iteration Numeric. Bootstrap iteration index.
-#' @param min.prop Numeric. Minimum proportion for the least abundant category in binary variables (default: \code{0.1}).
+#' @param min_prop Numeric. Minimum proportion for the least abundant category in binary variables (default: \code{0.1}).
 #'
 #' @return A bootstrap-resampled data.frame if valid, otherwise \code{NULL}.
 #'
 #' @keywords internal
-clinprog_bootstrap <- function(raw_data, bootstrap_data, iteration, min.prop = 0.1)
+clinprog_bootstrap <- function(raw_data, bootstrap_data, iteration, min_prop = 0.1)
 {
   # Validates input data
   if (!is.data.frame(raw_data)) {log_stop("'raw_data' must be a data.frame")}
@@ -1735,9 +1735,9 @@ clinprog_bootstrap <- function(raw_data, bootstrap_data, iteration, min.prop = 0
   if (iteration > length(bootstrap_data$strap)) {log_stop("'iteration' exceeds the number of available bootstrap samples")}
 
   # Validates minimum proportion
-  if (!is.numeric(min.prop) || length(min.prop) != 1 || min.prop <= 0 || min.prop >= 0.5)
+  if (!is.numeric(min_prop) || length(min_prop) != 1 || min_prop <= 0 || min_prop >= 0.5)
   {
-    log_stop("'min.prop' must be a numeric value between 0 and 0.5")
+    log_stop("'min_prop' must be a numeric value between 0 and 0.5")
   }
 
   # Extracts bootstrap sample indices
@@ -1762,7 +1762,7 @@ clinprog_bootstrap <- function(raw_data, bootstrap_data, iteration, min.prop = 0
     proportions <- prop.table(table(current_var))
 
     # Ensures minimum category proportion
-    if (min(proportions) < min.prop)
+    if (min(proportions) < min_prop)
     {
       return(structure(list(), reason = paste0(col, "\t", round(min(proportions), 4))))
     }

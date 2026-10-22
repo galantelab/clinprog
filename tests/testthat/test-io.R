@@ -67,7 +67,7 @@ test_that("read_table reads a TSV with row names", {
   df <- data.frame(a = 1:3, b = 4:6, row.names = c("s1", "s2", "s3"))
   write.table(df, tmp, sep = "\t", quote = FALSE)
   
-  res <- read_table(tmp, row.names = TRUE)
+  res <- read_table(tmp, row_names = TRUE)
   expect_s3_class(res, "data.frame")
   expect_identical(nrow(res), 3L)
   expect_identical(ncol(res), 2L)
@@ -79,7 +79,7 @@ test_that("read_table reads a TSV without row names", {
   df <- data.frame(a = 1:3, b = 4:6)
   write.table(df, tmp, sep = "\t", quote = FALSE, row.names = FALSE)
   
-  res <- read_table(tmp, row.names = FALSE)
+  res <- read_table(tmp, row_names = FALSE)
   expect_s3_class(res, "data.frame")
   expect_identical(nrow(res), 3L)
 })
@@ -90,7 +90,7 @@ test_that("read_table validates its arguments", {
   # Create a real file so the validation order doesn't short-circuit
   tmp <- tempfile(fileext = ".tsv")
   writeLines("a\tb\n1\t2", tmp)
-  expect_error(read_table(tmp, row.names = "yes"), regexp = "TRUE or FALSE")
+  expect_error(read_table(tmp, row_names = "yes"), regexp = "TRUE or FALSE")
   
   # Non-existent file (separate test since it short-circuits)
   expect_error(read_table("non_existent_file.tsv"), regexp = "does not exist")
@@ -232,7 +232,7 @@ test_that("write_metadata writes a JSON file", {
   params <- list(a = 1, b = "text", c = TRUE)
   write_metadata(
     module = "run_regression",
-    outprefix = file.path(tmp_dir, "test_run"),
+    output_prefix = file.path(tmp_dir, "test_run"),
     parameters = params,
     command = "none"
   )

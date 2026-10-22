@@ -7,20 +7,20 @@
 #'
 #' @param file Character. Path to input table file.
 #' @param sep Field separator (default: \code{tab}).
-#' @param row.names Logical. Whether the first column should be used as row names (default: \code{TRUE}).
+#' @param row_names Logical. Whether the first column should be used as row names (default: \code{TRUE}).
 #'
 #' @return A data.frame containing the imported table.
 #' @export
-read_table <- function(file, sep = "\t", row.names = TRUE) {
+read_table <- function(file, sep = "\t", row_names = TRUE) {
   # Validates input file
   if (!is.character(file) || length(file) != 1) {log_stop("'file' must be a single character string with the table PATH")}
   if (!file.exists(file)) {log_stop("Input file does not exist")}
 
-  # Validates row.names parameter
-  if (!is.logical(row.names) || length(row.names) != 1) {log_stop("'row.names' must be TRUE or FALSE")}
+  # Validates row_names parameter
+  if (!is.logical(row_names) || length(row_names) != 1) {log_stop("'row_names' must be TRUE or FALSE")}
 
   # Reads table
-  if (isTRUE(row.names))
+  if (isTRUE(row_names))
   {
     data <- utils::read.delim(file = file, header = TRUE, sep = sep, row.names = 1, check.names = FALSE)
   } else {
@@ -100,13 +100,13 @@ write_rds <- function(object, file, compress = "xz") {
 #' @param x A `clinprog_signature` or `clinprog_survival` object or a valid data frame.
 #' @param file Output file path.
 #' @param sep Field separator (default: \code{tab}).
-#' @param row.names Logical. Whether to write row names (default: \code{FALSE}).
+#' @param row_names Logical. Whether to write row names (default: \code{FALSE}).
 #' @param quote Logical. Whether to quote strings (default: \code{FALSE}).
 #' @param ... Additional arguments passed to \code{utils::write.table()}.
 #'
 #' @return Invisibly returns the input object.
 #' @export
-write_signature <- function(x, file, sep = "\t", row.names = FALSE, quote = FALSE, ...) {
+write_signature <- function(x, file, sep = "\t", row_names = FALSE, quote = FALSE, ...) {
   # Extracts signature table according to input type
   if (inherits(x, c("clinprog_signature", "clinprog_survival")))
   {
@@ -143,7 +143,7 @@ write_signature <- function(x, file, sep = "\t", row.names = FALSE, quote = FALS
   }
 
   # Writes signature
-  utils::write.table(df, file = file, sep = sep, row.names = row.names, quote = quote, ...)
+  utils::write.table(df, file = file, sep = sep, row.names = row_names, quote = quote, ...)
 
   invisible(x)
 }
@@ -154,14 +154,14 @@ write_signature <- function(x, file, sep = "\t", row.names = FALSE, quote = FALS
 #'
 #' @param module Character. Name of the executed clinprog module.
 #' Must be either "run_regression", or "run_survival" or "run_complete".
-#' @param outprefix Character. Output prefix used to generate the JSON file.
+#' @param output_prefix Character. Output prefix used to generate the JSON file.
 #' @param parameters Named list containing user-defined parameters.
 #' @param command Character. Command line used to run the analysis (optional).
 #' Use \code{"none"} to disable command export.
 #'
 #' @return Invisibly returns the metadata list.
 #' @export
-write_metadata <- function(module, outprefix, parameters, command = NULL)
+write_metadata <- function(module, output_prefix, parameters, command = NULL)
 {
   # Validates module
   valid_modules <- c("run_regression", "run_survival", "run_complete")
@@ -169,7 +169,7 @@ write_metadata <- function(module, outprefix, parameters, command = NULL)
   if (!module %in% valid_modules) {log_stop("'module' must be one of: ", paste(valid_modules, collapse = ", "))}
 
   # Validates output prefix
-  if (!is.character(outprefix) || length(outprefix) != 1) {log_stop("'outprefix' must be a character string")}
+  if (!is.character(output_prefix) || length(output_prefix) != 1) {log_stop("'output_prefix' must be a character string")}
 
   # Validates parameters
   if (!is.list(parameters)) {log_stop("'parameters' must be a named list")}
@@ -189,7 +189,7 @@ write_metadata <- function(module, outprefix, parameters, command = NULL)
   # Captures active session packages efficiently (CRAN safe)
   sess_info <- utils::sessionInfo()
   all_pkgs <- c(sess_info$otherPkgs, sess_info$loadedOnly)
-  
+
   if (length(all_pkgs) > 0) {
     installed_packages <- data.frame(Package = names(all_pkgs),
                                      Version = vapply(all_pkgs, function(p) as.character(p$Version), character(1)),
@@ -210,9 +210,9 @@ write_metadata <- function(module, outprefix, parameters, command = NULL)
   # Defines output file name
   output_file <- switch(
     module,
-    run_regression = paste0(outprefix, "_metadata_regression.json"),
-    run_survival = paste0(outprefix, "_metadata_survival.json"),
-    run_complete = paste0(outprefix, "_metadata_complete.json")
+    run_regression = paste0(output_prefix, "_metadata_regression.json"),
+    run_survival = paste0(output_prefix, "_metadata_survival.json"),
+    run_complete = paste0(output_prefix, "_metadata_complete.json")
   )
 
   # Writes JSON file
@@ -356,19 +356,19 @@ write_report <- function(object, format = TRUE, file = NULL,
 #'   \item A valid data.frame containing clinprog score information and possibly clinical data
 #' }
 #' @param file Output file path.
-#' @param clinics Logical. Whether the output should include clinical data or not (default: \code{FALSE}).
+#' @param include_clinical Logical. Whether the output should include clinical data or not (default: \code{FALSE}).
 #' @param sep Field separator (default: \code{tab}).
-#' @param row.names Logical. Whether to write row names (default: \code{TRUE}).
+#' @param row_names Logical. Whether to write row names (default: \code{TRUE}).
 #' @param quote Logical. Whether to quote strings (default: \code{FALSE}).
 #' @param ... Additional arguments passed to \code{utils::write.table()}.
 #'
 #' @return Invisibly returns the input object.
 #' @export
-write_score <- function(x, file, clinics = FALSE, sep = "\t", row.names = TRUE, quote = FALSE, ...) {
+write_score <- function(x, file, include_clinical = FALSE, sep = "\t", row_names = TRUE, quote = FALSE, ...) {
   # Extracts score table according to input type
   if (inherits(x, "clinprog_survival"))
   {
-    if (clinics)
+    if (include_clinical)
     {
       df <- x$clinical_data
     } else {df <- x$expression_data}
@@ -410,7 +410,7 @@ write_score <- function(x, file, clinics = FALSE, sep = "\t", row.names = TRUE, 
   }
 
   # Writes table
-  utils::write.table(df, file = file, sep = sep, row.names = row.names, quote = quote, ...)
+  utils::write.table(df, file = file, sep = sep, row.names = row_names, quote = quote, ...)
 
   invisible(x)
 }
@@ -428,13 +428,13 @@ write_score <- function(x, file, clinics = FALSE, sep = "\t", row.names = TRUE, 
 #'
 #' @param file Output file path.
 #' @param sep Field separator (default: \code{tab}).
-#' @param row.names Logical. Whether to write row names (default: \code{FALSE}).
+#' @param row_names Logical. Whether to write row names (default: \code{FALSE}).
 #' @param quote Logical. Whether to quote strings (default: \code{FALSE}).
 #' @param ... Additional arguments passed to \code{utils::write.table()}.
 #'
 #' @return Invisibly returns the input object.
 #' @export
-write_univariate <- function(x, file, sep = "\t", row.names = FALSE, quote = FALSE, ...) {
+write_univariate <- function(x, file, sep = "\t", row_names = FALSE, quote = FALSE, ...) {
   # Extracts univariate table according to input type
   if (inherits(x, "clinprog_survival"))
   {
@@ -478,7 +478,7 @@ write_univariate <- function(x, file, sep = "\t", row.names = FALSE, quote = FAL
   }
 
   # Writes table
-  utils::write.table(df, file = file, sep = sep, row.names = row.names, quote = quote, ...)
+  utils::write.table(df, file = file, sep = sep, row.names = row_names, quote = quote, ...)
 
   invisible(x)
 }
@@ -496,13 +496,13 @@ write_univariate <- function(x, file, sep = "\t", row.names = FALSE, quote = FAL
 #'
 #' @param file Output file path.
 #' @param sep Field separator (default: \code{tab}).
-#' @param row.names Logical. Whether to write row names (default: \code{FALSE}).
+#' @param row_names Logical. Whether to write row names (default: \code{FALSE}).
 #' @param quote Logical. Whether to quote strings (default: \code{FALSE}).
 #' @param ... Additional arguments passed to \code{utils::write.table()}.
 #'
 #' @return Invisibly returns the input object.
 #' @export
-write_multivariate <- function(x, file, sep = "\t", row.names = FALSE, quote = FALSE, ...) {
+write_multivariate <- function(x, file, sep = "\t", row_names = FALSE, quote = FALSE, ...) {
   # Extracts multivariate table according to input type
   if (inherits(x, "clinprog_survival"))
   {
@@ -543,7 +543,7 @@ write_multivariate <- function(x, file, sep = "\t", row.names = FALSE, quote = F
   }
 
   # Writes table
-  utils::write.table(df, file = file, sep = sep, row.names = row.names, quote = quote, ...)
+  utils::write.table(df, file = file, sep = sep, row.names = row_names, quote = quote, ...)
 
   invisible(x)
 }

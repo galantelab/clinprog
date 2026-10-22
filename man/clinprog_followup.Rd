@@ -4,12 +4,12 @@
 \alias{clinprog_followup}
 \title{Applies maximum follow-up censoring to survival data}
 \usage{
-clinprog_followup(data, followup = NULL)
+clinprog_followup(data, max_follow_up = NULL)
 }
 \arguments{
 \item{data}{Data.frame containing survival information.}
 
-\item{followup}{Numeric. Maximum follow-up time. If \code{NULL} (default), no filtering is applied.}
+\item{max_follow_up}{Numeric. Maximum follow-up time. If \code{NULL} (default), no filtering is applied.}
 }
 \value{
 A filtered data.frame with adjusted \code{OS} and \code{OS.time}.

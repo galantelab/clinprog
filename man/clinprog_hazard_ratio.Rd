@@ -6,23 +6,23 @@
 \usage{
 clinprog_hazard_ratio(
   x,
-  surv.time,
-  surv.event,
+  surv_time,
+  surv_event,
   alpha = 0.05,
-  method.test = c("logrank", "likelihood.ratio", "wald"),
+  method_test = c("logrank", "likelihood.ratio", "wald"),
   na.rm = FALSE
 )
 }
 \arguments{
 \item{x}{Predictor variable.}
 
-\item{surv.time}{Numeric vector containing follow-up times.}
+\item{surv_time}{Numeric vector containing follow-up times.}
 
-\item{surv.event}{Numeric or logical vector containing survival events.}
+\item{surv_event}{Numeric or logical vector containing survival events.}
 
 \item{alpha}{Numeric. Significance level used for confidence intervals (default: \code{0.05}).}
 
-\item{method.test}{Character. Statistical test used to compute p-values.
+\item{method_test}{Character. Statistical test used to compute p-values.
 One of \code{"logrank"}, \code{"likelihood.ratio"}, or \code{"wald"}.}
 
 \item{na.rm}{Logical. Whether to remove incomplete observations (default: \code{FALSE}).}

@@ -6,7 +6,7 @@
 \usage{
 plot_lollipop(
   signature,
-  outprefix = NULL,
+  output_prefix = NULL,
   theme = theme_clinprog(),
   width = 8,
   height = 5,
@@ -16,7 +16,7 @@ plot_lollipop(
 \arguments{
 \item{signature}{A data.frame with 'feature' and 'coefficient'.}
 
-\item{outprefix}{Character. Output prefix for saving the plot (optional).}
+\item{output_prefix}{Character. Output prefix for saving the plot (optional).}
 
 \item{theme}{A ggplot2 theme object. Defaults to \code{theme_clinprog()}.}
 

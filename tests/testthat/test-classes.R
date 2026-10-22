@@ -68,7 +68,7 @@ test_that("new_clinprog_survival creates a survival object", {
 
   result <- new_clinprog_survival(
     signature = signature,
-    score_cutoff = 0.5,
+    score_cutoff_value = 0.5,
     expression_data = expression_data,
     survival = survival_results,
     ph_result = ph_result,
@@ -82,11 +82,11 @@ test_that("new_clinprog_survival creates a survival object", {
   expect_s3_class(result, "clinprog_survival")
   expect_named(
     result,
-    c("signature", "score_cutoff", "expression_data", "clinical_data",
+    c("signature", "score_cutoff_value", "expression_data", "clinical_data",
       "survival", "roc_result", "ph_result", "plots", "params", "metadata", "call")
   )
   expect_equal(result$signature, signature)
-  expect_equal(result$score_cutoff, 0.5)
+  expect_equal(result$score_cutoff_value, 0.5)
   expect_equal(result$expression_data, expression_data)
   expect_equal(result$clinical_data, data.frame(age = c(50, 60)))
   expect_equal(result$survival, survival_results)
@@ -105,7 +105,7 @@ test_that("new_clinprog_survival rejects invalid required inputs", {
 
   expect_error(
     new_clinprog_survival(
-      signature = list(), score_cutoff = 0.5,
+      signature = list(), score_cutoff_value = 0.5,
       expression_data = valid_expression, survival = valid_survival,
       ph_result = valid_ph
     ),
@@ -114,7 +114,7 @@ test_that("new_clinprog_survival rejects invalid required inputs", {
 
   expect_error(
     new_clinprog_survival(
-      signature = valid_signature, score_cutoff = 0.5,
+      signature = valid_signature, score_cutoff_value = 0.5,
       expression_data = list(), survival = valid_survival,
       ph_result = valid_ph
     ),
@@ -123,7 +123,7 @@ test_that("new_clinprog_survival rejects invalid required inputs", {
 
   expect_error(
     new_clinprog_survival(
-      signature = valid_signature, score_cutoff = 0.5,
+      signature = valid_signature, score_cutoff_value = 0.5,
       expression_data = valid_expression, survival = valid_survival,
       ph_result = valid_ph, clinical_data = list()
     ),
@@ -132,25 +132,25 @@ test_that("new_clinprog_survival rejects invalid required inputs", {
 
   expect_error(
     new_clinprog_survival(
-      signature = valid_signature, score_cutoff = "median",
+      signature = valid_signature, score_cutoff_value = "median",
       expression_data = valid_expression, survival = valid_survival,
       ph_result = valid_ph
     ),
-    "'score_cutoff' must be a single numeric value"
+    "'score_cutoff_value' must be a single numeric value"
   )
 
   expect_error(
     new_clinprog_survival(
-      signature = valid_signature, score_cutoff = c(0.2, 0.5),
+      signature = valid_signature, score_cutoff_value = c(0.2, 0.5),
       expression_data = valid_expression, survival = valid_survival,
       ph_result = valid_ph
     ),
-    "'score_cutoff' must be a single numeric value"
+    "'score_cutoff_value' must be a single numeric value"
   )
 
   expect_error(
     new_clinprog_survival(
-      signature = valid_signature, score_cutoff = 0.5,
+      signature = valid_signature, score_cutoff_value = 0.5,
       expression_data = valid_expression, survival = "invalid",
       ph_result = valid_ph
     ),
@@ -159,7 +159,7 @@ test_that("new_clinprog_survival rejects invalid required inputs", {
 
   expect_error(
     new_clinprog_survival(
-      signature = valid_signature, score_cutoff = 0.5,
+      signature = valid_signature, score_cutoff_value = 0.5,
       expression_data = valid_expression, survival = valid_survival,
       ph_result = NULL
     ),
@@ -173,7 +173,7 @@ test_that("new_clinprog_complete creates a complete object", {
   )
   survival <- new_clinprog_survival(
     signature = regression$signature,
-    score_cutoff = 0.5,
+    score_cutoff_value = 0.5,
     expression_data = data.frame(OS = 0, OS.time = 10, score = 0.2),
     survival = list(),
     ph_result = list(test = "placeholder")
@@ -202,7 +202,7 @@ test_that("new_clinprog_complete rejects invalid inputs", {
   )
   survival <- new_clinprog_survival(
     signature = regression$signature,
-    score_cutoff = 0.5,
+    score_cutoff_value = 0.5,
     expression_data = data.frame(OS = 0, OS.time = 10, score = 0.2),
     survival = list(),
     ph_result = list(test = "placeholder")

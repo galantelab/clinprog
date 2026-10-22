@@ -9,8 +9,8 @@ clinprog_resampling(
   covariates,
   all_covariates,
   bootstrap = 100,
-  bootstrap.freq = 0.25,
-  boot.p.cutoff = 0.1
+  bootstrap_freq = 0.25,
+  boot_p_value_cutoff = 0.1
 )
 }
 \arguments{
@@ -23,9 +23,9 @@ Must contain columns \code{OS}, \code{OS.time}, and \code{score_group}.}
 
 \item{bootstrap}{Numeric. Number of bootstrap iterations (default: \code{100}).}
 
-\item{bootstrap.freq}{Numeric. Minimum frequency to retain variables after bootstrap resampling (default: \code{0.25}).}
+\item{bootstrap_freq}{Numeric. Minimum frequency to retain variables after bootstrap resampling (default: \code{0.25}).}
 
-\item{boot.p.cutoff}{Numeric. P-value threshold used to define prognosis groups (default: \code{0.05}).}
+\item{boot_p_value_cutoff}{Numeric. P-value threshold used to define prognosis groups (default: \code{0.05}).}
 }
 \value{
 A list containing:

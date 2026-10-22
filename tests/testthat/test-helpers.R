@@ -6,13 +6,13 @@ test_that("clinprog_followup preserves data when no censoring is needed", {
   )
 
   expect_message(
-    result <- clinprog_followup(data, followup = NULL),
+    result <- clinprog_followup(data, max_follow_up = NULL),
     "\\[INFO\\].*Returning original data.frame|Returning original data.frame"
   )
   expect_identical(result, data)
 
   expect_message(
-    result <- clinprog_followup(data, followup = 10),
+    result <- clinprog_followup(data, max_follow_up = 10),
     "\\[INFO\\].*Returning original data.frame|Returning original data.frame"
   )
   expect_identical(result, data)
@@ -25,7 +25,7 @@ test_that("clinprog_followup applies administrative censoring", {
     GeneA = c(3, 2, 5, 1)
   )
 
-  result <- clinprog_followup(data, followup = 5)
+  result <- clinprog_followup(data, max_follow_up = 5)
 
   expect_equal(result$OS, c(1, 1, 0, 0))
   expect_equal(result$OS.time, c(2, 4, 5, 5))
@@ -47,9 +47,9 @@ test_that("clinprog_followup validates its inputs through the logging layer", {
   )
 
   data <- data.frame(OS = c(0, 1), OS.time = c(1, 2))
-  expect_error(clinprog_followup(data, followup = 0), "\\[ERROR\\].*followup")
-  expect_error(clinprog_followup(data, followup = "5"), "\\[ERROR\\].*followup")
-  expect_error(clinprog_followup(data, followup = c(2, 3)), "\\[ERROR\\].*followup")
+  expect_error(clinprog_followup(data, max_follow_up = 0), "\\[ERROR\\].*max_follow_up")
+  expect_error(clinprog_followup(data, max_follow_up = "5"), "\\[ERROR\\].*max_follow_up")
+  expect_error(clinprog_followup(data, max_follow_up = c(2, 3)), "\\[ERROR\\].*max_follow_up")
 })
 
 test_that("clinprog_varfun removes low-variance features and preserves survival columns", {
@@ -63,7 +63,7 @@ test_that("clinprog_varfun removes low-variance features and preserves survival 
   result <- suppressMessages(clinprog_varfun(
     cmatrix = data,
     var_threshold = 0.01,
-    force = TRUE
+    skip_survival_checks = TRUE
   ))
 
   expect_named(result, c("OS", "OS.time", "varying"))
@@ -81,7 +81,7 @@ test_that("clinprog_varfun rejects zero-only feature columns", {
   )
 
   expect_error(
-    clinprog_varfun(data, var_threshold = 0.01, force = TRUE),
+    clinprog_varfun(data, var_threshold = 0.01, skip_survival_checks = TRUE),
     "\\[ERROR\\].*only zeros|only zeros"
   )
 })
@@ -208,8 +208,8 @@ test_that("clinprog_bootstrap validates its inputs", {
     "\\[ERROR\\].*iteration"
   )
   expect_error(
-    clinprog_bootstrap(raw_data, bootstrap_data, iteration = 1, min.prop = 0.5),
-    "\\[ERROR\\].*min.prop"
+    clinprog_bootstrap(raw_data, bootstrap_data, iteration = 1, min_prop = 0.5),
+    "\\[ERROR\\].*min_prop"
   )
 })
 

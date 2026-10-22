@@ -9,7 +9,7 @@ plot_scatter(
   signature = NULL,
   os_col = "OS",
   time_col = "OS.time",
-  outprefix = NULL,
+  output_prefix = NULL,
   theme = theme_clinprog(),
   exclude_cols = c("OS", "OS.time", "score", "score_group"),
   palette = c("#1A9850", "#D73027"),
@@ -18,8 +18,8 @@ plot_scatter(
   norm_exp = FALSE,
   width = NULL,
   height = NULL,
-  ylab = NULL,
-  xlab = "Followup",
+  y_label = NULL,
+  x_label = "Followup",
   individual = FALSE
 )
 }
@@ -32,7 +32,7 @@ plot_scatter(
 
 \item{time_col}{Character. Column name for followup time (default: \code{"OS.time"}).}
 
-\item{outprefix}{Character. Output prefix for saving the plot (optional).}
+\item{output_prefix}{Character. Output prefix for saving the plot (optional).}
 
 \item{theme}{A ggplot2 theme object. Defaults to \code{theme_clinprog()}.}
 
@@ -50,13 +50,13 @@ plot_scatter(
 
 \item{height}{Numeric. Plot height in inches (default: \code{NULL}).}
 
-\item{ylab}{Character. Title for the Y-axis (default: \code{NULL}).}
+\item{y_label}{Character. Title for the Y-axis (default: \code{NULL}).}
 
-\item{xlab}{Character. Title for the X-axis (default: \code{"Follow-up Time"}).}
+\item{x_label}{Character. Title for the X-axis (default: \code{"Follow-up Time"}).}
 
-\item{individual}{Logical. If \code{TRUE} and \code{outprefix} is provided, saves each feature scatter
-plot as its own PDF file named \code{{outprefix}_feature_scatter_{feature}.pdf}. The combined grid is
-still saved as \code{{outprefix}_feature_scatter.pdf} (default: \code{FALSE}).}
+\item{individual}{Logical. If \code{TRUE} and \code{output_prefix} is provided, saves each feature scatter
+plot as its own PDF file named \code{{output_prefix}_feature_scatter_{feature}.pdf}. The combined grid is
+still saved as \code{{output_prefix}_feature_scatter.pdf} (default: \code{FALSE}).}
 }
 \value{
 A \code{ggplot} object.

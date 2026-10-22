@@ -6,18 +6,18 @@
 \usage{
 clinprog_bootstrapfun(
   full_data,
-  n_boot,
+  bootstrap,
   group_size,
   cor_threshold,
   coef_threshold,
-  ncores = 1,
+  n_cores = 1,
   seed = 123
 )
 }
 \arguments{
 \item{full_data}{A data.frame with survival data and features.}
 
-\item{n_boot}{Integer. Number of bootstrap iterations.}
+\item{bootstrap}{Integer. Number of bootstrap iterations.}
 
 \item{group_size}{Integer. Number of features sampled per iteration.}
 
@@ -25,7 +25,7 @@ clinprog_bootstrapfun(
 
 \item{coef_threshold}{Numeric. Minimum absolute coefficient value to retain features.}
 
-\item{ncores}{Integer. Number of CPU cores used for parallel bootstrap
+\item{n_cores}{Integer. Number of CPU cores used for parallel bootstrap
 regression (Default: \code{1}).}
 
 \item{seed}{Integer. Random seed used for reproducible bootstrap regression

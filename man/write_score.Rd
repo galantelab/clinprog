@@ -7,9 +7,9 @@
 write_score(
   x,
   file,
-  clinics = FALSE,
+  include_clinical = FALSE,
   sep = "\\t",
-  row.names = TRUE,
+  row_names = TRUE,
   quote = FALSE,
   ...
 )
@@ -23,11 +23,11 @@ write_score(
 
 \item{file}{Output file path.}
 
-\item{clinics}{Logical. Whether the output should include clinical data or not (default: \code{FALSE}).}
+\item{include_clinical}{Logical. Whether the output should include clinical data or not (default: \code{FALSE}).}
 
 \item{sep}{Field separator (default: \code{tab}).}
 
-\item{row.names}{Logical. Whether to write row names (default: \code{TRUE}).}
+\item{row_names}{Logical. Whether to write row names (default: \code{TRUE}).}
 
 \item{quote}{Logical. Whether to quote strings (default: \code{FALSE}).}
 

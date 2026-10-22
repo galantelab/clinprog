@@ -4,7 +4,7 @@
 \alias{write_signature}
 \title{Export clinprog signature to file}
 \usage{
-write_signature(x, file, sep = "\\t", row.names = FALSE, quote = FALSE, ...)
+write_signature(x, file, sep = "\\t", row_names = FALSE, quote = FALSE, ...)
 }
 \arguments{
 \item{x}{A \code{clinprog_signature} or \code{clinprog_survival} object or a valid data frame.}
@@ -13,7 +13,7 @@ write_signature(x, file, sep = "\\t", row.names = FALSE, quote = FALSE, ...)
 
 \item{sep}{Field separator (default: \code{tab}).}
 
-\item{row.names}{Logical. Whether to write row names (default: \code{FALSE}).}
+\item{row_names}{Logical. Whether to write row names (default: \code{FALSE}).}
 
 \item{quote}{Logical. Whether to quote strings (default: \code{FALSE}).}
 

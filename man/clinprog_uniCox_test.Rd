@@ -4,7 +4,7 @@
 \alias{clinprog_uniCox_test}
 \title{Run multiple univariate Cox regressions for clinical covariates}
 \usage{
-clinprog_uniCox_test(data, covariates, p.cutoff = 0.2)
+clinprog_uniCox_test(data, covariates, p_value_cutoff = 0.2)
 }
 \arguments{
 \item{data}{Data.frame containing survival and binary clinical information.
@@ -12,7 +12,7 @@ Must contain columns \code{OS} and \code{OS.time}.}
 
 \item{covariates}{Character. Vector containing clinical covariate names.}
 
-\item{p.cutoff}{Numeric. P-value threshold used to define prognosis groups (default: \code{0.2}).}
+\item{p_value_cutoff}{Numeric. P-value threshold used to define prognosis groups (default: \code{0.2}).}
 }
 \value{
 A data.frame containing univariate Cox regression statistics for all tested covariates.

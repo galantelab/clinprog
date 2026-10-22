@@ -9,14 +9,14 @@ plot_boxplot(
   signature = NULL,
   group_col = "score_group",
   facet_by = NULL,
-  outprefix = NULL,
+  output_prefix = NULL,
   theme = theme_clinprog(),
   exclude_cols = c("OS", "OS.time", "score", "score_group"),
   palette = c("#D73027", "#1A9850"),
   test = c("wilcox", "t.test", "none"),
   paired = FALSE,
-  pvalue_position = c("subtitle", "inside"),
-  add_pvalue = TRUE,
+  p_value_position = c("subtitle", "inside"),
+  add_p_value = TRUE,
   show_points = FALSE,
   show_n = FALSE,
   max_features = NULL,
@@ -24,8 +24,8 @@ plot_boxplot(
   individual = FALSE,
   width = NULL,
   height = NULL,
-  ylab = NULL,
-  xlab = "Score"
+  y_label = NULL,
+  x_label = "Score"
 )
 }
 \arguments{
@@ -38,7 +38,7 @@ plot_boxplot(
 \item{facet_by}{Character or \code{NULL} (default).
 Optional column name used to facet each panel (e.g. \code{"OS"}).}
 
-\item{outprefix}{Character. Output prefix for saving the plot (optional).}
+\item{output_prefix}{Character. Output prefix for saving the plot (optional).}
 
 \item{theme}{A ggplot2 theme object. Defaults to \code{theme_clinprog()}.}
 
@@ -54,10 +54,10 @@ Optional column name used to facet each panel (e.g. \code{"OS"}).}
 \item{paired}{Logical. Whether to perform a paired test (default: \code{FALSE}).
 Ignored when \code{test = "none"}.}
 
-\item{pvalue_position}{Character. Where to place the p-value: \code{"subtitle"} (default) or \code{"inside"}.
+\item{p_value_position}{Character. Where to place the p-value: \code{"subtitle"} (default) or \code{"inside"}.
 When \code{facet_by} is set, \code{"inside"} draws the p-value of each facet level inside its own panel.}
 
-\item{add_pvalue}{Logical. Whether to compute and display the p-value (default: \code{TRUE}).}
+\item{add_p_value}{Logical. Whether to compute and display the p-value (default: \code{TRUE}).}
 
 \item{show_points}{Logical. Whether to show jittered points over the boxplots (default: \code{FALSE}).}
 
@@ -68,17 +68,17 @@ just above the x axis (default: \code{FALSE}).}
 
 \item{norm_exp}{Logical. Whether to apply log2 normalization on expression data (default: \code{FALSE}).}
 
-\item{individual}{Logical. If \code{TRUE} and \code{outprefix} is provided, saves each feature boxplot
-as its own PDF file named \code{{outprefix}_feature_{feature}.pdf}. The combined grid is still saved as
-\code{{outprefix}_feature_expression.pdf} (default: \code{FALSE}).}
+\item{individual}{Logical. If \code{TRUE} and \code{output_prefix} is provided, saves each feature boxplot
+as its own PDF file named \code{{output_prefix}_feature_{feature}.pdf}. The combined grid is still saved as
+\code{{output_prefix}_feature_expression.pdf} (default: \code{FALSE}).}
 
 \item{width}{Numeric. Plot width in inches (default: \code{NULL}).}
 
 \item{height}{Numeric. Plot height in inches (default: \code{NULL}).}
 
-\item{ylab}{Character. Title for the Y-axis (default: \code{NULL}).}
+\item{y_label}{Character. Title for the Y-axis (default: \code{NULL}).}
 
-\item{xlab}{Character. Title for the X-axis (default: \code{"Score"}).}
+\item{x_label}{Character. Title for the X-axis (default: \code{"Score"}).}
 }
 \value{
 A \code{ggplot} object.

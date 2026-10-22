@@ -10,10 +10,10 @@ clinprog_multiCox_test(
   logrank_result,
   covariates,
   all_covariates,
-  use.bootstrap = TRUE,
+  use_bootstrap = TRUE,
   bootstrap = 1,
-  bootstrap.freq = 0.25,
-  multi.p.cutoff = 0.1
+  bootstrap_freq = 0.25,
+  multi_p_value_cutoff = 0.1
 )
 }
 \arguments{
@@ -28,13 +28,13 @@ Must contain columns \code{OS}, \code{OS.time}, and \code{score_group}.}
 
 \item{all_covariates}{Character. Vector containing all available clinical covariates.}
 
-\item{use.bootstrap}{Logical. Whether bootstrap resampling should be used before final model fitting (default: \code{TRUE}).}
+\item{use_bootstrap}{Logical. Whether bootstrap resampling should be used before final model fitting (default: \code{TRUE}).}
 
 \item{bootstrap}{Numeric. Number of bootstrap iterations (default: \code{1}).}
 
-\item{bootstrap.freq}{Numeric. Minimum frequency to retain variables after bootstrap resampling (default: \code{0.25}).}
+\item{bootstrap_freq}{Numeric. Minimum frequency to retain variables after bootstrap resampling (default: \code{0.25}).}
 
-\item{multi.p.cutoff}{Numeric. P-value used to define prognosis groups in multivariate models (default: \code{0.1}).}
+\item{multi_p_value_cutoff}{Numeric. P-value used to define prognosis groups in multivariate models (default: \code{0.1}).}
 }
 \value{
 A list containing:

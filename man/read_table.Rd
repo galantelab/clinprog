@@ -4,14 +4,14 @@
 \alias{read_table}
 \title{Read clinprog input tables}
 \usage{
-read_table(file, sep = "\\t", row.names = TRUE)
+read_table(file, sep = "\\t", row_names = TRUE)
 }
 \arguments{
 \item{file}{Character. Path to input table file.}
 
 \item{sep}{Field separator (default: \code{tab}).}
 
-\item{row.names}{Logical. Whether the first column should be used as row names (default: \code{TRUE}).}
+\item{row_names}{Logical. Whether the first column should be used as row names (default: \code{TRUE}).}
 }
 \value{
 A data.frame containing the imported table.

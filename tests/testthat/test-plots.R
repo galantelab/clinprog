@@ -8,7 +8,7 @@ test_that("plot_swimmer returns a ggplot object", {
 
   result <- plot_swimmer(
     data = data,
-    cutoff = 0
+    score_cutoff_value = 0
   )
 
   expect_s3_class(result, "ggplot")
@@ -24,7 +24,7 @@ test_that("plot_swimmer groups patients according to cutoff", {
 
   result <- plot_swimmer(
     data = data,
-    cutoff = 0
+    score_cutoff_value = 0
   )
 
   plot_data <- ggplot2::ggplot_build(result)$data[[1]]
@@ -46,7 +46,7 @@ test_that("plot_swimmer validates its input", {
   expect_error(
     plot_swimmer(
       data = "not a data.frame",
-      cutoff = 0
+      score_cutoff_value = 0
     ),
     "data"
   )
@@ -54,7 +54,7 @@ test_that("plot_swimmer validates its input", {
   expect_error(
     plot_swimmer(
       data = data[, c("score", "OS", "OS.time")],
-      cutoff = 0
+      score_cutoff_value = 0
     ),
     "score_group"
   )
@@ -62,7 +62,7 @@ test_that("plot_swimmer validates its input", {
   expect_error(
     plot_swimmer(
       data = data,
-      cutoff = "zero"
+      score_cutoff_value = "zero"
     ),
     "cutoff"
   )
@@ -70,7 +70,7 @@ test_that("plot_swimmer validates its input", {
   expect_error(
     plot_swimmer(
       data = data,
-      cutoff = 0,
+      score_cutoff_value = 0,
       sort_by = "invalid"
     )
   )
@@ -87,9 +87,9 @@ test_that("plot_swimmer accepts patient labels", {
 
   result <- plot_swimmer(
     data = data,
-    cutoff = 0,
+    score_cutoff_value = 0,
     id_col = "patient",
-    show.labels = TRUE
+    show_labels = TRUE
   )
 
   expect_s3_class(result, "ggplot")
@@ -400,7 +400,7 @@ test_that("plot_clinics validates its input", {
   )
 })
 
-test_that("plot_clinics ignores individual without outprefix", {
+test_that("plot_clinics ignores individual without output_prefix", {
   data <- data.frame(
     score = c(-1, 1, -0.5, 2),
     OS = c(1, 0, 1, 0),
@@ -707,7 +707,7 @@ test_that("plot_barplot_score supports a custom score cutoff", {
 
   result <- plot_barplot_score(
     data = data,
-    score_cutoff = 1
+    score_cutoff_value = 1
   )
 
   expect_s3_class(result, "ggplot")
@@ -772,7 +772,7 @@ test_that("plot_barplot_score validates score cutoff", {
   expect_error(
     plot_barplot_score(
       data = data,
-      score_cutoff = c(0, 1)
+      score_cutoff_value = c(0, 1)
     ),
     "score_cutoff"
   )
@@ -820,13 +820,13 @@ test_that("plot_barplot_score validates axis labels", {
   )
 
   expect_error(
-    plot_barplot_score(data, xlab = 1),
-    "xlab"
+    plot_barplot_score(data, x_label = 1),
+    "x_label"
   )
 
   expect_error(
-    plot_barplot_score(data, ylab = 1),
-    "ylab"
+    plot_barplot_score(data, y_label = 1),
+    "y_label"
   )
 })
 
@@ -847,22 +847,22 @@ test_that("plot_barplot_score accepts custom column names", {
 })
 
 
-test_that("plot_barplot_score saves a PDF when outprefix is provided", {
+test_that("plot_barplot_score saves a PDF when output_prefix is provided", {
   data <- data.frame(
     OS = c(0, 0, 1, 1),
     score = c(-1, 0, 1, 2)
   )
 
-  outprefix <- file.path(tempdir(), "clinprog_barplot_score")
+  output_prefix <- file.path(tempdir(), "clinprog_barplot_score")
 
   result <- plot_barplot_score(
     data = data,
-    outprefix = outprefix
+    output_prefix = output_prefix
   )
 
   expect_s3_class(result, "ggplot")
   expect_true(
-    file.exists(paste0(outprefix, "_score_barplot.pdf"))
+    file.exists(paste0(output_prefix, "_score_barplot.pdf"))
   )
 })
 
@@ -888,7 +888,7 @@ test_that("plot_lineplot_score supports a custom score cutoff", {
 
   result <- plot_lineplot_score(
     data = data,
-    score_cutoff = 1
+    score_cutoff_value = 1
   )
 
   expect_s3_class(result, "ggplot")
@@ -974,7 +974,7 @@ test_that("plot_lineplot_score validates score cutoff", {
   expect_error(
     plot_lineplot_score(
       data = data,
-      score_cutoff = c(0, 1)
+      score_cutoff_value = c(0, 1)
     ),
     "score_cutoff"
   )
@@ -1025,13 +1025,13 @@ test_that("plot_lineplot_score validates axis labels", {
   )
 
   expect_error(
-    plot_lineplot_score(data, xlab = 1),
-    "xlab"
+    plot_lineplot_score(data, x_label = 1),
+    "x_label"
   )
 
   expect_error(
-    plot_lineplot_score(data, ylab = 1),
-    "ylab"
+    plot_lineplot_score(data, y_label = 1),
+    "y_label"
   )
 })
 
@@ -1054,24 +1054,24 @@ test_that("plot_lineplot_score accepts custom column names", {
 })
 
 
-test_that("plot_lineplot_score saves a PDF when outprefix is provided", {
+test_that("plot_lineplot_score saves a PDF when output_prefix is provided", {
   data <- data.frame(
     OS = c(0, 0, 1, 1),
     OS.time = c(2, 4, 3, 5),
     score = c(-1, 0, 1, 2)
   )
 
-  outprefix <- file.path(tempdir(), "clinprog_lineplot_score")
+  output_prefix <- file.path(tempdir(), "clinprog_lineplot_score")
 
   result <- plot_lineplot_score(
     data = data,
-    outprefix = outprefix
+    output_prefix = output_prefix
   )
 
   expect_s3_class(result, "ggplot")
   expect_true(
     file.exists(
-      paste0(outprefix, "_lineplot_score_followup.pdf")
+      paste0(output_prefix, "_lineplot_score_followup.pdf")
     )
   )
 })
@@ -1316,13 +1316,13 @@ test_that("plot_scatter validates plot dimensions and labels", {
   )
 
   expect_error(
-    plot_scatter(data, xlab = 1),
-    "xlab"
+    plot_scatter(data, x_label = 1),
+    "x_label"
   )
 
   expect_error(
-    plot_scatter(data, ylab = 1),
-    "ylab"
+    plot_scatter(data, y_label = 1),
+    "y_label"
   )
 })
 
@@ -1339,7 +1339,7 @@ test_that("plot_scatter warns when individual output has no prefix", {
       data = data,
       individual = TRUE
     ),
-    "outprefix"
+    "output_prefix"
   )
 
   expect_s3_class(result, "patchwork")
@@ -1354,11 +1354,11 @@ test_that("plot_scatter saves combined and individual PDFs", {
     GeneB = c(5, 4, 3, 4, 2, 1)
   )
 
-  outprefix <- file.path(tempdir(), "clinprog_scatter")
+  output_prefix <- file.path(tempdir(), "clinprog_scatter")
 
   result <- plot_scatter(
     data = data,
-    outprefix = outprefix,
+    output_prefix = output_prefix,
     individual = TRUE
   )
 
@@ -1366,19 +1366,19 @@ test_that("plot_scatter saves combined and individual PDFs", {
 
   expect_true(
     file.exists(
-      paste0(outprefix, "_feature_scatter.pdf")
+      paste0(output_prefix, "_feature_scatter.pdf")
     )
   )
 
   expect_true(
     file.exists(
-      paste0(outprefix, "_feature_scatter_GeneA.pdf")
+      paste0(output_prefix, "_feature_scatter_GeneA.pdf")
     )
   )
 
   expect_true(
     file.exists(
-      paste0(outprefix, "_feature_scatter_GeneB.pdf")
+      paste0(output_prefix, "_feature_scatter_GeneB.pdf")
     )
   )
 })

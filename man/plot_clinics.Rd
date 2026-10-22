@@ -12,18 +12,18 @@ plot_clinics(
   palette = c("#1A9850", "#D73027"),
   test = c("wilcox", "t.test", "none"),
   paired = FALSE,
-  pvalue_position = c("subtitle", "inside"),
-  add_pvalue = TRUE,
+  p_value_position = c("subtitle", "inside"),
+  add_p_value = TRUE,
   show_points = FALSE,
   show_n = FALSE,
   order_by_median = TRUE,
   max_features = NULL,
   id_col = NULL,
-  outprefix = NULL,
+  output_prefix = NULL,
   individual = FALSE,
   theme = theme_clinprog(),
-  ylab = "Score",
-  xlab = NULL,
+  y_label = "Score",
+  x_label = NULL,
   title = NULL,
   width = NULL,
   height = NULL
@@ -51,10 +51,10 @@ assigned to the facet levels.}
 
 \item{paired}{Logical. Whether to perform a paired test (default: \code{FALSE}). Ignored when \code{test = "none"}.}
 
-\item{pvalue_position}{Character. Where to place the p-value: \code{"subtitle"} (default) or \code{"inside"}.
+\item{p_value_position}{Character. Where to place the p-value: \code{"subtitle"} (default) or \code{"inside"}.
 When \code{facet_by} is set, \code{"inside"} draws the p-value of each facet level inside its own panel.}
 
-\item{add_pvalue}{Logical. Whether to compute and display the p-value (default: \code{TRUE}).}
+\item{add_p_value}{Logical. Whether to compute and display the p-value (default: \code{TRUE}).}
 
 \item{show_points}{Logical. Whether to overlay jittered points (default: \code{FALSE}).}
 
@@ -70,17 +70,17 @@ are present, only the first 16 are plotted with a warning.}
 \item{id_col}{Character or \code{NULL}. Optional column with sample IDs. If \code{NULL} (default), row names
 are used when they are not the default integer sequence.}
 
-\item{outprefix}{Character. Output prefix for saving the plot (optional).}
+\item{output_prefix}{Character. Output prefix for saving the plot (optional).}
 
-\item{individual}{Logical. If \code{TRUE} and \code{outprefix} is provided, saves each covariate boxplot as its
-own PDF file named \code{{outprefix}_clinical_{covariate}.pdf}. The combined grid is still saved as
-\code{{outprefix}_clinical_boxplots.pdf} (default: \code{FALSE}).}
+\item{individual}{Logical. If \code{TRUE} and \code{output_prefix} is provided, saves each covariate boxplot as its
+own PDF file named \code{{output_prefix}_clinical_{covariate}.pdf}. The combined grid is still saved as
+\code{{output_prefix}_clinical_boxplots.pdf} (default: \code{FALSE}).}
 
 \item{theme}{A ggplot2 theme object. Defaults to \code{theme_clinprog()}.}
 
-\item{ylab}{Character. Title for the Y-axis (default: \code{"Score"}).}
+\item{y_label}{Character. Title for the Y-axis (default: \code{"Score"}).}
 
-\item{xlab}{Character. Title for the X-axis (default: \code{NULL}).}
+\item{x_label}{Character. Title for the X-axis (default: \code{NULL}).}
 
 \item{title}{Character or \code{NULL}. Optional overall plot title.}
 

@@ -25,7 +25,7 @@ theme_clinprog <- function() {
 #' @description Generates a lollipop plot of top features ranked by coefficient.
 #'
 #' @param signature A data.frame with 'feature' and 'coefficient'.
-#' @param outprefix Character. Output prefix for saving the plot (optional).
+#' @param output_prefix Character. Output prefix for saving the plot (optional).
 #' @param theme A ggplot2 theme object. Defaults to \code{theme_clinprog()}.
 #' @param width Numeric. Plot width in inches (Default: \code{8})
 #' @param height Numeric. Plot height in inches (Default: \code{5})
@@ -34,7 +34,7 @@ theme_clinprog <- function() {
 #' @return A \code{ggplot} object.
 #' @importFrom rlang .data
 #' @export
-plot_lollipop <- function(signature, outprefix = NULL, theme = theme_clinprog(), width = 8, height = 5, dpi = 300) {
+plot_lollipop <- function(signature, output_prefix = NULL, theme = theme_clinprog(), width = 8, height = 5, dpi = 300) {
 
   log_message("Building lollipop plot...")
 
@@ -88,9 +88,9 @@ plot_lollipop <- function(signature, outprefix = NULL, theme = theme_clinprog(),
                    panel.border = ggplot2::element_blank())
 
   # Saves if requested
-  if (!is.null(outprefix)) {
-    if (!is.character(outprefix) || length(outprefix) != 1) {log_stop("'outprefix' must be a single character string")}
-    fname <- paste0(outprefix, "_lollipop.pdf")
+  if (!is.null(output_prefix)) {
+    if (!is.character(output_prefix) || length(output_prefix) != 1) {log_stop("'output_prefix' must be a single character string")}
+    fname <- paste0(output_prefix, "_lollipop.pdf")
     ggplot2::ggsave(filename = fname, plot = ll, device = "pdf", width = width, height = height, dpi = dpi)
   }
 
@@ -102,9 +102,9 @@ plot_lollipop <- function(signature, outprefix = NULL, theme = theme_clinprog(),
 #' @description Generates a histogram of coefficient distribution from a clinprog signature.
 #'
 #' @param signature A data.frame with 'feature' and 'coefficient'.
-#' @param outprefix Character. Output prefix for saving the plot (optional).
+#' @param output_prefix Character. Output prefix for saving the plot (optional).
 #' @param theme A ggplot2 theme object. Defaults to \code{theme_clinprog()}.
-#' @param binwidth Numeric. Width of the histogram bins (Default: \code{NULL})
+#' @param bin_width Numeric. Width of the histogram bins (Default: \code{NULL})
 #' @param width Numeric. Plot width in inches (Default: \code{8})
 #' @param height Numeric. Plot height in inches (Default: \code{5})
 #' @param dpi Numeric. Plot DPI resolution (Default: \code{300})
@@ -112,8 +112,8 @@ plot_lollipop <- function(signature, outprefix = NULL, theme = theme_clinprog(),
 #' @return A \code{ggplot} object.
 #' @importFrom rlang .data
 #' @export
-plot_histogram <- function(signature, outprefix = NULL, theme = theme_clinprog(),
-                           binwidth = NULL, width = 8, height = 5, dpi = 300) {
+plot_histogram <- function(signature, output_prefix = NULL, theme = theme_clinprog(),
+                           bin_width = NULL, width = 8, height = 5, dpi = 300) {
 
   log_message("Building histogram plot...")
 
@@ -123,12 +123,12 @@ plot_histogram <- function(signature, outprefix = NULL, theme = theme_clinprog()
   # Validates theme
   if (!inherits(theme, "theme")) {log_stop("'theme' must be a valid ggplot2 theme object")}
 
-  # Validates binwidth if provided by user
-  if (!is.null(binwidth))
+  # Validates bin_width if provided by user
+  if (!is.null(bin_width))
   {
-    if (!is.numeric(binwidth) || length(binwidth) != 1 || binwidth <= 0)
+    if (!is.numeric(bin_width) || length(bin_width) != 1 || bin_width <= 0)
     {
-      log_stop("'binwidth' must be a single positive numeric value.")
+      log_stop("'bin_width' must be a single positive numeric value.")
     }
   }
 
@@ -144,8 +144,8 @@ plot_histogram <- function(signature, outprefix = NULL, theme = theme_clinprog()
   # Checks if signature is still valid
   if (nrow(tt) == 0) {log_stop("No valid coefficients available for plotting")}
 
-  # Dynamically calculates binwidth if NULL (using Sturges' Rule for small N)
-  if (is.null(binwidth))
+  # Dynamically calculates bin_width if NULL (using Sturges' Rule for small N)
+  if (is.null(bin_width))
   {
     coef_range <- max(tt$coefficient) - min(tt$coefficient)
     n_obs <- nrow(tt)
@@ -154,13 +154,13 @@ plot_histogram <- function(signature, outprefix = NULL, theme = theme_clinprog()
     num_bins <- grDevices::nclass.Sturges(tt$coefficient)
 
     # Fallback safety if range is 0 or num_bins calculation fails
-    binwidth <- if (coef_range > 0) coef_range / num_bins else 0.05
+    bin_width <- if (coef_range > 0) coef_range / num_bins else 0.05
   }
 
   # Makes plot
   pl <- ggplot2::ggplot(tt, ggplot2::aes(x = .data$coefficient)) +
-    ggplot2::geom_histogram(binwidth = binwidth, fill = "#1c9099", color = "white", linewidth = 0.3, alpha = 0.8) +
-    ggplot2::geom_density(ggplot2::aes(y = ggplot2::after_stat(.data$density) * nrow(tt) * binwidth),
+    ggplot2::geom_histogram(width = bin_width, fill = "#1c9099", color = "white", linewidth = 0.3, alpha = 0.8) +
+    ggplot2::geom_density(ggplot2::aes(y = ggplot2::after_stat(.data$density) * nrow(tt) * bin_width),
                           color = "#016c59", linewidth = 0.8, alpha = 0.8) +
     ggplot2::geom_vline(xintercept = 0, linetype = "dashed", color = "grey40", linewidth = 0.5) +
     ggplot2::scale_y_continuous(expand = c(0, 0)) +
@@ -170,9 +170,9 @@ plot_histogram <- function(signature, outprefix = NULL, theme = theme_clinprog()
                    panel.border = ggplot2::element_blank())
 
   # Saves if requested
-  if (!is.null(outprefix)) {
-    if (!is.character(outprefix) || length(outprefix) != 1) {log_stop("'outprefix' must be a single character string")}
-    fname <- paste0(outprefix, "_histogram.pdf")
+  if (!is.null(output_prefix)) {
+    if (!is.character(output_prefix) || length(output_prefix) != 1) {log_stop("'output_prefix' must be a single character string")}
+    fname <- paste0(output_prefix, "_histogram.pdf")
     ggplot2::ggsave(filename = fname, plot = pl, device = "pdf", width = width, height = height, dpi = dpi)
   }
 
@@ -190,14 +190,14 @@ plot_histogram <- function(signature, outprefix = NULL, theme = theme_clinprog()
 #'   \item The full list returned by \code{clinprog_cutoff_roc()}
 #'   \item An \code{optimal.cutpoints} object
 #' }
-#' @param outprefix Character. Output prefix for saving the plot (optional).
+#' @param output_prefix Character. Output prefix for saving the plot (optional).
 #' If \code{NULL}, the plot is not written to disk.
 #' @param width Numeric. Plot width in inches (Default: \code{7}).
 #' @param height Numeric. Plot height in inches (Default: \code{6}).
 #'
 #' @return A ROC curve generated by \code{OptimalCutpoints::plot.optimal.cutpoints()}.
 #' @export
-plot_roc <- function(x, outprefix = NULL, width = 7, height = 6) {
+plot_roc <- function(x, output_prefix = NULL, width = 7, height = 6) {
 
   log_message("Building ROC curve...")
 
@@ -209,10 +209,10 @@ plot_roc <- function(x, outprefix = NULL, width = 7, height = 6) {
   if (!is.numeric(height) || length(height) != 1 || height <= 0) {log_stop("'height' must be a single positive numeric value")}
 
   # Opens PDF device if requested
-  if (!is.null(outprefix))
+  if (!is.null(output_prefix))
   {
-    if (!is.character(outprefix) || length(outprefix) != 1) {log_stop("'outprefix' must be a single character string")}
-    grDevices::pdf(file = paste0(outprefix, "_roc_curve.pdf"), width = width, height = height)
+    if (!is.character(output_prefix) || length(output_prefix) != 1) {log_stop("'output_prefix' must be a single character string")}
+    grDevices::pdf(file = paste0(output_prefix, "_roc_curve.pdf"), width = width, height = height)
     on.exit(grDevices::dev.off(), add = TRUE)
   }
 
@@ -237,11 +237,11 @@ plot_roc <- function(x, outprefix = NULL, width = 7, height = 6) {
 #'   \item A list returned by \code{clinprog_schoenfeld()}
 #' }
 #' @param is_multi Logical. Whether the model corresponds to a multivariate Cox analysis (default: \code{FALSE}).
-#' @param outprefix Character. Output prefix for saving the plot (optional).
+#' @param output_prefix Character. Output prefix for saving the plot (optional).
 #' If \code{NULL}, the plot is not written to disk.
-#' @param individual Logical. If \code{TRUE} and \code{outprefix} is provided, saves each Schoenfeld
-#' plot as its own PDF file named \code{{outprefix}_ph_assumptions_{variable}.pdf}. The combined grid
-#' is still saved as \code{{outprefix}_ph_assumptions_plot.pdf} (default: \code{FALSE}).
+#' @param individual Logical. If \code{TRUE} and \code{output_prefix} is provided, saves each Schoenfeld
+#' plot as its own PDF file named \code{{output_prefix}_ph_assumptions_{variable}.pdf}. The combined grid
+#' is still saved as \code{{output_prefix}_ph_assumptions_plot.pdf} (default: \code{FALSE}).
 #' @param theme A ggplot2 theme object. Defaults to \code{theme_clinprog()}.
 #' @param width Numeric. Plot width in inches (optional). If \code{NULL}, the width is set automatically.
 #' @param height Numeric. Plot height in inches (optional). If \code{NULL}, the height is set automatically.
@@ -249,7 +249,7 @@ plot_roc <- function(x, outprefix = NULL, width = 7, height = 6) {
 #'
 #' @return a list of \code{ggplot} objects.
 #' @export
-plot_ph <- function(x, is_multi = FALSE, outprefix = NULL, individual = FALSE,
+plot_ph <- function(x, is_multi = FALSE, output_prefix = NULL, individual = FALSE,
                     theme = theme_clinprog(), width = NULL, height = NULL, ...) {
 
   log_message("Building proportional hazards plot...")
@@ -272,19 +272,19 @@ plot_ph <- function(x, is_multi = FALSE, outprefix = NULL, individual = FALSE,
     log_stop("'individual' must be TRUE or FALSE")
   }
 
-  # Validates outprefix
-  if (!is.null(outprefix))
+  # Validates output_prefix
+  if (!is.null(output_prefix))
   {
-    if (!is.character(outprefix) || length(outprefix) != 1)
+    if (!is.character(output_prefix) || length(output_prefix) != 1)
     {
-      log_stop("'outprefix' must be NULL or a single character string")
+      log_stop("'output_prefix' must be NULL or a single character string")
     }
   }
 
-  # Cross-validation: individual only makes sense with outprefix
-  if (individual && is.null(outprefix))
+  # Cross-validation: individual only makes sense with output_prefix
+  if (individual && is.null(output_prefix))
   {
-    log_warning("'individual = TRUE' requires 'outprefix' to be provided. Ignoring 'individual'.")
+    log_warning("'individual = TRUE' requires 'output_prefix' to be provided. Ignoring 'individual'.")
     individual <- FALSE
   }
 
@@ -338,9 +338,9 @@ plot_ph <- function(x, is_multi = FALSE, outprefix = NULL, individual = FALSE,
   combined_plot <- patchwork::wrap_plots(ph_plots, ncol = ncol_plot)
 
   # Saves plots if requested
-  if (!is.null(outprefix))
+  if (!is.null(output_prefix))
   {
-    filename <- paste0(outprefix, "_ph_assumptions_plot.pdf")
+    filename <- paste0(output_prefix, "_ph_assumptions_plot.pdf")
     grDevices::pdf(file = filename, width = width, height = height)
     on.exit(grDevices::dev.off(), add = TRUE)
     print(combined_plot)
@@ -357,7 +357,7 @@ plot_ph <- function(x, is_multi = FALSE, outprefix = NULL, individual = FALSE,
 
       for (i in seq_along(ph_plots))
       {
-        fname_i <- paste0(outprefix, "_ph_assumptions_", safe_names[i], ".pdf")
+        fname_i <- paste0(output_prefix, "_ph_assumptions_", safe_names[i], ".pdf")
         ggplot2::ggsave(filename = fname_i, plot = ph_plots[[i]], device = "pdf",
                         width = ind_width, height = ind_height)
       }
@@ -384,19 +384,19 @@ plot_ph <- function(x, is_multi = FALSE, outprefix = NULL, individual = FALSE,
 #' @param df Numeric. Degrees of freedom used in spline smoothing (default: \code{4}).
 #' @param nsmo Numeric. Number of spline smoothing points (default: \code{40}).
 #' @param var Variables to plot. Can be numeric indices or variable names.
-#' @param point.col Point color for residuals (default: \code{"red"}).
-#' @param point.size Numeric. Point size (default: \code{1}).
-#' @param point.shape Numeric. Point shape (default: \code{19}).
-#' @param point.alpha Numeric. Point transparency (default: \code{1}).
+#' @param point_col Point color for residuals (default: \code{"red"}).
+#' @param point_size Numeric. Point size (default: \code{1}).
+#' @param point_shape Numeric. Point shape (default: \code{19}).
+#' @param point_alpha Numeric. Point transparency (default: \code{1}).
 #' @param caption Optional plot caption.
-#' @param ggtheme ggplot2 theme object (default: \code{survminer::theme_survminer()}).
+#' @param gg_theme ggplot2 theme object (default: \code{survminer::theme_survminer()}).
 #' @param ... Additional arguments passed to \code{ggpubr::ggpar()}.
 #'
 #' @return A list of \code{ggplot} objects of class \code{"ggcoxzph"}.
 #' @keywords internal
-plot_ggcoxzph <- function(fit, resid = TRUE, se = TRUE, df = 4, nsmo = 40, var, point.col = "red",
-                          point.size = 1, point.shape = 19, point.alpha = 1, caption = NULL,
-                          ggtheme = survminer::theme_survminer(), ...) {
+plot_ggcoxzph <- function(fit, resid = TRUE, se = TRUE, df = 4, nsmo = 40, var, point_col = "red",
+                          point_size = 1, point_shape = 19, point_alpha = 1, caption = NULL,
+                          gg_theme = survminer::theme_survminer(), ...) {
   x <- fit
   if (!inherits(x, "cox.zph")) {log_stop("Can't handle an object of class ", class(x))}
 
@@ -421,7 +421,7 @@ plot_ggcoxzph <- function(fit, resid = TRUE, se = TRUE, df = 4, nsmo = 40, var, 
     seval <- d * ((pmat %*% xtx) * pmat) %*% rep(1, df)
   }
 
-  ylab <- paste("Beta(t) for", dimnames(yy)[[2]])
+  y_label <- paste("Beta(t) for", dimnames(yy)[[2]])
 
   if (missing(var))
   {
@@ -448,13 +448,13 @@ plot_ggcoxzph <- function(fit, resid = TRUE, se = TRUE, df = 4, nsmo = 40, var, 
 
   plots <- list()
   plots <- lapply(var, function(i) {
-    pval <- round(x$table[i, 3], 4)
+    p_value <- round(x$table[i, 3], 4)
     global <- round(x$table[nrow(x$table), 3], 4)
 
     gplot <- ggplot2::ggplot() +
       ggplot2::labs(title = paste0('Global Schoenfeld Test p: ', global),
-                    subtitle = paste0('Individual Schoenfeld Test p: ', pval)) +
-      ggtheme +
+                    subtitle = paste0('Individual Schoenfeld Test p: ', p_value)) +
+      gg_theme +
       ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5, vjust = 0.5, face = "bold",
                                                         margin = ggplot2::margin(0, 0, 10, 0)),
                      plot.subtitle = ggplot2::element_text(hjust = 0, vjust = 0.5, face = "plain",
@@ -478,20 +478,20 @@ plot_ggcoxzph <- function(fit, resid = TRUE, se = TRUE, df = 4, nsmo = 40, var, 
 
     if (x$transform == "identity") {
       gplot <- gplot + ggplot2::geom_line(ggplot2::aes(x = pred.x, y = yhat)) +
-        ggplot2::xlab("Time") + ggplot2::ylab(ylab[i]) + ggplot2::ylim(yr)
+        ggplot2::xlab("Time") + ggplot2::ylab(y_label[i]) + ggplot2::ylim(yr)
     } else if (x$transform == "log") {
       gplot <- gplot + ggplot2::geom_line(ggplot2::aes(x = log(pred.x), y = yhat)) +
-        ggplot2::xlab("Time") + ggplot2::ylab(ylab[i]) + ggplot2::ylim(yr)
+        ggplot2::xlab("Time") + ggplot2::ylab(y_label[i]) + ggplot2::ylim(yr)
     } else {
       gplot <- gplot + ggplot2::geom_line(ggplot2::aes(x = pred.x, y = yhat)) +
-        ggplot2::xlab("Time") + ggplot2::ylab(ylab[i]) +
+        ggplot2::xlab("Time") + ggplot2::ylab(y_label[i]) +
         ggplot2::scale_x_continuous(breaks = xaxisval, labels = xaxislab) +
         ggplot2::ylim(yr)
     }
 
     if (resid) {
-      gplot <- gplot + ggplot2::geom_point(ggplot2::aes(x = xx, y = y), col = point.col,
-                                           shape = point.shape, size = point.size, alpha = point.alpha)
+      gplot <- gplot + ggplot2::geom_point(ggplot2::aes(x = xx, y = y), col = point_col,
+                                           shape = point_shape, size = point_size, alpha = point_alpha)
     }
 
     if (se) {
@@ -520,25 +520,25 @@ plot_ggcoxzph <- function(fit, resid = TRUE, se = TRUE, df = 4, nsmo = 40, var, 
 #'
 #' @param data Data.frame containing survival information and categorized scores.
 #' Must contain columns \code{OS}, \code{OS.time}, and \code{score_group}.
-#' @param cutoff Numeric. Cutoff value used to categorize scores. Displayed in legend labels (optional).
-#' @param outprefix Character. Output prefix for saving the plot (optional).
+#' @param score_cutoff_value Numeric. Cutoff value used to categorize scores. Displayed in legend labels (optional).
+#' @param output_prefix Character. Output prefix for saving the plot (optional).
 #' If \code{NULL}, the plot is not written to disk.
-#' @param pval Logical, Numeric or Character. Value to display in the plot. Typically extracted from \code{clinprog_uniCox_model()} (optional).
+#' @param p_value Logical, Numeric or Character. Value to display in the plot. Typically extracted from \code{clinprog_uniCox_model()} (optional).
 #' @param palette Character vector. Color palette for Kaplan-Meier curves (default: \code{c("#D73027", "#1A9850")}).
-#' @param ylab Character. Title for the Y-axis (default: \code{"Survival probability"}).
-#' @param xlab Character. Title for the X-axis (default: \code{"Time"}).
+#' @param y_label Character. Title for the Y-axis (default: \code{"Survival probability"}).
+#' @param x_label Character. Title for the X-axis (default: \code{"Time"}).
 #' @param title Character. Title for the plot (default: \code{NULL}).
-#' @param legend.title Character. Title for the legend (default: \code{"Score cutoff"}).
+#' @param legend_title Character. Title for the legend (default: \code{"Score cutoff"}).
 #' @param theme ggplot2 theme used in the Kaplan-Meier plot (default: \code{survminer::theme_survminer()}).
-#' @param tables.theme ggplot2 theme used in the risk table (default: \code{survminer::theme_cleantable()}).
+#' @param tables_theme ggplot2 theme used in the risk table (default: \code{survminer::theme_cleantable()}).
 #' @param width Numeric. Plot width in inches (default: \code{8}).
 #' @param height Numeric. Plot height in inches (default: \code{5}).
 #'
 #' @return A Kaplan-Meier plot generated by \code{survminer::ggsurvplot()}.
 #' @export
-plot_km <- function(data, cutoff = NULL, outprefix = NULL, pval = FALSE, palette = c("#D73027", "#1A9850"),
-                    ylab = "Survival probability", xlab = "Time", title = NULL, legend.title = "Score cutoff",
-                    theme = survminer::theme_survminer(), tables.theme = survminer::theme_cleantable(),
+plot_km <- function(data, score_cutoff_value = NULL, output_prefix = NULL, p_value = FALSE, palette = c("#D73027", "#1A9850"),
+                    y_label = "Survival probability", x_label = "Time", title = NULL, legend_title = "Score cutoff",
+                    theme = survminer::theme_survminer(), tables_theme = survminer::theme_cleantable(),
                     width = 8, height = 5) {
 
   log_message("Building Kaplan-Meier curves...")
@@ -548,26 +548,26 @@ plot_km <- function(data, cutoff = NULL, outprefix = NULL, pval = FALSE, palette
   if (!all(required_cols %in% colnames(data))) {log_stop("Input data must contain columns: 'OS', 'OS.time', and 'score_group'")}
 
   # Validates p-value parameter
-  if (!(is.logical(pval) || is.numeric(pval) || is.character(pval))) {log_stop("'pval' must be logical, numeric, or character")}
-  if (is.logical(pval) && length(pval) != 1) {log_stop("'pval' must be a single logical value")}
-  if (is.character(pval) && length(pval) != 1) {log_stop("'pval' must be a single character string")}
-  if (is.numeric(pval))
+  if (!(is.logical(p_value) || is.numeric(p_value) || is.character(p_value))) {log_stop("'p_value' must be logical, numeric, or character")}
+  if (is.logical(p_value) && length(p_value) != 1) {log_stop("'p_value' must be a single logical value")}
+  if (is.character(p_value) && length(p_value) != 1) {log_stop("'p_value' must be a single character string")}
+  if (is.numeric(p_value))
   {
-    if (length(pval) != 1 || pval < 0 || pval > 1) {log_stop("'pval' must be a single numeric value between 0 and 1")}
+    if (length(p_value) != 1 || p_value < 0 || p_value > 1) {log_stop("'p_value' must be a single numeric value between 0 and 1")}
   }
 
   # Validates plot parameters
-  if (!is.null(cutoff)) {if (!is.numeric(cutoff) || length(cutoff) != 1) {log_stop("'cutoff' must be a single numeric value")}}
+  if (!is.null(score_cutoff_value)) {if (!is.numeric(score_cutoff_value) || length(score_cutoff_value) != 1) {log_stop("'score_cutoff_value' must be a single numeric value")}}
   if (!is.character(palette) || length(palette) != 2) {log_stop("'palette' must be a character vector of length 2")}
-  if (!is.character(ylab) || length(ylab) != 1) {log_stop("'ylab' must be a single character string")}
-  if (!is.character(xlab) || length(xlab) != 1) {log_stop("'xlab' must be a single character string")}
+  if (!is.character(y_label) || length(y_label) != 1) {log_stop("'y_label' must be a single character string")}
+  if (!is.character(x_label) || length(x_label) != 1) {log_stop("'x_label' must be a single character string")}
   if (!is.null(title) && (!is.character(title) || length(title) != 1))
   {
     log_stop("'title' must be NULL or a single character string")
   }
-  if (!is.null(legend.title) && (!is.character(legend.title) || length(legend.title) != 1))
+  if (!is.null(legend_title) && (!is.character(legend_title) || length(legend_title) != 1))
   {
-    log_stop("'legend.title' must be NULL or a single character string")
+    log_stop("'legend_title' must be NULL or a single character string")
   }
 
   # Validates plot sizes
@@ -585,9 +585,9 @@ plot_km <- function(data, cutoff = NULL, outprefix = NULL, pval = FALSE, palette
   fit <- survival::survfit(survival::Surv(OS.time, OS) ~ score_group, data = data)
 
   # Creates legend labels
-  if (!is.null(cutoff))
+  if (!is.null(score_cutoff_value))
   {
-    legend_labels <- c(paste0("score > ", round(cutoff, 4)), paste0("score <= ", round(cutoff, 4)))
+    legend_labels <- c(paste0("score > ", round(score_cutoff_value, 4)), paste0("score <= ", round(score_cutoff_value, 4)))
   } else {legend_labels <- unique(as.character(stats::na.omit(data$score_group)))}
 
   # Generates Kaplan-Meier plot
@@ -597,21 +597,21 @@ plot_km <- function(data, cutoff = NULL, outprefix = NULL, pval = FALSE, palette
     risk.table = "abs_pct",
     surv.scale = "percent",
     palette = palette,
-    ylab = ylab,
+    ylab = y_label,
     ylim = c(0, 1),
     break.y.by = 0.25,
     tables.height = 0.2,
     risk.table.title = "Number at risk (%)",
     tables.y.text = FALSE,
-    xlab = xlab,
-    tables.theme = tables.theme,
+    xlab = x_label,
+    tables.theme = tables_theme,
     ggtheme = theme,
     conf.int = FALSE,
     linetype = 1,
     censor.shape = 73,
     censor = TRUE,
     censor.size = 4,
-    pval = pval,
+    pval = p_value,
     font.legend = 14,
     font.x = 18,
     font.y = 18,
@@ -620,7 +620,7 @@ plot_km <- function(data, cutoff = NULL, outprefix = NULL, pval = FALSE, palette
     pval.coord = c(0, 0.1),
     title = title,
     legend = c(0.85, 0.9),
-    legend.title = legend.title,
+    legend.title = legend_title,
     linewidth = 1,
     fontsize = 3,
     axes.offset = TRUE,
@@ -633,10 +633,10 @@ plot_km <- function(data, cutoff = NULL, outprefix = NULL, pval = FALSE, palette
                                                   plot.margin = ggplot2::margin(5, 5, 5, 30))
 
   # Saves plot
-  if (!is.null(outprefix))
+  if (!is.null(output_prefix))
   {
-    if (!is.character(outprefix) || length(outprefix) != 1) {log_stop("'outprefix' must be a single character string")}
-    grDevices::pdf(file = paste0(outprefix, "_km_plot.pdf"), width = width, height = height, onefile = FALSE)
+    if (!is.character(output_prefix) || length(output_prefix) != 1) {log_stop("'output_prefix' must be a single character string")}
+    grDevices::pdf(file = paste0(output_prefix, "_km_plot.pdf"), width = width, height = height, onefile = FALSE)
     on.exit(grDevices::dev.off(), add = TRUE)
     suppressMessages(suppressWarnings(print(km_plot)))
   }
@@ -649,7 +649,7 @@ plot_km <- function(data, cutoff = NULL, outprefix = NULL, pval = FALSE, palette
 #' @description Creates a forest plot from a multivariate Cox proportional hazards model.
 #'
 #' @param model_object A fitted \code{survival::coxph} model object.
-#' @param outprefix Character. Output prefix for saving the plot (optional).
+#' @param output_prefix Character. Output prefix for saving the plot (optional).
 #' @param panels List. Custom forestmodel panels. If \code{NULL}, default clinprog panels are used (optional).
 #' @param hr_breaks Numeric. Vector defining hazard ratio axis breaks (default: \code{c(0.25, 0.5, 1, 2, 4, 8)}).
 #' @param width Numeric. Plot width in inches (default: \code{8}).
@@ -657,7 +657,7 @@ plot_km <- function(data, cutoff = NULL, outprefix = NULL, pval = FALSE, palette
 #'
 #' @return A forest plot object generated by \code{forestmodel::forest_model()}.
 #' @export
-plot_forest <- function(model_object, outprefix = NULL, panels = NULL,
+plot_forest <- function(model_object, output_prefix = NULL, panels = NULL,
                         hr_breaks = c(0.25, 0.5, 1, 2, 4, 8), width = 8, height = 5) {
 
   log_message("Building forest plot...")
@@ -726,10 +726,10 @@ plot_forest <- function(model_object, outprefix = NULL, panels = NULL,
   breaks_log <- log(hr_breaks)
 
   # Saves plot
-  if (!is.null(outprefix))
+  if (!is.null(output_prefix))
   {
-    if (!is.character(outprefix) || length(outprefix) != 1) {log_stop("'outprefix' must be a single character string")}
-    grDevices::pdf(file = paste0(outprefix, "_forest_plot.pdf"), width = width, height = height, onefile = FALSE)
+    if (!is.character(output_prefix) || length(output_prefix) != 1) {log_stop("'output_prefix' must be a single character string")}
+    grDevices::pdf(file = paste0(output_prefix, "_forest_plot.pdf"), width = width, height = height, onefile = FALSE)
     on.exit(grDevices::dev.off(), add = TRUE)
   }
 
@@ -740,7 +740,7 @@ plot_forest <- function(model_object, outprefix = NULL, panels = NULL,
                                                                              factor_separate_line = FALSE,
                                                                              recalculate_width = TRUE,
                                                                              recalculate_height = TRUE)))
-  if (!is.null(outprefix)) {suppressMessages(suppressWarnings(print(forest_plot)))}
+  if (!is.null(output_prefix)) {suppressMessages(suppressWarnings(print(forest_plot)))}
 
   return(forest_plot)
 }
@@ -752,30 +752,30 @@ plot_forest <- function(model_object, outprefix = NULL, panels = NULL,
 #'
 #' @param plot_df Data.frame generated by \code{clinprog_merge()} or extracted from \code{clinprog_multiCox_test()}
 #' bootstrap results. Must contain columns \code{covariate} and \code{frequency}.
-#' @param outprefix Character. Output prefix for saving the plot (optional).
-#' @param frequency.threshold Numeric. Frequency threshold (in \%) displayed as a horizontal dashed
+#' @param output_prefix Character. Output prefix for saving the plot (optional).
+#' @param frequency_threshold Numeric. Frequency threshold (in \%) displayed as a horizontal dashed
 #' line (default: \code{25}). Always interpreted as a percentage between 0-100, regardless of \code{type}.
 #' @param type Character. How to display frequencies: \code{"relative"} (percentage, default) or
 #' \code{"absolute"} (raw counts). Only these two values are accepted.
-#' @param n_bootstraps Integer. Total number of bootstrap iterations (minimum value: 2). Required when
-#' \code{type = "absolute"}. When \code{type = "relative"} and \code{n_bootstraps} is provided, absolute
-#' frequencies are converted to percentages via \code{frequency / n_bootstraps * 100}. When
-#' \code{type = "relative"} and \code{n_bootstraps} is \code{NULL} (default),
+#' @param bootstrap Integer. Total number of bootstrap iterations (minimum value: 2). Required when
+#' \code{type = "absolute"}. When \code{type = "relative"} and \code{bootstrap} is provided, absolute
+#' frequencies are converted to percentages via \code{frequency / bootstrap * 100}. When
+#' \code{type = "relative"} and \code{bootstrap} is \code{NULL} (default),
 #' \code{frequency} is assumed to already be a percentage.
 #' @param theme A ggplot2 theme object. Defaults to \code{theme_clinprog()}.
-#' @param bar.width Numeric. Width of bars (default: \code{0.5}).
-#' @param ylab Character. Title for the Y-axis. If \code{NULL} (default),
+#' @param bar_width Numeric. Width of bars (default: \code{0.5}).
+#' @param y_label Character. Title for the Y-axis. If \code{NULL} (default),
 #' a sensible label is chosen automatically based on \code{type}.
-#' @param xlab Character. Title for the X-axis (default: empty string).
+#' @param x_label Character. Title for the X-axis (default: empty string).
 #' @param width Numeric. Plot width in inches (default: \code{8}).
 #' @param height Numeric. Plot height in inches (default: \code{5}).
 #'
 #' @return A \code{ggplot} object.
 #' @importFrom rlang .data
 #' @export
-plot_barplot <- function(plot_df, outprefix = NULL, frequency.threshold = 25, type = c("relative", "absolute"),
-                         n_bootstraps = NULL, theme = theme_clinprog(), bar.width = 0.5,
-                         ylab = NULL, xlab = "", width = 8, height = 5)
+plot_barplot <- function(plot_df, output_prefix = NULL, frequency_threshold = 25, type = c("relative", "absolute"),
+                         bootstrap = NULL, theme = theme_clinprog(), bar_width = 0.5,
+                         y_label = NULL, x_label = "", width = 8, height = 5)
 {
 
   log_message("Building bar plot...")
@@ -788,37 +788,37 @@ plot_barplot <- function(plot_df, outprefix = NULL, frequency.threshold = 25, ty
   required_cols <- c("covariate", "frequency")
   if (!all(required_cols %in% colnames(plot_df))) {log_stop("'plot_df' must contain columns: 'covariate' and 'frequency'")}
 
-  # Validates frequency threshold (always in %)
-  if (!is.numeric(frequency.threshold) || length(frequency.threshold) != 1 ||
-      frequency.threshold < 0 || frequency.threshold > 100)
+  # Validates frequency_threshold (always in %)
+  if (!is.numeric(frequency_threshold) || length(frequency_threshold) != 1 ||
+      frequency_threshold < 0 || frequency_threshold > 100)
   {
-    log_stop("'frequency.threshold' must be a numeric value (percentage) between 0 and 100")
+    log_stop("'frequency_threshold' must be a numeric value (percentage) between 0 and 100")
   }
 
   # Validates bootstraps
-  if (!is.null(n_bootstraps))
+  if (!is.null(bootstrap))
   {
-    if (!is.numeric(n_bootstraps) || length(n_bootstraps) != 1 || n_bootstraps < 2 || n_bootstraps %% 1 != 0)
+    if (!is.numeric(bootstrap) || length(bootstrap) != 1 || bootstrap < 2 || bootstrap %% 1 != 0)
     {
-      log_stop("'n_bootstraps' must be NULL or a single integer value >= 2")
+      log_stop("'bootstrap' must be NULL or a single integer value >= 2")
     }
   }
 
-  # Enforces: type = "absolute" requires "n_bootstraps" (otherwise the threshold cannot be positioned on the axis)
-  if (type == "absolute" && is.null(n_bootstraps))
+  # Enforces: type = "absolute" requires "bootstrap" (otherwise the threshold cannot be positioned on the axis)
+  if (type == "absolute" && is.null(bootstrap))
   {
-    log_stop("'n_bootstraps' must be provided when 'type = absolute'.")
+    log_stop("'bootstrap' must be provided when 'type = absolute'.")
   }
 
-  # Validates bar width
-  if (!is.numeric(bar.width) || length(bar.width) != 1 || bar.width <= 0) {log_stop("'bar.width' must be a single positive numeric value")}
+  # Validates bar_width
+  if (!is.numeric(bar_width) || length(bar_width) != 1 || bar_width <= 0) {log_stop("'bar_width' must be a single positive numeric value")}
 
   # Validates theme
   if (!inherits(theme, "theme")) {log_stop("'theme' must be a valid ggplot2 theme object")}
 
-  # Validates axis labels (ylab NULL = auto; xlab must be a string)
-  if (!is.null(ylab) && (!is.character(ylab) || length(ylab) != 1)) {log_stop("'ylab' must be NULL or a single character string")}
-  if (!is.character(xlab) || length(xlab) != 1) {log_stop("'xlab' must be a single character string")}
+  # Validates axis labels (y_label NULL = auto; x_label must be a string)
+  if (!is.null(y_label) && (!is.character(y_label) || length(y_label) != 1)) {log_stop("'y_label' must be NULL or a single character string")}
+  if (!is.character(x_label) || length(x_label) != 1) {log_stop("'x_label' must be a single character string")}
 
   # Validates plot sizes
   if (!is.numeric(width) || length(width) != 1 || width <= 0) {log_stop("'width' must be a single positive numeric value")}
@@ -835,11 +835,11 @@ plot_barplot <- function(plot_df, outprefix = NULL, frequency.threshold = 25, ty
   # Resolves units: computes 'freq_pct' (always in %) for ordering and threshold comparison, and 'freq_display' (Y axis)
   if (type == "relative")
   {
-    if (!is.null(n_bootstraps))
+    if (!is.null(bootstrap))
     {
       # Converts absolute counts --> percentages
-      freq_pct <- plot_df$frequency / n_bootstraps * 100
-      if (any(freq_pct > 100, na.rm = TRUE)) {log_stop("Computed relative frequencies > 100%. Check 'n_bootstraps'.")}
+      freq_pct <- plot_df$frequency / bootstrap * 100
+      if (any(freq_pct > 100, na.rm = TRUE)) {log_stop("Computed relative frequencies > 100%. Check 'bootstrap'.")}
     }
     else
     {
@@ -847,23 +847,23 @@ plot_barplot <- function(plot_df, outprefix = NULL, frequency.threshold = 25, ty
       freq_pct <- plot_df$frequency
       if (any(freq_pct > 100, na.rm = TRUE))
       {
-        log_stop("'frequency' values exceed 100 but 'n_bootstraps' was not provided. ",
-                 "Either pass 'n_bootstraps' or make sure 'frequency' is already a percentage.")
+        log_stop("'frequency' values exceed 100 but 'bootstrap' was not provided. ",
+                 "Either pass 'bootstrap' or make sure 'frequency' is already a percentage.")
       }
     }
     freq_display <- freq_pct
     y_max <- 100
     y_brk <- seq(0, 100, by = 20)
-    if (is.null(ylab)) ylab <- "Frequency (%)"
+    if (is.null(y_label)) y_label <- "Frequency (%)"
   }
   else {  # type == "absolute"
-    # n_bootstraps is guaranteed non-NULL here (checked above)
+    # bootstrap is guaranteed non-NULL here (checked above)
     freq_display <- plot_df$frequency
-    freq_pct <- plot_df$frequency / n_bootstraps * 100
+    freq_pct <- plot_df$frequency / bootstrap * 100
     y_max <- ceiling(max(freq_display, na.rm = TRUE) * 1.05)
     if (!is.finite(y_max) || y_max <= 0) y_max <- 1
     y_brk <- pretty(c(0, y_max))
-    if (is.null(ylab)) ylab <- "Frequency (count)"
+    if (is.null(y_label)) y_label <- "Frequency (count)"
   }
 
   # Attaches internal columns used for plotting/ordering
@@ -873,20 +873,20 @@ plot_barplot <- function(plot_df, outprefix = NULL, frequency.threshold = 25, ty
   # Orders by percentage (stable across 'type' choices)
   plot_df <- plot_df[order(plot_df$freq_pct, decreasing = TRUE), , drop = FALSE]
 
-  # Positions the threshold line on the correct axis scale. 'frequency.threshold' is always in %; convert to counts when needed.
+  # Positions the threshold line on the correct axis scale. 'frequency_threshold' is always in %; convert to counts when needed.
   if (type == "absolute")
   {
-    threshold_display <- frequency.threshold / 100 * n_bootstraps
+    threshold_display <- frequency_threshold / 100 * bootstrap
   } else {
-    threshold_display <- frequency.threshold
+    threshold_display <- frequency_threshold
   }
 
   # Generates barplot
   final_plot <- ggplot2::ggplot(data = plot_df,
                                 ggplot2::aes(x = stats::reorder(.data$covariate, .data$freq_display),
                                              y = .data$freq_display)) +
-    ggplot2::geom_col(width = bar.width, color = "white", fill = "#1c9099", linewidth = 0.3, alpha = 0.8) +
-    ggplot2::xlab(xlab) + ggplot2::ylab(ylab) +
+    ggplot2::geom_col(width = bar_width, color = "white", fill = "#1c9099", linewidth = 0.3, alpha = 0.8) +
+    ggplot2::xlab(x_label) + ggplot2::ylab(y_label) +
     ggplot2::geom_hline(yintercept = threshold_display, color = "grey40", linetype = "dashed", linewidth = 0.5) +
     ggplot2::scale_y_continuous(breaks = y_brk, limits = c(0, y_max), expand = c(0, 0)) +
     ggplot2::coord_flip() + theme +
@@ -897,10 +897,10 @@ plot_barplot <- function(plot_df, outprefix = NULL, frequency.threshold = 25, ty
                    panel.border = ggplot2::element_blank())
 
   # Saves plot
-  if (!is.null(outprefix))
+  if (!is.null(output_prefix))
   {
-    if (!is.character(outprefix) || length(outprefix) != 1) {log_stop("'outprefix' must be a single character string")}
-    grDevices::pdf(file = paste0(outprefix, "_bootstrap_barplot.pdf"), width = width, height = height, onefile = FALSE)
+    if (!is.character(output_prefix) || length(output_prefix) != 1) {log_stop("'output_prefix' must be a single character string")}
+    grDevices::pdf(file = paste0(output_prefix, "_bootstrap_barplot.pdf"), width = width, height = height, onefile = FALSE)
     on.exit(grDevices::dev.off(), add = TRUE)
     print(final_plot)
   }
@@ -927,21 +927,21 @@ plot_barplot <- function(plot_df, outprefix = NULL, frequency.threshold = 25, ty
 #' \code{"wilcox"} (Mann-Whitney, default), \code{"t.test"}, or \code{"none"}.
 #' @param paired Logical. Whether to perform a paired test (default: \code{FALSE}).
 #' Ignored when \code{test = "none"}.
-#' @param pvalue_position Character. Where to place the p-value: \code{"subtitle"} (default) or \code{"inside"}.
+#' @param p_value_position Character. Where to place the p-value: \code{"subtitle"} (default) or \code{"inside"}.
 #' When \code{facet_by} is set, \code{"inside"} draws the p-value of each facet level inside its own panel.
-#' @param add_pvalue Logical. Whether to compute and display the p-value (default: \code{TRUE}).
+#' @param add_p_value Logical. Whether to compute and display the p-value (default: \code{TRUE}).
 #' @param show_points Logical. Whether to show jittered points over the boxplots (default: \code{FALSE}).
 #' @param show_n Logical. Whether to print the sample size per group inside each panel,
 #' just above the x axis (default: \code{FALSE}).
 #' @param max_features Numeric. Max features to plot (default: \code{NULL}).
 #' @param norm_exp Logical. Whether to apply log2 normalization on expression data (default: \code{FALSE}).
-#' @param outprefix Character. Output prefix for saving the plot (optional).
-#' @param individual Logical. If \code{TRUE} and \code{outprefix} is provided, saves each feature boxplot
-#' as its own PDF file named \code{{outprefix}_feature_{feature}.pdf}. The combined grid is still saved as
-#' \code{{outprefix}_feature_expression.pdf} (default: \code{FALSE}).
+#' @param output_prefix Character. Output prefix for saving the plot (optional).
+#' @param individual Logical. If \code{TRUE} and \code{output_prefix} is provided, saves each feature boxplot
+#' as its own PDF file named \code{{output_prefix}_feature_{feature}.pdf}. The combined grid is still saved as
+#' \code{{output_prefix}_feature_expression.pdf} (default: \code{FALSE}).
 #' @param theme A ggplot2 theme object. Defaults to \code{theme_clinprog()}.
-#' @param ylab Character. Title for the Y-axis (default: \code{NULL}).
-#' @param xlab Character. Title for the X-axis (default: \code{"Score"}).
+#' @param y_label Character. Title for the Y-axis (default: \code{NULL}).
+#' @param x_label Character. Title for the X-axis (default: \code{"Score"}).
 #' @param width Numeric. Plot width in inches (default: \code{NULL}).
 #' @param height Numeric. Plot height in inches (default: \code{NULL}).
 #'
@@ -949,19 +949,19 @@ plot_barplot <- function(plot_df, outprefix = NULL, frequency.threshold = 25, ty
 #' @importFrom rlang .data
 #' @importFrom dplyr %>%
 #' @export
-plot_boxplot <- function(data, signature = NULL, group_col = "score_group", facet_by = NULL, outprefix = NULL,
+plot_boxplot <- function(data, signature = NULL, group_col = "score_group", facet_by = NULL, output_prefix = NULL,
                          theme = theme_clinprog(), exclude_cols = c("OS", "OS.time", "score", "score_group"),
                          palette = c("#D73027", "#1A9850"), test = c("wilcox", "t.test", "none"), paired = FALSE,
-                         pvalue_position = c("subtitle", "inside"), add_pvalue = TRUE, show_points = FALSE,
+                         p_value_position = c("subtitle", "inside"), add_p_value = TRUE, show_points = FALSE,
                          show_n = FALSE, max_features = NULL, norm_exp = FALSE, individual = FALSE,
-                         width = NULL, height = NULL, ylab = NULL, xlab = "Score")
+                         width = NULL, height = NULL, y_label = NULL, x_label = "Score")
 {
 
   log_message("Building feature expression boxplots...")
 
   # Resolves multiple-choice arguments
   test <- match.arg(test)
-  pvalue_position <- match.arg(pvalue_position)
+  p_value_position <- match.arg(p_value_position)
 
   # Validates input data
   if (!is.data.frame(data)) {log_stop("'data' must be a data.frame")}
@@ -1003,9 +1003,9 @@ plot_boxplot <- function(data, signature = NULL, group_col = "score_group", face
   if (!is.null(palette) && anyNA(palette)) {log_stop("'palette' must not contain NA values")}
 
   # Validates p-value display
-  if (!is.logical(add_pvalue) || length(add_pvalue) != 1 || is.na(add_pvalue))
+  if (!is.logical(add_p_value) || length(add_p_value) != 1 || is.na(add_p_value))
   {
-    log_stop("'add_pvalue' must be a single logical value")
+    log_stop("'add_p_value' must be a single logical value")
   }
 
   # Validates normalization expression
@@ -1026,11 +1026,11 @@ plot_boxplot <- function(data, signature = NULL, group_col = "score_group", face
   if (!inherits(theme, "theme")) {log_stop("'theme' must be a valid ggplot2 theme object")}
 
   # Validates labels for the axis
-  if (!is.null(ylab) && (!is.character(ylab) || length(ylab) != 1))
+  if (!is.null(y_label) && (!is.character(y_label) || length(y_label) != 1))
   {
-    log_stop("'ylab' must be a single character string or NULL")
+    log_stop("'y_label' must be a single character string or NULL")
   }
-  if (!is.character(xlab) || length(xlab) != 1) {log_stop("'xlab' must be a single character string")}
+  if (!is.character(x_label) || length(x_label) != 1) {log_stop("'x_label' must be a single character string")}
 
   # Validates plot sizes
   if (!is.null(width) && (!is.numeric(width) || length(width) != 1 || width <= 0))
@@ -1057,12 +1057,12 @@ plot_boxplot <- function(data, signature = NULL, group_col = "score_group", face
     }
   }
 
-  # Validates outprefix
-  if (!is.null(outprefix))
+  # Validates output_prefix
+  if (!is.null(output_prefix))
   {
-    if (!is.character(outprefix) || length(outprefix) != 1)
+    if (!is.character(output_prefix) || length(output_prefix) != 1)
     {
-      log_stop("'outprefix' must be NULL or a single character string")
+      log_stop("'output_prefix' must be NULL or a single character string")
     }
   }
 
@@ -1073,10 +1073,10 @@ plot_boxplot <- function(data, signature = NULL, group_col = "score_group", face
     paired <- FALSE
   }
 
-  # Cross-validation: individual only makes sense with outprefix
-  if (individual && is.null(outprefix))
+  # Cross-validation: individual only makes sense with output_prefix
+  if (individual && is.null(output_prefix))
   {
-    log_warning("'individual = TRUE' requires 'outprefix' to be provided. Ignoring 'individual'.")
+    log_warning("'individual = TRUE' requires 'output_prefix' to be provided. Ignoring 'individual'.")
     individual <- FALSE
   }
 
@@ -1142,7 +1142,7 @@ plot_boxplot <- function(data, signature = NULL, group_col = "score_group", face
   }
 
   # Defines Y-axis label if NULL
-  if (is.null(ylab)) {ylab <- if (norm_exp) "log2(Expression + 1)" else "Expression"}
+  if (is.null(y_label)) {y_label <- if (norm_exp) "log2(Expression + 1)" else "Expression"}
 
   # Facet variable levels and friendly labels
   facet_levels <- NULL
@@ -1226,7 +1226,7 @@ plot_boxplot <- function(data, signature = NULL, group_col = "score_group", face
     subtitle_text <- NULL
     inside_annot <- NULL  # data.frame with label per facet (or single row without facet)
 
-    if (add_pvalue && test != "none")
+    if (add_p_value && test != "none")
     {
       # Helper that runs the test on a subset and returns label + p-value string
       run_test <- function(sub_df, label)
@@ -1273,7 +1273,7 @@ plot_boxplot <- function(data, signature = NULL, group_col = "score_group", face
         if (!is.null(test_res))
         {
           subtitle_text <- test_res$full
-          if (pvalue_position == "inside")
+          if (p_value_position == "inside")
           {
             inside_annot <- data.frame(x = 1.5, y = Inf, label = test_res$full, stringsAsFactors = FALSE)
           }
@@ -1367,7 +1367,7 @@ plot_boxplot <- function(data, signature = NULL, group_col = "score_group", face
     }
 
     # p-value inside panel (works with and without facet)
-    if (add_pvalue && test != "none" && pvalue_position == "inside" && !is.null(inside_annot))
+    if (add_p_value && test != "none" && p_value_position == "inside" && !is.null(inside_annot))
     {
       p <- p + ggplot2::geom_text(data = inside_annot, ggplot2::aes(x = .data$x, y = .data$y, label = .data$label),
                                   inherit.aes = FALSE, hjust = 0.5, vjust = 1.2, fontface = "italic", size = 3.5)
@@ -1375,8 +1375,8 @@ plot_boxplot <- function(data, signature = NULL, group_col = "score_group", face
 
     # Adds labs to plots
     p <- p + ggplot2::labs(
-      x = xlab, y = ylab, title = gene,
-      subtitle = if (!is.null(subtitle_text) && pvalue_position == "subtitle") subtitle_text else NULL
+      x = x_label, y = y_label, title = gene,
+      subtitle = if (!is.null(subtitle_text) && p_value_position == "subtitle") subtitle_text else NULL
     ) + theme +
       ggplot2::theme(legend.position = "none",
                      axis.title = ggplot2::element_text(face = "plain", colour = "black", size = 12),
@@ -1415,10 +1415,10 @@ plot_boxplot <- function(data, signature = NULL, group_col = "score_group", face
   # Combines plots into a single patchwork object
   combined_plot <- patchwork::wrap_plots(plot_list, ncol = ncol_plot)
 
-  # Saves the single-page grid PDF if an outprefix is provided
-  if (!is.null(outprefix))
+  # Saves the single-page grid PDF if an output_prefix is provided
+  if (!is.null(output_prefix))
   {
-    grDevices::pdf(file = paste0(outprefix, "_feature_expression.pdf"), width = width, height = height)
+    grDevices::pdf(file = paste0(output_prefix, "_feature_expression.pdf"), width = width, height = height)
     on.exit(grDevices::dev.off(), add = TRUE)
     print(combined_plot)
 
@@ -1434,7 +1434,7 @@ plot_boxplot <- function(data, signature = NULL, group_col = "score_group", face
 
       for (i in seq_along(plot_list))
       {
-        fname_i <- paste0(outprefix, "_feature_", safe_names[i], ".pdf")
+        fname_i <- paste0(output_prefix, "_feature_", safe_names[i], ".pdf")
         ggplot2::ggsave(filename = fname_i, plot = plot_list[[i]], device = "pdf",
                         width = ind_width, height = ind_height)
       }
@@ -1467,9 +1467,9 @@ plot_boxplot <- function(data, signature = NULL, group_col = "score_group", face
 #' @param test Character. Statistical test to compare score between the two covariate levels:
 #' \code{"wilcox"} (Mann-Whitney, default), \code{"t.test"}, or \code{"none"}.
 #' @param paired Logical. Whether to perform a paired test (default: \code{FALSE}). Ignored when \code{test = "none"}.
-#' @param pvalue_position Character. Where to place the p-value: \code{"subtitle"} (default) or \code{"inside"}.
+#' @param p_value_position Character. Where to place the p-value: \code{"subtitle"} (default) or \code{"inside"}.
 #' When \code{facet_by} is set, \code{"inside"} draws the p-value of each facet level inside its own panel.
-#' @param add_pvalue Logical. Whether to compute and display the p-value (default: \code{TRUE}).
+#' @param add_p_value Logical. Whether to compute and display the p-value (default: \code{TRUE}).
 #' @param show_points Logical. Whether to overlay jittered points (default: \code{FALSE}).
 #' @param show_n Logical. Whether to print the sample size per category inside each panel,
 #' just above the x axis. When \code{facet_by} is set, the N is computed within each facet level (default: \code{FALSE}).
@@ -1479,13 +1479,13 @@ plot_boxplot <- function(data, signature = NULL, group_col = "score_group", face
 #' are present, only the first 16 are plotted with a warning.
 #' @param id_col Character or \code{NULL}. Optional column with sample IDs. If \code{NULL} (default), row names
 #' are used when they are not the default integer sequence.
-#' @param outprefix Character. Output prefix for saving the plot (optional).
-#' @param individual Logical. If \code{TRUE} and \code{outprefix} is provided, saves each covariate boxplot as its
-#' own PDF file named \code{{outprefix}_clinical_{covariate}.pdf}. The combined grid is still saved as
-#' \code{{outprefix}_clinical_boxplots.pdf} (default: \code{FALSE}).
+#' @param output_prefix Character. Output prefix for saving the plot (optional).
+#' @param individual Logical. If \code{TRUE} and \code{output_prefix} is provided, saves each covariate boxplot as its
+#' own PDF file named \code{{output_prefix}_clinical_{covariate}.pdf}. The combined grid is still saved as
+#' \code{{output_prefix}_clinical_boxplots.pdf} (default: \code{FALSE}).
 #' @param theme A ggplot2 theme object. Defaults to \code{theme_clinprog()}.
-#' @param ylab Character. Title for the Y-axis (default: \code{"Score"}).
-#' @param xlab Character. Title for the X-axis (default: \code{NULL}).
+#' @param y_label Character. Title for the Y-axis (default: \code{"Score"}).
+#' @param x_label Character. Title for the X-axis (default: \code{NULL}).
 #' @param title Character or \code{NULL}. Optional overall plot title.
 #' @param width Numeric. Plot width in inches (default: \code{NULL}, auto-computed).
 #' @param height Numeric. Plot height in inches (default: \code{NULL}, auto-computed).
@@ -1496,16 +1496,16 @@ plot_boxplot <- function(data, signature = NULL, group_col = "score_group", face
 #' @export
 plot_clinics <- function(data, score_col = "score", exclude_cols = c("OS", "OS.time", "score", "score_group"),
                          facet_by = NULL, palette = c("#1A9850", "#D73027"), test = c("wilcox", "t.test", "none"),
-                         paired = FALSE, pvalue_position = c("subtitle", "inside"), add_pvalue = TRUE,
+                         paired = FALSE, p_value_position = c("subtitle", "inside"), add_p_value = TRUE,
                          show_points = FALSE, show_n = FALSE, order_by_median = TRUE, max_features = NULL,
-                         id_col = NULL, outprefix = NULL, individual = FALSE, theme = theme_clinprog(),
-                         ylab = "Score", xlab = NULL, title = NULL, width = NULL, height = NULL) {
+                         id_col = NULL, output_prefix = NULL, individual = FALSE, theme = theme_clinprog(),
+                         y_label = "Score", x_label = NULL, title = NULL, width = NULL, height = NULL) {
 
   log_message("Building clinical covariate boxplots...")
 
   # Resolves multiple-choice arguments
   test <- match.arg(test)
-  pvalue_position <- match.arg(pvalue_position)
+  p_value_position <- match.arg(p_value_position)
 
   # Input validation
   if (!is.data.frame(data)) {log_stop("'data' must be a data.frame")}
@@ -1536,9 +1536,9 @@ plot_clinics <- function(data, score_col = "score", exclude_cols = c("OS", "OS.t
   if (anyNA(palette)) {log_stop("'palette' must not contain NA values")}
 
   # flags
-  if (!is.logical(add_pvalue) || length(add_pvalue) != 1 || is.na(add_pvalue))
+  if (!is.logical(add_p_value) || length(add_p_value) != 1 || is.na(add_p_value))
   {
-    log_stop("'add_pvalue' must be TRUE or FALSE")
+    log_stop("'add_p_value' must be TRUE or FALSE")
   }
   if (!is.logical(show_points) || length(show_points) != 1 || is.na(show_points))
   {
@@ -1559,13 +1559,13 @@ plot_clinics <- function(data, score_col = "score", exclude_cols = c("OS", "OS.t
   if (!inherits(theme, "theme")) {log_stop("'theme' must be a valid ggplot2 theme object")}
 
   # labels
-  if (!is.null(ylab) && (!is.character(ylab) || length(ylab) != 1))
+  if (!is.null(y_label) && (!is.character(y_label) || length(y_label) != 1))
   {
-    log_stop("'ylab' must be NULL or a single character string")
+    log_stop("'y_label' must be NULL or a single character string")
   }
-  if (!is.null(xlab) && (!is.character(xlab) || length(xlab) != 1))
+  if (!is.null(x_label) && (!is.character(x_label) || length(x_label) != 1))
   {
-    log_stop("'xlab' must be NULL or a single character string")
+    log_stop("'x_label' must be NULL or a single character string")
   }
   if (!is.null(title) && (!is.character(title) || length(title) != 1))
   {
@@ -1598,12 +1598,12 @@ plot_clinics <- function(data, score_col = "score", exclude_cols = c("OS", "OS.t
     if (!id_col %in% colnames(data)) {log_stop(paste0("'id_col' column '", id_col, "' not found in 'data'."))}
   }
 
-  # outprefix
-  if (!is.null(outprefix))
+  # output_prefix
+  if (!is.null(output_prefix))
   {
-    if (!is.character(outprefix) || length(outprefix) != 1)
+    if (!is.character(output_prefix) || length(output_prefix) != 1)
     {
-      log_stop("'outprefix' must be NULL or a single character string")
+      log_stop("'output_prefix' must be NULL or a single character string")
     }
   }
 
@@ -1614,10 +1614,10 @@ plot_clinics <- function(data, score_col = "score", exclude_cols = c("OS", "OS.t
     paired <- FALSE
   }
 
-  # Cross-validation: individual only makes sense with outprefix
-  if (individual && is.null(outprefix))
+  # Cross-validation: individual only makes sense with output_prefix
+  if (individual && is.null(output_prefix))
   {
-    log_warning("'individual = TRUE' requires 'outprefix' to be provided. Ignoring 'individual'.")
+    log_warning("'individual = TRUE' requires 'output_prefix' to be provided. Ignoring 'individual'.")
     individual <- FALSE
   }
 
@@ -1781,7 +1781,7 @@ plot_clinics <- function(data, score_col = "score", exclude_cols = c("OS", "OS.t
     subtitle_text <- NULL
     inside_annot  <- NULL  # data.frame with label per facet (or single row without facet)
 
-    if (add_pvalue && test != "none")
+    if (add_p_value && test != "none")
     {
       # Helper that runs the test on a subset and returns label + p-value string
       run_test <- function(sub_df, label)
@@ -1827,7 +1827,7 @@ plot_clinics <- function(data, score_col = "score", exclude_cols = c("OS", "OS.t
         if (!is.null(test_res))
         {
           subtitle_text <- test_res$full
-          if (pvalue_position == "inside")
+          if (p_value_position == "inside")
           {
             # x = 1.5 centers the label between the two covariate levels (factor positions 1 and 2)
             inside_annot <- data.frame(x = 1.5, y = Inf, label = test_res$full, stringsAsFactors = FALSE)
@@ -1920,7 +1920,7 @@ plot_clinics <- function(data, score_col = "score", exclude_cols = c("OS", "OS.t
     }
 
     # p-value inside panel (works with and without facet)
-    if (add_pvalue && test != "none" && pvalue_position == "inside" && !is.null(inside_annot))
+    if (add_p_value && test != "none" && p_value_position == "inside" && !is.null(inside_annot))
     {
       p <- p + ggplot2::geom_text(data = inside_annot,
                                   ggplot2::aes(x = .data$x, y = .data$y, label = .data$label),
@@ -1929,8 +1929,8 @@ plot_clinics <- function(data, score_col = "score", exclude_cols = c("OS", "OS.t
 
     # Titles and theme
     p <- p + ggplot2::labs(
-      x = xlab, y = ylab, title = cov,
-      subtitle = if (!is.null(subtitle_text) && pvalue_position == "subtitle") subtitle_text else NULL) + theme +
+      x = x_label, y = y_label, title = cov,
+      subtitle = if (!is.null(subtitle_text) && p_value_position == "subtitle") subtitle_text else NULL) + theme +
       ggplot2::theme(legend.position = "none",
                      axis.title = ggplot2::element_text(face = "plain", colour = "black", size = 12),
                      axis.text = ggplot2::element_text(face = "plain", colour = "black", size = 11),
@@ -1967,9 +1967,9 @@ plot_clinics <- function(data, score_col = "score", exclude_cols = c("OS", "OS.t
   if (!is.null(title)) {combined_plot <- combined_plot + patchwork::plot_annotation(title = title)}
 
   # Saves combined grid
-  if (!is.null(outprefix))
+  if (!is.null(output_prefix))
   {
-    grDevices::pdf(file = paste0(outprefix, "_clinical_boxplots.pdf"), width = width, height = height)
+    grDevices::pdf(file = paste0(output_prefix, "_clinical_boxplots.pdf"), width = width, height = height)
     on.exit(grDevices::dev.off(), add = TRUE)
     print(combined_plot)
 
@@ -1984,7 +1984,7 @@ plot_clinics <- function(data, score_col = "score", exclude_cols = c("OS", "OS.t
       ind_height <- if (!is.null(height)) min(height, 5) else 5
       for (i in seq_along(plot_list))
       {
-        fname_i <- paste0(outprefix, "_clinical_", safe_names[i], ".pdf")
+        fname_i <- paste0(output_prefix, "_clinical_", safe_names[i], ".pdf")
         ggplot2::ggsave(filename = fname_i, plot = plot_list[[i]], device = "pdf",
                         width = ind_width, height = ind_height)
       }
@@ -2005,7 +2005,7 @@ plot_clinics <- function(data, score_col = "score", exclude_cols = c("OS", "OS.t
 #' @param coef_col Character. Column name in \code{signature} for model coefficients (default: \code{"coefficient"}).
 #' @param pos_color Character. Color for positive coefficients (default: \code{"#D73027"}).
 #' @param neg_color Character. Color for negative coefficients (default: \code{"#1A9850"}).
-#' @param outprefix Character. Output prefix for saving the plot (optional).
+#' @param output_prefix Character. Output prefix for saving the plot (optional).
 #' @param theme A ggplot2 theme object. Defaults to \code{theme_clinprog()}.
 #' @param width Numeric. Plot width in inches (default: \code{NULL}).
 #' @param height Numeric. Plot height in inches (default: \code{NULL}).
@@ -2017,7 +2017,7 @@ plot_clinics <- function(data, score_col = "score", exclude_cols = c("OS", "OS.t
 #' @importFrom rlang .data
 #' @export
 plot_wordcloud <- function(data, signature, feature_col = "feature", coef_col = "coefficient",
-                           pos_color = "#D73027", neg_color = "#1A9850", outprefix = NULL, theme = theme_clinprog(),
+                           pos_color = "#D73027", neg_color = "#1A9850", output_prefix = NULL, theme = theme_clinprog(),
                            width = NULL, height = NULL, max_size = NULL, min_alpha = 0.5, max_alpha = 1.0)
 {
 
@@ -2138,11 +2138,11 @@ plot_wordcloud <- function(data, signature, feature_col = "feature", coef_col = 
                    legend.position = "right") +
     ggplot2::guides(color = ggplot2::guide_legend(override.aes = list(shape = 16, size = 4, alpha = 1)))
 
-  # Saves plot to PDF if outprefix is provided
-  if (!is.null(outprefix))
+  # Saves plot to PDF if output_prefix is provided
+  if (!is.null(output_prefix))
   {
-    if (!is.character(outprefix) || length(outprefix) != 1) {log_stop("'outprefix' must be a single character string")}
-    grDevices::pdf(file = paste0(outprefix, "_signature_wordcloud.pdf"), width = width, height = height)
+    if (!is.character(output_prefix) || length(output_prefix) != 1) {log_stop("'output_prefix' must be a single character string")}
+    grDevices::pdf(file = paste0(output_prefix, "_signature_wordcloud.pdf"), width = width, height = height)
     on.exit(grDevices::dev.off(), add = TRUE)
     print(final_plot)
   }
@@ -2153,23 +2153,23 @@ plot_wordcloud <- function(data, signature, feature_col = "feature", coef_col = 
 #' Generate single barplot comparing scores across OS groups with cutoff coloring
 #'
 #' @param data Data.frame containing clinical/survival data.
-#' @param palette Character vector of length 2. Colors for below and above cutoff (default: \code{c("#1A9850", "#D73027")}).
-#' @param outprefix Character. Output prefix for saving the plot (optional).
-#' @param score_cutoff Numeric. Threshold to define low/high score color scheme (default: \code{0}).
+#' @param palette Character vector of length 2. Colors for below and above score_cutoff_value (default: \code{c("#1A9850", "#D73027")}).
+#' @param output_prefix Character. Output prefix for saving the plot (optional).
+#' @param score_cutoff_value Numeric. Threshold to define low/high score color scheme (default: \code{0}).
 #' @param os_col Character. Column name for OS status (default: \code{"OS"}).
 #' @param score_col Character. Column name for score values (default: \code{"score"}).
 #' @param theme A ggplot2 theme object. Defaults to \code{theme_clinprog()}.
-#' @param xlab Character. Title for the X-axis (default: \code{"Patients"}).
-#' @param ylab Character. Title for the Y-axis (default: \code{"Score"}).
+#' @param x_label Character. Title for the X-axis (default: \code{"Patients"}).
+#' @param y_label Character. Title for the Y-axis (default: \code{"Score"}).
 #' @param width Numeric. Plot width in inches (default: \code{8}).
 #' @param height Numeric. Plot height in inches (default: \code{5}).
 #'
 #' @return A \code{ggplot} object.
 #' @importFrom rlang .data
 #' @export
-plot_barplot_score <- function(data, palette = c("#1A9850", "#D73027"), outprefix = NULL, score_cutoff = 0,
+plot_barplot_score <- function(data, palette = c("#1A9850", "#D73027"), output_prefix = NULL, score_cutoff_value = 0,
                                os_col = "OS", score_col = "score", theme = theme_clinprog(),
-                               xlab = "Patients", ylab = "Score", width = 8, height = 5) {
+                               x_label = "Patients", y_label = "Score", width = 8, height = 5) {
 
   log_message("Building score barplot by OS status...")
 
@@ -2182,8 +2182,8 @@ plot_barplot_score <- function(data, palette = c("#1A9850", "#D73027"), outprefi
   # Validates theme
   if (!inherits(theme, "theme")) {log_stop("'theme' must be a valid ggplot2 theme object")}
 
-  # Validates score cutoff
-  if (!is.numeric(score_cutoff) || length(score_cutoff) != 1) log_stop("'score_cutoff' must be a single numeric value.")
+  # Validates score_cutoff_value
+  if (!is.numeric(score_cutoff_value) || length(score_cutoff_value) != 1) log_stop("'score_cutoff_value' must be a single numeric value.")
 
   # Validates color palette
   if (length(palette) < 2) log_stop("'palette' must contain at least 2 colors.")
@@ -2193,8 +2193,8 @@ plot_barplot_score <- function(data, palette = c("#1A9850", "#D73027"), outprefi
   if (!is.numeric(height) || length(height) != 1 || height <= 0) {log_stop("'height' must be a single positive numeric value")}
 
   # Validates plot axes
-  if (!is.character(ylab) || length(ylab) != 1) {log_stop("'ylab' must be a single character string")}
-  if (!is.character(xlab) || length(xlab) != 1) {log_stop("'xlab' must be a single character string")}
+  if (!is.character(y_label) || length(y_label) != 1) {log_stop("'y_label' must be a single character string")}
+  if (!is.character(x_label) || length(x_label) != 1) {log_stop("'x_label' must be a single character string")}
 
   # Prepares data
   temp_df <- data[!is.na(data[[os_col]]) & !is.na(data[[score_col]]), ]
@@ -2203,19 +2203,19 @@ plot_barplot_score <- function(data, palette = c("#1A9850", "#D73027"), outprefi
   temp_df$OS_Group <- factor(temp_df[[os_col]], levels = c(0, 1), labels = c("Alive", "Dead"))
 
   # Defines status based on threshold
-  temp_df$Color_Group <- ifelse(temp_df[[score_col]] >= score_cutoff, "High", "Low")
+  temp_df$Color_Group <- ifelse(temp_df[[score_col]] >= score_cutoff_value, "High", "Low")
   temp_df$Color_Group <- factor(temp_df$Color_Group, levels = c("Low", "High"))
 
-  # Calculates score relative to cutoff so bars originate from the cutoff line
-  temp_df$score_diff <- temp_df[[score_col]] - score_cutoff
+  # Calculates score relative to score_cutoff_value so bars originate from the score_cutoff_value line
+  temp_df$score_diff <- temp_df[[score_col]] - score_cutoff_value
 
   # Calculates Pearson's Chi-Square Test
   contingency_tab <- table(temp_df$OS_Group, temp_df$Color_Group)
   chisq_res <- suppressWarnings(stats::chisq.test(contingency_tab))
-  pval <- chisq_res$p.value
+  p_value <- chisq_res$p.value
 
   # Format p-value string
-  p_formatted <- if (pval < 0.001) "p < 0.001" else paste0("p = ", round(pval, 3))
+  p_formatted <- if (p_value < 0.001) "p < 0.001" else paste0("p = ", round(p_value, 3))
   p_text <- paste0("Chi-Square ", p_formatted)
 
   # Sets names for manual color mapping
@@ -2238,10 +2238,10 @@ plot_barplot_score <- function(data, palette = c("#1A9850", "#D73027"), outprefi
   p <- ggplot2::ggplot(temp_df, ggplot2::aes(x = .data$Sample_ID, y = .data$score_diff, fill = .data$Color_Group)) +
     ggplot2::geom_col(width = 0.8) +
     ggplot2::scale_fill_manual(values = color_map, name = "Score cutoff", labels = c("Low", "High")) +
-    ggplot2::scale_y_continuous(labels = function(x) x + round(score_cutoff, 4)) +
+    ggplot2::scale_y_continuous(labels = function(x) x + round(score_cutoff_value, 4)) +
     ggplot2::geom_hline(yintercept = 0, linetype = "dashed", color = "black", linewidth = 0.6) +
     ggplot2::facet_grid(~ OS_Group, scales = "free_x", space = "free_x") +
-    ggplot2::labs(x = xlab, y = ylab) +
+    ggplot2::labs(x = x_label, y = y_label) +
     ggplot2::geom_text(data = annot_df, ggplot2::aes(x = .data$Sample_ID, y = .data$score_diff, label = .data$label),
                        inherit.aes = FALSE, hjust = 0, vjust = 1, fontface = "italic", size = 4) +
     theme +
@@ -2254,10 +2254,10 @@ plot_barplot_score <- function(data, palette = c("#1A9850", "#D73027"), outprefi
                    strip.background = ggplot2::element_rect(fill = "gray90", color = NA),
                    strip.text = ggplot2::element_text(face = "plain", size = 12))
 
-  # Saves PDF if outprefix is passed
-  if (!is.null(outprefix)) {
-    if (!is.character(outprefix) || length(outprefix) != 1) log_stop("'outprefix' must be a single character string")
-    grDevices::pdf(file = paste0(outprefix, "_score_barplot.pdf"), width = width, height = height)
+  # Saves PDF if output_prefix is passed
+  if (!is.null(output_prefix)) {
+    if (!is.character(output_prefix) || length(output_prefix) != 1) log_stop("'output_prefix' must be a single character string")
+    grDevices::pdf(file = paste0(output_prefix, "_score_barplot.pdf"), width = width, height = height)
     on.exit(grDevices::dev.off(), add = TRUE)
     print(p)
   }
@@ -2268,24 +2268,24 @@ plot_barplot_score <- function(data, palette = c("#1A9850", "#D73027"), outprefi
 #' Generate line plots for score vs follow-up time (OS.time) by OS status
 #'
 #' @param data Data.frame containing clinical/survival data.
-#' @param palette Character vector of length 2. Colors for below and above cutoff (default: \code{c("#1A9850", "#D73027")}).
-#' @param outprefix Character. Output prefix for saving the plot (optional).
-#' @param score_cutoff Numeric. Threshold to define low/high score color scheme (default: \code{0}).
+#' @param palette Character vector of length 2. Colors for below and above score_cutoff_value (default: \code{c("#1A9850", "#D73027")}).
+#' @param output_prefix Character. Output prefix for saving the plot (optional).
+#' @param score_cutoff_value Numeric. Threshold to define low/high score color scheme (default: \code{0}).
 #' @param os_col Character. Column name for OS status (default: \code{"OS"}).
 #' @param time_col Character. Column name for followup time (default: \code{"OS.time"}).
 #' @param score_col Character. Column name for score values (default: \code{"score"}).
 #' @param theme A ggplot2 theme object. Defaults to \code{theme_clinprog()}.
-#' @param xlab Character. Title for the X-axis (default: \code{"Follow-up Time"}).
-#' @param ylab Character. Title for the Y-axis (default: \code{"Score"}).
+#' @param x_label Character. Title for the X-axis (default: \code{"Follow-up Time"}).
+#' @param y_label Character. Title for the Y-axis (default: \code{"Score"}).
 #' @param width Numeric. Plot width in inches (default: \code{12}).
 #' @param height Numeric. Plot height in inches (default: \code{6}).
 #'
 #' @return A \code{ggplot} object.
 #' @importFrom rlang .data
 #' @export
-plot_lineplot_score <- function(data, palette = c("#1A9850", "#D73027"), outprefix = NULL, score_cutoff = 0,
+plot_lineplot_score <- function(data, palette = c("#1A9850", "#D73027"), output_prefix = NULL, score_cutoff_value = 0,
                                 os_col = "OS", time_col = "OS.time", score_col = "score", theme = theme_clinprog(),
-                                xlab = "Followup", ylab = "Score", width = 12, height = 6) {
+                                x_label = "Followup", y_label = "Score", width = 12, height = 6) {
 
   log_message("Building score vs follow-up time line plots by OS status...")
 
@@ -2300,8 +2300,8 @@ plot_lineplot_score <- function(data, palette = c("#1A9850", "#D73027"), outpref
   # Validates theme
   if (!inherits(theme, "theme")) log_stop("'theme' must be a valid ggplot2 theme object")
 
-  # Validates score cutoff
-  if (!is.numeric(score_cutoff) || length(score_cutoff) != 1) log_stop("'score_cutoff' must be a single numeric value.")
+  # Validates score_cutoff_value
+  if (!is.numeric(score_cutoff_value) || length(score_cutoff_value) != 1) log_stop("'score_cutoff_value' must be a single numeric value.")
 
   # Validates color palette
   if (length(palette) < 2) log_stop("'palette' must contain at least 2 colors.")
@@ -2311,8 +2311,8 @@ plot_lineplot_score <- function(data, palette = c("#1A9850", "#D73027"), outpref
   if (!is.numeric(height) || length(height) != 1 || height <= 0) log_stop("'height' must be a single positive numeric value")
 
   # Validates plot axes
-  if (!is.character(ylab) || length(ylab) != 1) log_stop("'ylab' must be a single character string")
-  if (!is.character(xlab) || length(xlab) != 1) log_stop("'xlab' must be a single character string")
+  if (!is.character(y_label) || length(y_label) != 1) log_stop("'y_label' must be a single character string")
+  if (!is.character(x_label) || length(x_label) != 1) log_stop("'x_label' must be a single character string")
 
   # Prepare data
   temp_df <- data[!is.na(data[[os_col]]) & !is.na(data[[score_col]]) & !is.na(data[[time_col]]), ]
@@ -2321,11 +2321,11 @@ plot_lineplot_score <- function(data, palette = c("#1A9850", "#D73027"), outpref
   temp_df$OS_Group <- factor(temp_df[[os_col]], levels = c(0, 1), labels = c("Alive", "Dead"))
 
   # Define status based on threshold for point colors
-  temp_df$Color_Group <- ifelse(temp_df[[score_col]] >= score_cutoff, "High", "Low")
+  temp_df$Color_Group <- ifelse(temp_df[[score_col]] >= score_cutoff_value, "High", "Low")
   temp_df$Color_Group <- factor(temp_df$Color_Group, levels = c("Low", "High"))
 
-  # Calculate score relative to cutoff so the reference origin becomes the cutoff
-  temp_df$score_diff <- temp_df[[score_col]] - score_cutoff
+  # Calculate score relative to score_cutoff_value so the reference origin becomes the score_cutoff_value
+  temp_df$score_diff <- temp_df[[score_col]] - score_cutoff_value
 
   # Set names for manual color mapping
   color_map <- c("Low" = palette[1], "High" = palette[2])
@@ -2340,10 +2340,10 @@ plot_lineplot_score <- function(data, palette = c("#1A9850", "#D73027"), outpref
     ggplot2::geom_point(ggplot2::aes(color = .data$Color_Group), size = 1.5, alpha = 0.7) +
     ggplot2::scale_color_manual(values = color_map, name = "Score cutoff", labels = c("Low", "High")) +
     ggplot2::scale_x_continuous(limits = c(0, max_time), breaks = round(seq(0, max_time, length.out = 5))) +
-    ggplot2::scale_y_continuous(labels = function(y) y + round(score_cutoff, 4)) +
+    ggplot2::scale_y_continuous(labels = function(y) y + round(score_cutoff_value, 4)) +
     ggplot2::geom_hline(yintercept = 0, linetype = "dashed", color = "black", linewidth = 0.5) +
     ggplot2::facet_grid(~ OS_Group, scales = "free_x") +
-    ggplot2::labs(x = xlab, y = ylab) +
+    ggplot2::labs(x = x_label, y = y_label) +
     theme +
     ggplot2::theme(panel.grid = ggplot2::element_blank(),
                    axis.title = ggplot2::element_text(face = "plain", colour = "black", size = 14),
@@ -2353,10 +2353,10 @@ plot_lineplot_score <- function(data, palette = c("#1A9850", "#D73027"), outpref
                    strip.background = ggplot2::element_rect(fill = "gray90", color = NA),
                    strip.text = ggplot2::element_text(face = "plain", size = 12))
 
-  # Save PDF if outprefix is passed
-  if (!is.null(outprefix)) {
-    if (!is.character(outprefix) || length(outprefix) != 1) log_stop("'outprefix' must be a single character string")
-    grDevices::pdf(file = paste0(outprefix, "_lineplot_score_followup.pdf"), width = width, height = height)
+  # Save PDF if output_prefix is passed
+  if (!is.null(output_prefix)) {
+    if (!is.character(output_prefix) || length(output_prefix) != 1) log_stop("'output_prefix' must be a single character string")
+    grDevices::pdf(file = paste0(output_prefix, "_lineplot_score_followup.pdf"), width = width, height = height)
     on.exit(grDevices::dev.off(), add = TRUE)
     print(p)
   }
@@ -2377,13 +2377,13 @@ plot_lineplot_score <- function(data, palette = c("#1A9850", "#D73027"), outpref
 #' @param exclude_cols Character vector. Columns to exclude from the feature list (default: \code{c("OS", "OS.time", "score", "score_group")}).
 #' @param palette Character vector. Color palette for OS groups (default: \code{c("#1A9850", "#D73027")}).
 #' @param add_stat Logical. Whether to perform and display Spearman correlation test (default: \code{TRUE}).
-#' @param outprefix Character. Output prefix for saving the plot (optional).
-#' @param individual Logical. If \code{TRUE} and \code{outprefix} is provided, saves each feature scatter
-#' plot as its own PDF file named \code{{outprefix}_feature_scatter_{feature}.pdf}. The combined grid is
-#' still saved as \code{{outprefix}_feature_scatter.pdf} (default: \code{FALSE}).
+#' @param output_prefix Character. Output prefix for saving the plot (optional).
+#' @param individual Logical. If \code{TRUE} and \code{output_prefix} is provided, saves each feature scatter
+#' plot as its own PDF file named \code{{output_prefix}_feature_scatter_{feature}.pdf}. The combined grid is
+#' still saved as \code{{output_prefix}_feature_scatter.pdf} (default: \code{FALSE}).
 #' @param theme A ggplot2 theme object. Defaults to \code{theme_clinprog()}.
-#' @param ylab Character. Title for the Y-axis (default: \code{NULL}).
-#' @param xlab Character. Title for the X-axis (default: \code{"Follow-up Time"}).
+#' @param y_label Character. Title for the Y-axis (default: \code{NULL}).
+#' @param x_label Character. Title for the X-axis (default: \code{"Follow-up Time"}).
 #' @param width Numeric. Plot width in inches (default: \code{NULL}).
 #' @param height Numeric. Plot height in inches (default: \code{NULL}).
 #' @param max_features Numeric. Max features to plot (default: \code{NULL}).
@@ -2393,10 +2393,10 @@ plot_lineplot_score <- function(data, palette = c("#1A9850", "#D73027"), outpref
 #' @importFrom rlang .data
 #' @importFrom dplyr %>%
 #' @export
-plot_scatter <- function(data, signature = NULL, os_col = "OS", time_col = "OS.time", outprefix = NULL,
+plot_scatter <- function(data, signature = NULL, os_col = "OS", time_col = "OS.time", output_prefix = NULL,
                          theme = theme_clinprog(), exclude_cols = c("OS", "OS.time", "score", "score_group"),
                          palette = c("#1A9850", "#D73027"), add_stat = TRUE, max_features = NULL,
-                         norm_exp = FALSE, width = NULL, height = NULL, ylab = NULL, xlab = "Followup",
+                         norm_exp = FALSE, width = NULL, height = NULL, y_label = NULL, x_label = "Followup",
                          individual = FALSE) {
 
   log_message("Building feature expression vs follow-up time scatter plots...")
@@ -2440,8 +2440,8 @@ plot_scatter <- function(data, signature = NULL, os_col = "OS", time_col = "OS.t
   if (!inherits(theme, "theme")) {log_stop("'theme' must be a valid ggplot2 theme object")}
 
   # Validates labels for the axis
-  if (!is.null(ylab) && (!is.character(ylab) || length(ylab) != 1)) {log_stop("'ylab' must be a single character string or NULL")}
-  if (!is.character(xlab) || length(xlab) != 1) {log_stop("'xlab' must be a single character string")}
+  if (!is.null(y_label) && (!is.character(y_label) || length(y_label) != 1)) {log_stop("'y_label' must be a single character string or NULL")}
+  if (!is.character(x_label) || length(x_label) != 1) {log_stop("'x_label' must be a single character string")}
 
   # Validates plot sizes
   if (!is.null(width) && (!is.numeric(width) || length(width) != 1 || width <= 0)) {log_stop("'width' must be a single positive numeric value or NULL")}
@@ -2456,19 +2456,19 @@ plot_scatter <- function(data, signature = NULL, os_col = "OS", time_col = "OS.t
     }
   }
 
-  # Validates outprefix
-  if (!is.null(outprefix))
+  # Validates output_prefix
+  if (!is.null(output_prefix))
   {
-    if (!is.character(outprefix) || length(outprefix) != 1)
+    if (!is.character(output_prefix) || length(output_prefix) != 1)
     {
-      log_stop("'outprefix' must be NULL or a single character string")
+      log_stop("'output_prefix' must be NULL or a single character string")
     }
   }
 
-  # Cross-validation: individual only makes sense with outprefix
-  if (individual && is.null(outprefix))
+  # Cross-validation: individual only makes sense with output_prefix
+  if (individual && is.null(output_prefix))
   {
-    log_warning("'individual = TRUE' requires 'outprefix' to be provided. Ignoring 'individual'.")
+    log_warning("'individual = TRUE' requires 'output_prefix' to be provided. Ignoring 'individual'.")
     individual <- FALSE
   }
 
@@ -2516,9 +2516,9 @@ plot_scatter <- function(data, signature = NULL, os_col = "OS", time_col = "OS.t
   if (length(gene_cols) == 0) {log_stop("No valid numeric feature columns remaining to plot.")}
 
   # Defines Y-axis label if NULL
-  if (is.null(ylab))
+  if (is.null(y_label))
   {
-    ylab <- if (norm_exp) "log2(Expression + 1)" else "Expression"
+    y_label <- if (norm_exp) "log2(Expression + 1)" else "Expression"
   }
 
   # List to store generated plots
@@ -2573,7 +2573,7 @@ plot_scatter <- function(data, signature = NULL, os_col = "OS", time_col = "OS.t
       ggplot2::geom_smooth(method = "lm", formula = y ~ x, se = FALSE, linewidth = 0.8) +
       ggplot2::scale_color_manual(values = color_map) +
       ggplot2::facet_grid(~ .data$OS_Group, scales = "free_x") +
-      ggplot2::labs(x = xlab, y = ylab, title = gene, subtitle = subtitle_text) + theme +
+      ggplot2::labs(x = x_label, y = y_label, title = gene, subtitle = subtitle_text) + theme +
       ggplot2::theme(legend.position = "none",
                      axis.title = ggplot2::element_text(face = "plain", colour = "black", size = 12),
                      axis.text = ggplot2::element_text(face = "plain", colour = "black", size = 12),
@@ -2604,9 +2604,9 @@ plot_scatter <- function(data, signature = NULL, os_col = "OS", time_col = "OS.t
   # Combines plots into grid
   combined_plot <- patchwork::wrap_plots(plot_list, ncol = ncol_plot)
 
-  # Saves PDF if outprefix is passed
-  if (!is.null(outprefix)) {
-    grDevices::pdf(file = paste0(outprefix, "_feature_scatter.pdf"), width = width, height = height)
+  # Saves PDF if output_prefix is passed
+  if (!is.null(output_prefix)) {
+    grDevices::pdf(file = paste0(output_prefix, "_feature_scatter.pdf"), width = width, height = height)
     on.exit(grDevices::dev.off(), add = TRUE)
     print(combined_plot)
 
@@ -2622,7 +2622,7 @@ plot_scatter <- function(data, signature = NULL, os_col = "OS", time_col = "OS.t
 
       for (i in seq_along(plot_list))
       {
-        fname_i <- paste0(outprefix, "_feature_scatter_", safe_names[i], ".pdf")
+        fname_i <- paste0(output_prefix, "_feature_scatter_", safe_names[i], ".pdf")
         ggplot2::ggsave(filename = fname_i, plot = plot_list[[i]], device = "pdf",
                         width = ind_width, height = ind_height)
       }
@@ -2637,33 +2637,33 @@ plot_scatter <- function(data, signature = NULL, os_col = "OS", time_col = "OS.t
 #' @description Creates a swimmer plot (a.k.a. swimlane plot) where each horizontal bar represents one patient.
 #' The bar length corresponds to the follow-up time (from time = 0 up to the observed \code{time_col}), and the
 #' bar color encodes whether the patient's clinprog score is below or equal (low) or strictly above (high) the
-#' specified \code{cutoff}. At the end of each bar, a symbol indicates the patient's status at last follow-up:
+#' specified \code{score_cutoff_value}. At the end of each bar, a symbol indicates the patient's status at last follow-up:
 #' a circle for alive/censored and a triangle for dead/event (shapes are configurable).
 #'
 #' @param data Data.frame containing clinical/survival information. Must contain at least the columns
 #' referenced by \code{group_col}, \code{score_col}, \code{os_col}, and \code{time_col}.
-#' @param cutoff Numeric. Cutoff used to dichotomize the score into \code{"Low"} and \code{"High"}.
+#' @param score_cutoff_value Numeric. Cutoff used to dichotomize the score into \code{"Low"} and \code{"High"}.
 #' @param group_col Character. Column name with the dichotomized score group. Validated for existence, but the
-#' actual coloring is derived from \code{score_col} and \code{cutoff} (default: \code{"score_group"}).
+#' actual coloring is derived from \code{score_col} and \code{score_cutoff_value} (default: \code{"score_group"}).
 #' @param score_col Character. Column name with the numeric score (default: \code{"score"}). Used together with
-#' \code{cutoff} to define the Low/High color group.
+#' \code{score_cutoff_value} to define the Low/High color group.
 #' @param os_col Character. Column name for OS status (default: \code{"OS"}). Values are expected to be
 #' 0/1 (0 = Alive/censored, 1 = Dead/event).
 #' @param time_col Character. Column name for follow-up time (default: \code{"OS.time"}).
 #' @param id_col Character or \code{NULL}. Column name used as patient ID for the Y axis. If \code{NULL} (default),
 #' row names are used when they differ from the default integer sequence; otherwise an internal index is generated.
-#' @param outprefix Character. Output prefix for saving the plot (optional).
+#' @param output_prefix Character. Output prefix for saving the plot (optional).
 #' If \code{NULL}, the plot is not written to disk.
 #' @param palette Character vector of length 2.
-#' Colors for below/equal and above cutoff (default: \code{c("#1A9850", "#D73027")}).
-#' @param ylab Character. Title for the Y-axis (default: \code{"Patients"}).
-#' @param xlab Character. Title for the X-axis (default: \code{"Follow-up time"}).
+#' Colors for below/equal and above score_cutoff_value (default: \code{c("#1A9850", "#D73027")}).
+#' @param y_label Character. Title for the Y-axis (default: \code{"Patients"}).
+#' @param x_label Character. Title for the X-axis (default: \code{"Follow-up time"}).
 #' @param title Character. Plot title (default: \code{NULL}).
-#' @param legend.title Character. Title for the color legend (default: \code{"Score cutoff"}).
+#' @param legend_title Character. Title for the color legend (default: \code{"Score score_cutoff_value"}).
 #' @param theme A ggplot2 theme object. Defaults to \code{theme_clinprog()}.
 #' @param width Numeric. Plot width in inches (default: \code{8}).
 #' @param height Numeric. Plot height in inches (default: \code{6}).
-#' @param show.labels Logical or character vector. If \code{NULL} (default) or \code{FALSE}, no patient labels are
+#' @param show_labels Logical or character vector. If \code{NULL} (default) or \code{FALSE}, no patient labels are
 #' shown on the Y axis. If \code{TRUE}, all patients are labeled. If a character vector, only the matching
 #' patient IDs are labeled (others are blank).
 #' @param sort_by Character. Order patients along the Y axis by follow-up \code{"time"} (default),
@@ -2681,10 +2681,10 @@ plot_scatter <- function(data, signature = NULL, os_col = "OS", time_col = "OS.t
 #' @return A \code{ggplot} object.
 #' @importFrom rlang .data
 #' @export
-plot_swimmer <- function(data, cutoff, group_col = "score_group", score_col = "score", os_col = "OS",
-                         time_col = "OS.time", id_col = NULL, outprefix = NULL, palette = c("#1A9850", "#D73027"),
-                         ylab = "Patients", xlab = "Follow-up time", title = NULL, legend.title = "Score cutoff",
-                         theme = theme_clinprog(), width = 8, height = 6, show.labels = NULL,
+plot_swimmer <- function(data, score_cutoff_value, group_col = "score_group", score_col = "score", os_col = "OS",
+                         time_col = "OS.time", id_col = NULL, output_prefix = NULL, palette = c("#1A9850", "#D73027"),
+                         y_label = "Patients", x_label = "Follow-up time", title = NULL, legend_title = "Score cutoff",
+                         theme = theme_clinprog(), width = 8, height = 6, show_labels = NULL,
                          sort_by = c("time", "score", "none"), time_cutoff = NULL, facet_by = NULL, alive_shape = 16,
                          dead_shape = 17, alive_color = "#2C7FB8", dead_color = "#F28E2B",
                          point_size = 1, bar_height = 0.7, show_legend = TRUE) {
@@ -2709,9 +2709,9 @@ plot_swimmer <- function(data, cutoff, group_col = "score_group", score_col = "s
   if (!is.numeric(data[[score_col]])) {log_stop(paste0("Column '", score_col, "' must be numeric."))}
   if (!is.numeric(data[[time_col]])) {log_stop(paste0("Column '", time_col, "' must be numeric."))}
 
-  # Validates cutoff
-  if (missing(cutoff) || is.null(cutoff)) {log_stop("'cutoff' must be provided (numeric scalar).")}
-  if (!is.numeric(cutoff) || length(cutoff) != 1 || !is.finite(cutoff)) {log_stop("'cutoff' must be a single finite numeric value")}
+  # Validates score_cutoff_value
+  if (missing(score_cutoff_value) || is.null(score_cutoff_value)) {log_stop("'score_cutoff_value' must be provided (numeric scalar).")}
+  if (!is.numeric(score_cutoff_value) || length(score_cutoff_value) != 1 || !is.finite(score_cutoff_value)) {log_stop("'score_cutoff_value' must be a single finite numeric value")}
 
   # Validates palette
   if (!is.character(palette) || length(palette) < 2) {log_stop("'palette' must be a character vector with at least 2 colors")}
@@ -2721,12 +2721,12 @@ plot_swimmer <- function(data, cutoff, group_col = "score_group", score_col = "s
   if (!inherits(theme, "theme")) {log_stop("'theme' must be a valid ggplot2 theme object")}
 
   # Validates labels
-  if (!is.null(ylab) && (!is.character(ylab) || length(ylab) != 1)) {log_stop("'ylab' must be NULL or a single character string")}
-  if (!is.null(xlab) && (!is.character(xlab) || length(xlab) != 1)) {log_stop("'xlab' must be NULL or a single character string")}
+  if (!is.null(y_label) && (!is.character(y_label) || length(y_label) != 1)) {log_stop("'y_label' must be NULL or a single character string")}
+  if (!is.null(x_label) && (!is.character(x_label) || length(x_label) != 1)) {log_stop("'x_label' must be NULL or a single character string")}
   if (!is.null(title) && (!is.character(title) || length(title) != 1)) {log_stop("'title' must be NULL or a single character string")}
-  if (!is.null(legend.title) && (!is.character(legend.title) || length(legend.title) != 1))
+  if (!is.null(legend_title) && (!is.character(legend_title) || length(legend_title) != 1))
   {
-    log_stop("'legend.title' must be NULL or a single character string")
+    log_stop("'legend_title' must be NULL or a single character string")
   }
 
   # Validates plot sizes
@@ -2748,7 +2748,7 @@ plot_swimmer <- function(data, cutoff, group_col = "score_group", score_col = "s
   }
   if (!is.logical(show_legend) || length(show_legend) != 1 || is.na(show_legend)) {log_stop("'show_legend' must be TRUE or FALSE")}
 
-  # Validates optional time cutoff
+  # Validates optional time score_cutoff_value
   if (!is.null(time_cutoff))
   {
     if (!is.numeric(time_cutoff) || length(time_cutoff) != 1 || !is.finite(time_cutoff))
@@ -2771,24 +2771,24 @@ plot_swimmer <- function(data, cutoff, group_col = "score_group", score_col = "s
     if (!id_col %in% colnames(data)) {log_stop(paste0("'id_col' column '", id_col, "' not found in data."))}
   }
 
-  # Validates show.labels
-  if (!is.null(show.labels) && !is.logical(show.labels) && !is.character(show.labels))
+  # Validates show_labels
+  if (!is.null(show_labels) && !is.logical(show_labels) && !is.character(show_labels))
   {
-    log_stop("'show.labels' must be NULL, TRUE/FALSE, or a character vector of patient IDs")
+    log_stop("'show_labels' must be NULL, TRUE/FALSE, or a character vector of patient IDs")
   }
-  if (is.logical(show.labels) && length(show.labels) != 1) {log_stop("'show.labels' must be a single logical value")}
-  if (is.character(show.labels) && length(show.labels) == 0) {log_stop("'show.labels' character vector must not be empty")}
+  if (is.logical(show_labels) && length(show_labels) != 1) {log_stop("'show_labels' must be a single logical value")}
+  if (is.character(show_labels) && length(show_labels) == 0) {log_stop("'show_labels' character vector must not be empty")}
 
   # Cross-validations
   n_patients_check <- nrow(data)
-  if (!is.null(facet_by) && isTRUE(show.labels))
+  if (!is.null(facet_by) && isTRUE(show_labels))
   {
-    log_warning("Combining 'facet_by' with 'show.labels = TRUE' may produce crowded Y axes. ",
-                "Consider passing a subset of IDs to 'show.labels'.")
+    log_warning("Combining 'facet_by' with 'show_labels = TRUE' may produce crowded Y axes. ",
+                "Consider passing a subset of IDs to 'show_labels'.")
   }
-  if (is.null(facet_by) && isTRUE(show.labels) && n_patients_check > 50)
+  if (is.null(facet_by) && isTRUE(show_labels) && n_patients_check > 50)
   {
-    log_warning("Showing labels for ", n_patients_check, " patients may be unreadable. Consider subsetting via 'show.labels'.")
+    log_warning("Showing labels for ", n_patients_check, " patients may be unreadable. Consider subsetting via 'show_labels'.")
   }
   if (!is.null(time_cutoff))
   {
@@ -2819,13 +2819,13 @@ plot_swimmer <- function(data, cutoff, group_col = "score_group", score_col = "s
     temp_df$.patient_id <- paste0(temp_df$.patient_id, "_", seq_len(nrow(temp_df)))
   }
 
-  # Defines Low/High group based on cutoff and score_col
-  temp_df$.score_group <- ifelse(temp_df[[score_col]] > cutoff, "High", "Low")
+  # Defines Low/High group based on score_cutoff_value and score_col
+  temp_df$.score_group <- ifelse(temp_df[[score_col]] > score_cutoff_value, "High", "Low")
   temp_df$.score_group <- factor(temp_df$.score_group, levels = c("Low", "High"))
 
   if (length(unique(temp_df$.score_group)) < 2)
   {
-    log_warning("All patients fall in the same score group given the provided 'cutoff'. Only one color will appear.")
+    log_warning("All patients fall in the same score group given the provided 'score_cutoff_value'. Only one color will appear.")
   }
 
   temp_df$.status <- factor(temp_df[[os_col]], levels = c(0, 1), labels = c("Alive", "Dead"))
@@ -2844,20 +2844,20 @@ plot_swimmer <- function(data, cutoff, group_col = "score_group", score_col = "s
   all_levels <- levels(temp_df$.patient_factor)
   label_levels <- stats::setNames(rep("", length(all_levels)), all_levels)
 
-  if (is.null(show.labels) || (is.logical(show.labels) && isFALSE(show.labels))) {
+  if (is.null(show_labels) || (is.logical(show_labels) && isFALSE(show_labels))) {
     show_labels_flag <- FALSE
-  } else if (is.logical(show.labels) && isTRUE(show.labels)) {
+  } else if (is.logical(show_labels) && isTRUE(show_labels)) {
     label_levels[] <- all_levels
     show_labels_flag <- TRUE
-  } else if (is.character(show.labels)) {
-    valid_ids <- intersect(show.labels, all_levels)
+  } else if (is.character(show_labels)) {
+    valid_ids <- intersect(show_labels, all_levels)
     if (length(valid_ids) == 0) {
-      log_warning("None of the IDs in 'show.labels' matched patient IDs. No labels will be shown.")
+      log_warning("None of the IDs in 'show_labels' matched patient IDs. No labels will be shown.")
       show_labels_flag <- FALSE
     } else {
-      if (length(valid_ids) < length(show.labels)) {
-        unmatched <- setdiff(show.labels, valid_ids)
-        log_warning("Some IDs in 'show.labels' did not match any patient: ", paste(unmatched, collapse = ", "))
+      if (length(valid_ids) < length(show_labels)) {
+        unmatched <- setdiff(show_labels, valid_ids)
+        log_warning("Some IDs in 'show_labels' did not match any patient: ", paste(unmatched, collapse = ", "))
       }
       label_levels[valid_ids] <- valid_ids
       show_labels_flag <- TRUE
@@ -2878,9 +2878,9 @@ plot_swimmer <- function(data, cutoff, group_col = "score_group", score_col = "s
                                              fill = .data$.score_group)) + ggplot2::geom_rect(color = NA) +
     ggplot2::geom_point(ggplot2::aes(x = .data$.time, y = as.numeric(.data$.patient_factor), color = .data$.status,
                                      shape = .data$.status), size = point_size, stroke = 0.3) +
-    ggplot2::scale_fill_manual(values = color_map, name = legend.title,
-                               labels = c("Low"  = paste0("Low (<= ", round(cutoff, 4), ")"),
-                                          "High" = paste0("High (> ",  round(cutoff, 4), ")"))) +
+    ggplot2::scale_fill_manual(values = color_map, name = legend_title,
+                               labels = c("Low"  = paste0("Low (<= ", round(score_cutoff_value, 4), ")"),
+                                          "High" = paste0("High (> ",  round(score_cutoff_value, 4), ")"))) +
     ggplot2::scale_color_manual(values = status_color_map, name = "Status",
                                 labels = c("Alive" = "Alive / Censored", "Dead" = "Dead / Event")) +
     ggplot2::scale_shape_manual(values = shape_map, name = "Status",
@@ -2889,7 +2889,7 @@ plot_swimmer <- function(data, cutoff, group_col = "score_group", score_col = "s
     ggplot2::guides(
       fill  = ggplot2::guide_legend(override.aes = list(shape = 22, color = NA, size = 3, stroke = 0), order = 1),
       color = ggplot2::guide_legend(override.aes = list(shape = c(alive_shape, dead_shape), size = 3), order = 2),
-      shape = "none") + ggplot2::labs(x = xlab, y = ylab, title = title)
+      shape = "none") + ggplot2::labs(x = x_label, y = y_label, title = title)
 
   # Y-axis: labels & breaks depend on facet presence
   if (is.null(facet_by)) {
@@ -2929,10 +2929,10 @@ plot_swimmer <- function(data, cutoff, group_col = "score_group", score_col = "s
   }
 
   # Saves if requested
-  if (!is.null(outprefix))
+  if (!is.null(output_prefix))
   {
-    if (!is.character(outprefix) || length(outprefix) != 1) {log_stop("'outprefix' must be a single character string")}
-    fname <- paste0(outprefix, "_swimmer_plot.pdf")
+    if (!is.character(output_prefix) || length(output_prefix) != 1) {log_stop("'output_prefix' must be a single character string")}
+    fname <- paste0(output_prefix, "_swimmer_plot.pdf")
     ggplot2::ggsave(filename = fname, plot = p, device = "pdf", width = width, height = height)
   }
 

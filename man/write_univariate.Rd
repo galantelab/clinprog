@@ -4,7 +4,7 @@
 \alias{write_univariate}
 \title{Export clinprog univariate survival results to file}
 \usage{
-write_univariate(x, file, sep = "\\t", row.names = FALSE, quote = FALSE, ...)
+write_univariate(x, file, sep = "\\t", row_names = FALSE, quote = FALSE, ...)
 }
 \arguments{
 \item{x}{Either:
@@ -18,7 +18,7 @@ write_univariate(x, file, sep = "\\t", row.names = FALSE, quote = FALSE, ...)
 
 \item{sep}{Field separator (default: \code{tab}).}
 
-\item{row.names}{Logical. Whether to write row names (default: \code{FALSE}).}
+\item{row_names}{Logical. Whether to write row names (default: \code{FALSE}).}
 
 \item{quote}{Logical. Whether to quote strings (default: \code{FALSE}).}
 

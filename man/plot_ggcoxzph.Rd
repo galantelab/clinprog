@@ -11,12 +11,12 @@ plot_ggcoxzph(
   df = 4,
   nsmo = 40,
   var,
-  point.col = "red",
-  point.size = 1,
-  point.shape = 19,
-  point.alpha = 1,
+  point_col = "red",
+  point_size = 1,
+  point_shape = 19,
+  point_alpha = 1,
   caption = NULL,
-  ggtheme = survminer::theme_survminer(),
+  gg_theme = survminer::theme_survminer(),
   ...
 )
 }
@@ -33,17 +33,17 @@ plot_ggcoxzph(
 
 \item{var}{Variables to plot. Can be numeric indices or variable names.}
 
-\item{point.col}{Point color for residuals (default: \code{"red"}).}
+\item{point_col}{Point color for residuals (default: \code{"red"}).}
 
-\item{point.size}{Numeric. Point size (default: \code{1}).}
+\item{point_size}{Numeric. Point size (default: \code{1}).}
 
-\item{point.shape}{Numeric. Point shape (default: \code{19}).}
+\item{point_shape}{Numeric. Point shape (default: \code{19}).}
 
-\item{point.alpha}{Numeric. Point transparency (default: \code{1}).}
+\item{point_alpha}{Numeric. Point transparency (default: \code{1}).}
 
 \item{caption}{Optional plot caption.}
 
-\item{ggtheme}{ggplot2 theme object (default: \code{survminer::theme_survminer()}).}
+\item{gg_theme}{ggplot2 theme object (default: \code{survminer::theme_survminer()}).}
 
 \item{...}{Additional arguments passed to \code{ggpubr::ggpar()}.}
 }

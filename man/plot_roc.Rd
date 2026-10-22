@@ -4,7 +4,7 @@
 \alias{plot_roc}
 \title{Generate ROC curve plot for clinprog scores}
 \usage{
-plot_roc(x, outprefix = NULL, width = 7, height = 6)
+plot_roc(x, output_prefix = NULL, width = 7, height = 6)
 }
 \arguments{
 \item{x}{Either:
@@ -13,7 +13,7 @@ plot_roc(x, outprefix = NULL, width = 7, height = 6)
 \item An \code{optimal.cutpoints} object
 }}
 
-\item{outprefix}{Character. Output prefix for saving the plot (optional).
+\item{output_prefix}{Character. Output prefix for saving the plot (optional).
 If \code{NULL}, the plot is not written to disk.}
 
 \item{width}{Numeric. Plot width in inches (Default: \code{7}).}

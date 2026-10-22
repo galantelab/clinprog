@@ -6,7 +6,7 @@
 \usage{
 new_clinprog_survival(
   signature,
-  score_cutoff,
+  score_cutoff_value,
   expression_data,
   survival,
   ph_result,
@@ -25,7 +25,7 @@ new_clinprog_survival(
 \item \code{coefficient}: Numeric coefficients associated with each feature
 }}
 
-\item{score_cutoff}{Numeric cutoff used to define low/high clinprog score groups.}
+\item{score_cutoff_value}{Numeric cutoff used to define low/high clinprog score groups.}
 
 \item{expression_data}{A data.frame containing survival variables, scores, and expression data.}
 
@@ -49,7 +49,7 @@ new_clinprog_survival(
 An object of class \code{"clinprog_survival"} containing:
 \itemize{
 \item \code{signature}: clinprog molecular signature
-\item \code{score_cutoff}: Numeric score cutoff
+\item \code{score_cutoff_value}: Numeric score cutoff
 \item \code{expression_data}: Expression and survival data
 \item \code{clinical_data}: Clinical data (if available)
 \item \code{survival}: Survival analysis results

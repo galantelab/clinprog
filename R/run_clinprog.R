@@ -3,59 +3,60 @@
 #' @description
 #' Main function for finding a molecular signature using bootstrap resampling and penalized (LASSO) Cox regression.
 #'
-#' @param data Data.frame. A data.frame containing survival data
-#' (e.g., OS, OS.time) and expression values (genes or transcripts).
-#' @param outprefix Character. Output prefix used for generated files (Default: \code{"clinprog"}).
-#' @param norm_exp Logical. If \code{TRUE}, applies a log2(expression + 1)
-#'   transformation to expression data before downstream filtering and regression
-#'   (Default: \code{FALSE}).
+#' @param data Character or data.frame. A data.frame or a path to a tab-separated file containing survival data
+#'   (e.g., OS, OS.time) and expression values (genes or transcripts). Example: \code{"myPATH/myTPM.tsv"}.
+#' @param output_prefix Character. Output prefix used for generated files (Default: \code{"clinprog"}).
+#' @param norm_exp Logical. If \code{TRUE}, log2(exp+1) transforms expression data (Default: \code{FALSE}).
 #' @param bootstrap Integer. Number of bootstrap iterations (Default: \code{1}).
-#' @param groupsize Integer. Number of genes/transcripts sampled per iteration (Default: \code{10}).
-#' @param percentagefilter Numeric. Correlation filter threshold (0–1; Default: \code{0.3}).
-#' @param variancefilter Numeric. Variance filter threshold (0–1; Default: \code{0.01}).
-#' @param followup Numeric. Maximum followup time (Default: \code{NULL}).
-#' @param type Character. Feature type: either \code{"gene"} (default) or \code{"transcript"}.
-#' @param min_signature_size Integer or NULL. Minimum number of features to
-#'   retain when searching for a smaller prognostic signature. If \code{NULL},
-#'   no minimum-signature search is performed (Default: \code{NULL}).
-#' @param min_signature_cutoff Character or NULL. Score cutoff strategy used
-#'   during the minimum-signature search. Must be one of \code{"median"},
-#'   \code{"mean"}, \code{"signal"}, or \code{"roc"}. If
-#'   \code{min_signature_size} is provided and this argument is \code{NULL},
-#'   \code{"median"} is used (Default: \code{NULL}).
-#' @param force Logical. If \code{TRUE}, overrides filtering steps related to survival assumptions (Default: \code{FALSE}).
-#' @param plots Logical. If \code{TRUE}, generates histogram and lollipop plots (Default: \code{FALSE}).
+#' @param group_size Integer. Number of genes/transcripts sampled per iteration (Default: \code{10}).
+#' @param percentage_filter Numeric. Correlation filter threshold (0–1; Default: \code{0.3}).
+#' @param variance_filter Numeric. Variance filter threshold (0–1; Default: \code{0.01}).
+#' @param max_follow_up Numeric or \code{NULL}. Maximum max_follow_up time (Default: \code{NULL}).
+#' @param feature_type Character. Feature feature_type: either \code{"gene"} (default) or \code{"transcript"}.
+#' @param min_signature_size Integer or \code{NULL} (disabled). If provided, after the bootstrap/Cox LASSO regression
+#'   step, searches for the smallest signature (top-ranked features by absolute coefficient) that still yields a
+#'   significant univariate log-rank test on the same dataset. The search starts at \code{min_signature_size} features
+#'   and increases one feature at a time until the log-rank p-value drops below \code{0.05}.
+#' @param min_signature_cutoff Character or \code{NULL} (default). Strategy used to split scores into low/high
+#'   groups during the minimum signature search. One of \code{"median"}, \code{"mean"}, \code{"signal"}, or
+#'   \code{"roc"}.
+#' @param skip_survival_checks Logical. If \code{TRUE}, overrides filtering steps related to survival assumptions (Default: \code{FALSE}).
+#' @param save_plots Logical. If \code{TRUE}, generates histogram and lollipop plots (Default: \code{FALSE}).
 #'
 #'   These can also be generated later using \code{plot_histogram()} and \code{plot_lollipop()}.
-#' @param table Logical. If \code{TRUE}, writes signature table to disk (Default: \code{FALSE}).
+#' @param save_table Logical. If \code{TRUE}, writes signature table to disk (Default: \code{FALSE}).
 #'
 #'   This can also be done later using \code{write_signature()} for the signature file.
-#' @param saveJSON Logical. If \code{TRUE}, saves to disk the metadata in a JSON file (Default: \code{FALSE}).
+#' @param save_json Logical. If \code{TRUE}, saves to disk the metadata in a JSON file (Default: \code{FALSE}).
 #'
 #'   This can also be done later using \code{write_metadata()} for a JSON with metadata.
-#' @param saveRDS Logical. If \code{TRUE}, saves to disk the R object in a RDS file (Default: \code{FALSE}).
+#' @param save_rds Logical. If \code{TRUE}, saves to disk the R object in a RDS file (Default: \code{FALSE}).
 #'
 #'   This can also be done later using \code{write_rds()}.
-#' @param report Logical or character. Whether to generate a final analysis report. Accepted values are:
+#' @param report_format Logical or character. Whether to generate a final analysis report_format. Accepted values are:
 #' \itemize{
-#'   \item \code{FALSE}: Do not generate a report (default).
-#'   \item \code{TRUE}: Generate a PDF report.
-#'   \item \code{"PDF"}: Generate a PDF report.
-#'   \item \code{"HTML"}: Generate an HTML report.
+#'   \item \code{FALSE}: Do not generate a report_format (default).
+#'   \item \code{TRUE}: Generate a PDF report_format.
+#'   \item \code{"PDF"}: Generate a PDF report_format.
+#'   \item \code{"HTML"}: Generate an HTML report_format.
 #' }
 #'
 #'   This can also be done later using \code{write_report()}.
-#' @param log Logical. If \code{TRUE}, writes a minimalist log file tracking the pipeline execution (Default: \code{FALSE}).
-#' @param ncores Integer. Number of CPU cores used for parallel bootstrap regression
+#' @param verbose Integer or Logical. If \code{1} (or \code{TRUE}), prints progress messages to the console. On the
+#'   other hand, if \code{0} (or \code{FALSE}), runs silently (Default: \code{1}).
+#' @param save_log Logical. If \code{TRUE}, writes a minimalist log file tracking the pipeline execution (Default: \code{FALSE}).
+#'   This can also be done later using \code{write_log()}.
+#' @param n_cores Integer. Number of CPU cores used for parallel bootstrap regression
 #'   (Default: \code{1}, i.e. sequential execution).
-#' @param seed Integer. Random seed used for reproducible bootstrap regression
-#'   in \code{run_regression()} (Default: \code{123}).
+#' @param seed Integer or \code{NULL}. Random seed controlling every stochastic step in the pipeline
+#'   (missing-value imputation, bootstrap feature subsampling, and LASSO cross-validation folds), so
+#'   that results are reproducible across runs for the same input and parameters (Default: \code{123}).
 #'
 #' @details
 #' The clinprog pipeline applies a sequence of preprocessing and modeling steps:
 #' \enumerate{
 #'   \item Checking minimum requirements in input dataset and parameters
-#'   \item Max followup definition to control for survival analysis
+#'   \item Max max_follow_up definition to control for survival analysis
 #'   \item Variance filtering to remove low-variance features
 #'   \item Proportional hazards assumption testing (Schoenfeld residuals)
 #'   \item Optional simplified regression (if dataset is small)
@@ -63,6 +64,7 @@
 #'   \item Features (pairs) correlation filtering for every iteration
 #'   \item Custom coefficient filtering for genes/transcripts
 #'   \item Aggregation and ranking of selected features
+#'   \item Optional search for the most parsimonious signature with significant results (top-k prefix search)
 #' }
 #'
 #' The final signature consists of features with stable and non-zero coefficients across bootstrap iterations.
@@ -71,28 +73,38 @@
 #' An S3 object of class \code{"clinprog_signature"} containing:
 #' \itemize{
 #'   \item \code{signature}: data.frame with selected features and coefficients
-#'   \item \code{plots}: list of generated plots (if requested)
+#'   \item \code{save_plots}: list of generated plots (if requested)
 #'   \item \code{params}: list of parameters used in the analysis
 #'   \item \code{metadata}: list of metadata information such as timestamp, R version, and clinprog package version
 #'   \item \code{call}: original function call
 #' }
 #'
 #' @note
-#' Runtime may increase substantially with larger values of \code{bootstrap} (e.g., >1000 iterations) in combination with \code{groupsize}.
+#' Runtime may increase substantially with larger values of \code{bootstrap} (e.g., >1000 iterations) in combination with \code{group_size}.
 #'   Large dataset sizes (samples and/or features) may also significantly increase runtime.
 #'
 #'   For exploratory analyses, smaller values are recommended.
 #'   Input data must be properly formatted and free of missing or infinite values after preprocessing steps to avoid errors.
 #'
-#' Change \code{percentagefilter} and \code{variancefilter} parameters to make the filters more or less flexible and,
+#' Set \code{norm_exp} parameter to \code{TRUE} if a log2(expression + 1) transformation on expression data is required.
+#' Otherwise, keep it \code{FALSE}. Log2-transformed expression data are highly recommended for survival analyses.
+#'
+#' Change \code{percentage_filter} and \code{variance_filter} parameters to make the filters more or less flexible and,
 #' as a result, obtaining bigger or smaller signatures.
 #'
-#' Change \code{followup} to adjust the maximum followup. Ideal when time-specific survival analyses are needed.
+#' Change \code{max_follow_up} to adjust the maximum max_follow_up. Ideal when time-specific survival analyses are needed.
 #' For instance, 1-year OS, or 3-year OS, or 5-year OS or even 10-year OS.
 #'
-#' Careful with the \code{type} parameter to get proper results, depending on the input (genes or transcripts).
+#' Careful with the \code{feature_type} parameter to get proper results, depending on the input (genes or transcripts).
 #'
-#' Keeping \code{force = FALSE} parameter is recommended, especially if other endpoints can be evaluated.
+#' Keeping \code{skip_survival_checks = FALSE} parameter is recommended, especially if other endpoints can be evaluated.
+#'
+#' Setting \code{min_signature_size} is useful when the user wants to obtain the smallest signature that still shows a
+#' significant univariate association with survival, trading off statistical power for parsimony. This search uses the
+#' same dataset used to derive the signature, so it should be interpreted as a heuristic rather than a formal validation.
+#'
+#' Set \code{seed} parameter to \code{NULL} to disable seeding and restore the previous (non-reproducible) behavior.
+#' The seed is applied locally and the caller's R session RNG state is restored afterwards.
 #'
 #' @seealso
 #' Project Github repository: \url{https://github.com/galantelab/clinprog} \cr
@@ -101,29 +113,33 @@
 #'
 #' Other functions: \code{\link{plot_histogram}}, \code{\link{plot_lollipop}}, \code{\link{read_table}},
 #' \code{\link{read_rds}}, \code{\link{write_rds}}, \code{\link{write_metadata}},
-#' \code{\link{write_signature}}, and \code{\link{write_report}}
+#' \code{\link{write_signature}}, \code{\link{write_report}}, and \code{\link{write_log}}.
 #'
 #' @examples
 #' \dontrun{
 #' # Example usage
 #' result <- run_regression(
-#'   data = expression_data,
-#'   outprefix = "my_analysis",
+#'   data = "expression_data.tsv",
+#'   output_prefix = "my_analysis",
+#'   norm_exp = TRUE,
 #'   bootstrap = 100,
-#'   groupsize = 10,
-#'   percentagefilter = 0.3,
-#'   variancefilter = 0.01,
-#'   followup = NULL,
-#'   type = "gene",
-#'   force = TRUE,
-#'   plots = TRUE,
-#'   table = TRUE,
-#'   saveJSON = TRUE,
-#'   saveRDS = TRUE,
-#'   report = TRUE,
-#'   log = TRUE,
-#'   ncores = 4,
-#'   seed = 123
+#'   group_size = 10,
+#'   percentage_filter = 0.3,
+#'   variance_filter = 0.01,
+#'   max_follow_up = NULL,
+#'   feature_type = "gene",
+#'   min_signature_size = NULL,
+#'   min_signature_cutoff = NULL,
+#'   skip_survival_checks = TRUE,
+#'   save_plots = TRUE,
+#'   save_table = TRUE,
+#'   save_json = TRUE,
+#'   save_rds = TRUE,
+#'   report_format = TRUE,
+#'   verbose = 1,
+#'   n_cores = 4,
+#'   seed = 123,
+#'   save_log = TRUE
 #' )
 #'
 #' # Access signature through custom clinprog S3 methods
@@ -147,79 +163,86 @@
 #' write_signature(result, "my_analysis_signature.txt")
 #'
 #' # Export metadata manually
-#' write_metadata(module = "run_regression", outprefix = outprefix,
-#'                       parameters = list(...), command = "none")
+#' write_metadata(module = "run_regression", output_prefix = output_prefix,
+#'                parameters = list(...), command = "none")
 #'
 #' # Save result in RDS
 #' write_rds(object = result, file = "my_analysis.rds")
 #'
-#' # Generate final report
-#' write_report(object = result, format = report, file = "my_analysis_report.pdf")
+#' # Save LOG file
+#' write_log(file = "my_analysis.log")
+#'
+#' # Generate final report_format
+#' write_report(object = result, format = report_format, file = "my_analysis_report.pdf")
+#'
+#' # Search for the smallest signature with significant univariate survival
+#' result_min <- run_regression(
+#'   data = "expression_data.tsv",
+#'   output_prefix = "my_analysis_min",
+#'   bootstrap = 100,
+#'   min_signature_size = 2,
+#'   min_signature_cutoff = "roc",
+#'   skip_survival_checks = TRUE,
+#'   n_cores = 4,
+#'   seed = 123
+#' )
 #' }
 #'
 #' @export
 run_regression <- function(data,
-                           outprefix = "clinprog",
+                           output_prefix = "clinprog",
                            norm_exp = FALSE,
                            bootstrap = 1,
-                           groupsize = 10,
-                           percentagefilter = 0.3,
-                           variancefilter = 0.01,
-                           followup = NULL,
-                           type = "gene",
+                           group_size = 10,
+                           percentage_filter = 0.3,
+                           variance_filter = 0.01,
+                           max_follow_up = NULL,
+                           feature_type = "gene",
                            min_signature_size = NULL,
                            min_signature_cutoff = NULL,
-                           force = FALSE,
-                           plots = FALSE,
-                           table = FALSE,
-                           saveJSON = FALSE,
-                           saveRDS = FALSE,
-                           report = FALSE,
+                           skip_survival_checks = FALSE,
+                           save_plots = FALSE,
+                           save_table = FALSE,
+                           save_json = FALSE,
+                           save_rds = FALSE,
+                           report_format = FALSE,
                            verbose = 1,
-                           log = FALSE,
-                           ncores = 1,
-                           seed = 123)
+                           n_cores = 1,
+                           seed = 123,
+                           save_log = FALSE)
 {
   # Start time counter
   start_time <- Sys.time()
 
   # Checks LOG argument
-  if (!is.logical(log) || length(log) != 1) {log_stop("Argument 'log' must be a boolean [TRUE or FALSE]")}
-
-  # Checks output prefix argument
-  if (!is.character(outprefix) || length(outprefix) != 1) {log_stop("Argument 'outprefix' must be a string")}
+  if (!is.logical(save_log) || length(save_log) != 1) {log_stop("Argument 'save_log' must be a boolean [TRUE or FALSE]")}
 
   # Checks verbosity and updates environment
-  if (length(verbose) != 1 ||
-      is.na(verbose) ||
-      !verbose %in% c(0, 1, FALSE, TRUE)) {
+  if (!verbose %in% c(0, 1, FALSE, TRUE) || length(verbose) != 1)
+  {
     log_stop("Argument 'verbose' must be 0, 1, FALSE or TRUE")
   }
   .clinprog_env$verbose <- as.logical(verbose)
 
-  # Logging setup - creating
-  start_msg <- paste0(
-    "[", .timestamp(), "] [INFO] clinprog regression log started"
-  )
-  .clinprog_env$log_messages <- c(.clinprog_env$log_messages, start_msg)
+  # Checks output prefix argument
+  if (!is.character(output_prefix) || length(output_prefix) != 1) {log_stop("Argument 'output_prefix' must be a string")}
 
-  if (log) {
-    logfile <- paste0(outprefix, "_regression.log")
+  # Logging setup - creating
+  start_msg <- paste0("[", .timestamp(), "] [INFO] clinprog regression log started")
+  .clinprog_env$log_messages <- c(.clinprog_env$log_messages, start_msg)
+  if (save_log)
+  {
+    logfile <- paste0(output_prefix, "_regression.log")
     .clinprog_env$log_con <- file(logfile, open = "wt")
     writeLines(start_msg, .clinprog_env$log_con)
   }
 
   # Logging setup - closing
   on.exit({
-    finish_msg <- paste0(
-      "[", .timestamp(), "] [INFO] clinprog regression finished"
-    )
-    .clinprog_env$log_messages <- c(
-      .clinprog_env$log_messages, finish_msg
-    )
+    finish_msg <- paste0("[", .timestamp(), "] [INFO] clinprog regression finished")
+    .clinprog_env$log_messages <- c(.clinprog_env$log_messages, finish_msg)
 
-    if (!is.null(.clinprog_env$log_con) &&
-        isOpen(.clinprog_env$log_con)) {
+    if (!is.null(.clinprog_env$log_con) && isOpen(.clinprog_env$log_con)) {
       writeLines(finish_msg, .clinprog_env$log_con)
       close(.clinprog_env$log_con)
       .clinprog_env$log_con <- NULL
@@ -231,94 +254,69 @@ run_regression <- function(data,
 
   # Validates input parameters
   log_message("Validating parameters...")
-  if (!is.logical(norm_exp) || length(norm_exp) != 1) {
-    log_stop("Argument 'norm_exp' must be a boolean [TRUE or FALSE]")
-  }
-  if (!type %in% c("gene", "transcript")) {log_stop("Argument 'type' must be either 'gene' or 'transcript'")}
-  if (!is.null(min_signature_size) &&
-      (!is.numeric(min_signature_size) ||
-       length(min_signature_size) != 1 ||
-       is.na(min_signature_size) ||
-       min_signature_size < 1 ||
-       min_signature_size != as.integer(min_signature_size))) {
-    log_stop(
-      "Argument 'min_signature_size' must be NULL or a single positive integer"
-    )
-  }
-  if (!is.null(min_signature_size)) {
-    min_signature_size <- as.integer(min_signature_size)
-  }
-  if (!is.null(min_signature_cutoff) &&
-      (!is.character(min_signature_cutoff) ||
-       length(min_signature_cutoff) != 1 ||
-       is.na(min_signature_cutoff) ||
-       !tolower(min_signature_cutoff) %in%
-         c("median", "mean", "signal", "roc"))) {
-    log_stop(
-      "Argument 'min_signature_cutoff' must be NULL or one of: ",
-      "'median', 'mean', 'signal', 'roc'"
-    )
-  }
-  if (!is.null(min_signature_cutoff)) {
-    min_signature_cutoff <- tolower(min_signature_cutoff)
-  }
-  if (is.null(min_signature_size) &&
-      !is.null(min_signature_cutoff)) {
-    log_warning(
-      "'min_signature_cutoff' was provided but 'min_signature_size' is NULL. ",
-      "The minimum signature search will not run. Set 'min_signature_size' ",
-      "to enable it."
-    )
-  }
+  if (!feature_type %in% c("gene", "transcript")) {log_stop("Argument 'feature_type' must be either 'gene' or 'transcript'")}
   if (!is.numeric(bootstrap) || length(bootstrap) != 1 || bootstrap < 0 || bootstrap %% 1 != 0)
   {
     log_stop("Argument 'bootstrap' must be an integer")
   }
-  if (!is.numeric(groupsize) || length(groupsize) != 1 || groupsize < 0 || groupsize %% 1 != 0)
+  if (!is.numeric(group_size) || length(group_size) != 1 || group_size < 0 || group_size %% 1 != 0)
   {
-    log_stop("Argument 'groupsize' must be an integer")
+    log_stop("Argument 'group_size' must be an integer")
   }
-  if (!is.numeric(percentagefilter) || length(percentagefilter) != 1 ||
-      percentagefilter <= 0 || percentagefilter > 1)
+  if (!is.numeric(percentage_filter) || length(percentage_filter) != 1 ||
+      percentage_filter <= 0 || percentage_filter > 1)
   {
-    log_stop("Argument 'percentagefilter' must be a positive numeric value in range (0, 1]")
+    log_stop("Argument 'percentage_filter' must be a positive numeric value in range (0, 1]")
   }
-  if (!is.numeric(variancefilter) || length(variancefilter) != 1 ||
-      variancefilter <= 0 || variancefilter > 1)
+  if (!is.numeric(variance_filter) || length(variance_filter) != 1 ||
+      variance_filter <= 0 || variance_filter > 1)
   {
-    log_stop("Argument 'variancefilter' must be a positive numeric value in range (0, 1]")
+    log_stop("Argument 'variance_filter' must be a positive numeric value in range (0, 1]")
   }
-  if (!is.null(followup) && (!is.numeric(followup) || length(followup) != 1 || followup <= 0))
+  if (!is.null(max_follow_up) && (!is.numeric(max_follow_up) || length(max_follow_up) != 1 || max_follow_up <= 0))
   {
-    log_stop("Argument 'followup' must be a positive numeric value")
+    log_stop("Argument 'max_follow_up' must be a positive numeric value")
   }
-  if (!is.logical(force) || length(force) != 1) {log_stop("Argument 'force' must be a boolean [TRUE or FALSE]")}
-  if (!is.logical(table) || length(table) != 1) {log_stop("Argument 'table' must be a boolean [TRUE or FALSE]")}
-  if (!is.logical(saveJSON) || length(saveJSON) != 1) {log_stop("Argument 'saveJSON' must be a boolean [TRUE or FALSE]")}
-  if (!is.logical(saveRDS) || length(saveRDS) != 1) {log_stop("Argument 'saveRDS' must be a boolean [TRUE or FALSE]")}
-  if (!is.logical(plots) || length(plots) != 1) {log_stop("Argument 'plots' must be a boolean [TRUE or FALSE]")}
-  if (!(is.logical(report) || (is.character(report) && length(report) == 1 && toupper(report) %in% c("PDF", "HTML"))))
+  if (!is.logical(norm_exp) || length(norm_exp) != 1) {log_stop("Argument 'norm_exp' must be a boolean [TRUE or FALSE]")}
+  if (!is.null(min_signature_size) && (!is.numeric(min_signature_size) || length(min_signature_size) != 1 ||
+                                       min_signature_size < 1 || min_signature_size %% 1 != 0))
   {
-    log_stop("'report' must be a boolean [TRUE or FALSE] or a character ['PDF' or 'HTML']")
+    log_stop("Argument 'min_signature_size' must be NULL or a single positive integer")
   }
-  log_message("Done.")
-
-  # Validates ncores parameter
-  if (!is.numeric(ncores) || length(ncores) != 1 ||
-      !is.finite(ncores) || ncores < 1 || ncores %% 1 != 0)
+  if (!is.null(min_signature_cutoff)) {
+    min_signature_cutoff <- tolower(min_signature_cutoff)
+  }
+  if (!is.null(min_signature_cutoff) && (!is.character(min_signature_cutoff) || length(min_signature_cutoff) != 1 ||
+                                         !min_signature_cutoff %in% c("median", "mean", "signal", "roc")))
   {
-    log_stop("Argument 'ncores' must be a positive integer")
+    log_stop("Argument 'min_signature_cutoff' must be NULL or one of: 'median', 'mean', 'signal', 'roc'")
   }
-
-  ncores <- as.integer(ncores)
-
-  # Validates seed parameter
-  if (!is.numeric(seed) || length(seed) != 1 ||
-      !is.finite(seed) || seed %% 1 != 0)
+  if (is.null(min_signature_size) && !is.null(min_signature_cutoff))
+  {
+    log_warning("'min_signature_cutoff' was provided but 'min_signature_size' is NULL. The minimum signature search ",
+                "will not run. Set 'min_signature_size' to enable it.")
+  }
+  if (!is.logical(skip_survival_checks) || length(skip_survival_checks) != 1) {log_stop("Argument 'skip_survival_checks' must be a boolean [TRUE or FALSE]")}
+  if (!is.logical(save_table) || length(save_table) != 1) {log_stop("Argument 'save_table' must be a boolean [TRUE or FALSE]")}
+  if (!is.logical(save_json) || length(save_json) != 1) {log_stop("Argument 'save_json' must be a boolean [TRUE or FALSE]")}
+  if (!is.logical(save_rds) || length(save_rds) != 1) {log_stop("Argument 'save_rds' must be a boolean [TRUE or FALSE]")}
+  if (!is.logical(save_plots) || length(save_plots) != 1) {log_stop("Argument 'save_plots' must be a boolean [TRUE or FALSE]")}
+  if (!(is.logical(report_format) || (is.character(report_format) && length(report_format) == 1 && toupper(report_format) %in% c("PDF", "HTML"))))
+  {
+    log_stop("'report_format' must be a boolean [TRUE or FALSE] or a character ['PDF' or 'HTML']")
+  }
+  if (!is.numeric(n_cores) || length(n_cores) != 1 || !is.finite(n_cores) || n_cores < 1 || n_cores %% 1 != 0)
+  {
+    log_stop("Argument 'n_cores' must be a positive integer")
+  }
+  if (!is.numeric(seed) || length(seed) != 1 || !is.finite(seed) || seed %% 1 != 0)
   {
     log_stop("Argument 'seed' must be an integer")
   }
+  log_message("Done.")
 
+  # Get n_cores and seed
+  n_cores <- as.integer(n_cores)
   seed <- as.integer(seed)
 
   # Snapshot the current global RNG state (if any) into old_seed,
@@ -339,7 +337,6 @@ run_regression <- function(data,
   }, add = TRUE)
 
   # Reads INput
-  log_message("Processing expression/survival data...")
   full_data <- data
   colnames(full_data) <- gsub("-", "__", colnames(full_data))
   log_message("Done.")
@@ -349,7 +346,7 @@ run_regression <- function(data,
   colnames(full_data)[1:2] <- c("OS", "OS.time")
   log_message("Done.")
 
-  # Log2(Expression + 1) transformation if requested
+  # Log2(Expression + 1) transforms expression data if requested
   if (norm_exp)
   {
     log_message("Transforming expression data with formula log2(expression + 1)...")
@@ -367,28 +364,28 @@ run_regression <- function(data,
   # OS survival column
   os_values <- full_data[,1]
   if (!is.numeric(os_values)) {log_stop("Column [OS] must be numeric and the first in the table")}
-  if (any(is.na(os_values))) {log_stop("Column [OS] must be the first in the table and contain no missing values")}
+  if (anyNA(os_values)) {log_stop("Column [OS] must be the first in the table and contain no missing values")}
   unique_os <- sort(unique(stats::na.omit(os_values)))
   if (!setequal(unique_os, c(0, 1))) {log_stop("Column [OS] must be the first in the table and contain only binary values: 0 and 1")}
 
   # OS.time survival column
   time_values <- full_data[,2]
   if (!is.numeric(time_values)) {log_stop("Column [OS.time] must be numeric and the second in the table")}
-  if (any(is.na(time_values))) {log_stop("Column [OS.time] must be the second in the table and contain no missing values")}
+  if (anyNA(time_values)) {log_stop("Column [OS.time] must be the second in the table and contain no missing values")}
   if (any(time_values < 0, na.rm = TRUE)) {log_stop("Column [OS.time] must be the second in the table and contain only positive values")}
   log_message("Done.")
 
   # Applies maximum follow-up censoring if requested
-  log_message("Applying maximum followup value...")
-  full_data <- clinprog_followup(data = full_data, followup = followup)
+  log_message("Applying maximum max_follow_up value...")
+  full_data <- clinprog_followup(data = full_data, max_follow_up = max_follow_up)
   log_message("Done.")
 
   # Defines coefficient cutoffs to minimize false positives
-  bar <- if (type == "gene") 0.0035 else 0.011
+  bar <- if (feature_type == "gene") 0.0035 else 0.011
 
   # Variance filter
   log_message("Running variance filter...")
-  full_data <- clinprog_varfun(full_data, variancefilter, force)
+  full_data <- clinprog_varfun(full_data, variance_filter, skip_survival_checks)
   log_message("Done.")
 
   # Schoenfeld tests
@@ -401,13 +398,13 @@ run_regression <- function(data,
   if (!is.data.frame(full_data)) {log_stop("Processed data is not a 'data.frame' anymore")}
   if (nrow(full_data) == 0) {log_stop("No samples remaining after filtering steps")}
   if ((ncol(full_data) - 2) < 1) {log_stop("No features remaining after filtering steps")}
-  num_data <- full_data[, sapply(full_data, is.numeric), drop = FALSE]
-  if (any(!is.finite(as.matrix(num_data)))) {log_stop("Processed data contains invalid values [NA, NaN or Inf]")}
+  num_data <- full_data[, vapply(full_data, is.numeric, FUN.VALUE = logical(1)), drop = FALSE]
+  if (!all(is.finite(as.matrix(num_data)))) {log_stop("Processed data contains invalid values [NA, NaN or Inf]")}
   log_message("Done.")
 
   # Runs simplified regression
   log_message("Checking if simplified regression with no bootstraps is required...")
-  early_signature <- clinprog_feature_check(full_data, groupsize, seed = seed)
+  early_signature <- clinprog_feature_check(full_data, group_size, seed = seed)
   log_message("Done.")
 
   # Decides if user needs to use simplified result or go for the more robust Bootstrap approach
@@ -419,11 +416,11 @@ run_regression <- function(data,
     log_message("Running robust regression with bootstraps...")
     signature <- clinprog_bootstrapfun(
       full_data = full_data,
-      n_boot = bootstrap,
-      group_size = groupsize,
-      cor_threshold = percentagefilter,
+      bootstrap = bootstrap,
+      group_size = group_size,
+      cor_threshold = percentage_filter,
       coef_threshold = bar,
-      ncores = ncores,
+      n_cores = n_cores,
       seed = seed
     )
     log_message("Done.")
@@ -434,7 +431,7 @@ run_regression <- function(data,
   if (!is.data.frame(signature)) {log_stop("signature must be a 'data.frame'")}
   if (nrow(signature) == 0) {log_stop("No features selected in the final signature")}
   if (!all(c("feature", "coefficient") %in% colnames(signature))) {log_stop("signature must contain 'feature' and 'coefficient' columns")}
-  if (any(is.na(signature$coefficient)))
+  if (anyNA(signature$coefficient))
   {
     log_warning("NA values found in coefficients. Removing them...")
     signature <- signature[!is.na(signature$coefficient), ]
@@ -448,44 +445,32 @@ run_regression <- function(data,
   {
     if (is.null(min_signature_cutoff))
     {
-      log_warning(
-        "'min_signature_cutoff' not provided. Using 'median' (default)."
-      )
+      log_warning("'min_signature_cutoff' not provided. Using 'median' (default).")
       cutoff_used <- "median"
     } else {
       cutoff_used <- min_signature_cutoff
     }
-
-    log_message("Searching for minimum prognostic signature...")
-
-    min_signature_result <- clinprog_min_signature(
-      signature = signature,
-      data = full_data,
-      min_size = min_signature_size,
-      score_cutoff = cutoff_used
-    )
-
-    signature <- min_signature_result$signature
-
-    log_message("Done.")
+    min_sig_result <- clinprog_min_signature(signature = signature, data = full_data,
+                                             min_size = min_signature_size, score_cutoff = cutoff_used)
+    signature <- min_sig_result$signature
   }
 
   # Produces histogram and lollipop plots for generated signature
   plot_list <- NULL
-  if (plots)
+  if (save_plots)
   {
     log_message("Making histogram and lollipop plots...")
     plot_list <- list(
-      hist_plot = plot_histogram(signature, outprefix),
-      lolli_plot = plot_lollipop(signature, outprefix))
+      hist_plot = plot_histogram(signature, output_prefix),
+      lolli_plot = plot_lollipop(signature, output_prefix))
     log_message("Done.")
   }
 
   # Writes signature table if requested
-  if (table)
+  if (save_table)
   {
     log_message("Writing signature table...")
-    write_signature(signature, paste0(outprefix, "_signature.txt"))
+    write_signature(signature, paste0(output_prefix, "_signature.txt"))
     log_message("Done.")
   }
 
@@ -497,15 +482,15 @@ run_regression <- function(data,
     params = list(
       norm_exp = norm_exp,
       bootstrap = bootstrap,
-      groupsize = groupsize,
-      percentagefilter = percentagefilter,
-      variancefilter = variancefilter,
-      followup = followup,
-      type = type,
+      group_size = group_size,
+      percentage_filter = percentage_filter,
+      variance_filter = variance_filter,
+      max_follow_up = max_follow_up,
+      feature_type = feature_type,
       min_signature_size = min_signature_size,
       min_signature_cutoff = min_signature_cutoff,
-      force = force,
-      ncores = ncores,
+      skip_survival_checks = skip_survival_checks,
+      n_cores = n_cores,
       seed = seed
     ),
     metadata = list(
@@ -517,34 +502,34 @@ run_regression <- function(data,
   )
 
   # Writes execution metadata
-  if (saveJSON)
+  if (save_json)
   {
     log_message("Writing JSON metadata...")
     write_metadata(
       module = "run_regression",
-      outprefix = outprefix,
+      output_prefix = output_prefix,
       parameters = list(
         data = "data.frame",
-        outprefix = outprefix,
+        output_prefix = output_prefix,
         norm_exp = norm_exp,
         bootstrap = bootstrap,
-        groupsize = groupsize,
-        percentagefilter = percentagefilter,
-        variancefilter = variancefilter,
-        followup = followup,
-        type = type,
+        group_size = group_size,
+        percentage_filter = percentage_filter,
+        variance_filter = variance_filter,
+        max_follow_up = max_follow_up,
+        feature_type = feature_type,
         min_signature_size = min_signature_size,
         min_signature_cutoff = min_signature_cutoff,
-        force = force,
-        plots = plots,
-        ncores = ncores,
-        seed = seed,
-        table = table,
-        saveJSON = saveJSON,
-        saveRDS = saveRDS,
-        report = report,
+        skip_survival_checks = skip_survival_checks,
+        save_plots = save_plots,
+        save_table = save_table,
+        save_json = save_json,
+        save_rds = save_rds,
+        report_format = report_format,
         verbose = verbose,
-        log = log
+        n_cores = n_cores,
+        seed = seed,
+        save_log = save_log
       ),
       command = "none"
     )
@@ -552,18 +537,18 @@ run_regression <- function(data,
   }
 
   # Writes RDS object
-  if (saveRDS)
+  if (save_rds)
   {
     log_message("Writing RDS object...")
-    write_rds(object = result, file = paste0(outprefix, "_regression.rds"))
+    write_rds(object = result, file = paste0(output_prefix, "_regression.rds"))
     log_message("Done.")
   }
 
-  # Generates report if requested
-  if (!isFALSE(report))
+  # Generates report_format if requested
+  if (!isFALSE(report_format))
   {
-    log_message("Writing clinprog report...")
-    write_report(object = result, format = report, file = paste0(outprefix, "_report_regression.pdf"))
+    log_message("Writing clinprog report_format...")
+    write_report(object = result, format = report_format, file = paste0(output_prefix, "_report_regression.pdf"))
     log_message("Done.")
   }
 
@@ -587,70 +572,80 @@ run_regression <- function(data,
 #'
 #' @description
 #' Applies a molecular signature to survival data, generating prognostic scores and performing
-#' survival analyses (univariate and, optionally, multivariate Cox regression).
+#' survival analyses (univariate and, optionally, run_multivariate Cox regression).
 #'
-#' @param data Data.frame. A data.frame containing survival data
-#' (e.g., OS, OS.time) and expression values (genes or transcripts).
-#' @param signature A \code{clinprog_signature} object generated by
-#' \code{run_regression()}, or a data.frame containing the molecular
-#' signature with feature names and regression coefficients.
-#' @param outprefix Character. Output prefix used for generated files (Default: \code{"clinprog"}).
-#' @param multivariate Logical. If \code{TRUE}, performs multivariate survival analysis including clinical variables
-#'   present in \code{clindata} (Default: \code{FALSE}).
-#' @param clindata Data.frame. A data.frame containing binary-categorized
-#' clinical data (e.g., Age, Gender, ...) (required if \code{multivariate = TRUE}).
-#' @param score_cutoff Character. Strategy used to determine the cutoff for
-#'   categorizing signature scores. Must be one of \code{"median"},
-#'   \code{"mean"}, \code{"signal"}, or \code{"roc"} (Default:
-#'   \code{"median"}).
-#' @param variancefilter Numeric. Minimum normalized variance for follow-up time (0–1; Default: \code{0.01}).
-#' @param followup Numeric. Maximum followup time (Default: \code{NULL}).
-#' @param p.cutoff Numeric. P-value threshold used to select clinical covariates from univariate Cox regression
-#' for inclusion in multivariate analysis (Default: \code{0.2}).
-#' @param bootstrap Integer. Number of bootstrap iterations for multivariate Cox regression (Default: \code{1}).
-#' @param force Logical. If \code{TRUE}, overrides filtering steps related to survival assumptions (Default: \code{FALSE}).
-#' @param plots Logical. If \code{TRUE}, generates a Kaplan-Meier curve, the proportional hazards assumption plot, and
-#'   extra figures, depending on the chosen parameters (Default: \code{FALSE}).
+#' @param data Character or data.frame. A data.frame or a path to a tab-separated file containing survival data
+#'   (e.g., OS, OS.time) and expression values (genes or transcripts). Example: \code{"myPATH/myTPM.tsv"}.
+#' @param signature A molecular signature. Can be:
+#'   \itemize{
+#'     \item An object of class \code{"clinprog_signature"} from the \code{run_regression()} clinprog function (regression - module I)
+#'     \item A data.frame with columns \code{feature} and \code{coefficient}
+#'     \item A path to a .tsv file containing the signature
+#'   }
+#' @param output_prefix Character. Output prefix used for generated files (Default: \code{"clinprog"}).
+#' @param norm_exp Logical. If \code{TRUE}, log2(exp+1) transforms expression data (Default: \code{FALSE}).
+#' @param run_multivariate Logical. If \code{TRUE}, performs run_multivariate survival analysis including clinical variables
+#'   present in \code{clinical_data} (Default: \code{FALSE}).
+#' @param clinical_data Character or data.frame or \code{NULL}. A data.frame or a path to a tab-separated file containing
+#'   binary-categorized clinical data (e.g., Age, Gender, ...) (required if \code{run_multivariate = TRUE}).
+#'   Example: \code{"myPATH/myClinics.tsv"}.
+#' @param score_cutoff Character. Uses the \code{"median"}, the \code{"mean"}, the \code{"signal"}, or a \code{"roc"}
+#'   curve to define the score cutoff (Default: \code{"median"}).
+#' @param variance_filter Numeric. Minimum normalized variance for follow-up time (0–1; Default: \code{0.01}).
+#' @param max_follow_up Numeric or \code{NULL}. Maximum max_follow_up time (Default: \code{NULL}).
+#' @param p_value_cutoff Numeric. P-value threshold used to select clinical covariates from univariate Cox regression
+#'   for inclusion in run_multivariate analysis (Default: \code{0.2}).
+#' @param bootstrap Integer. Number of bootstrap iterations for run_multivariate Cox regression (Default: \code{1}).
+#' @param skip_survival_checks Logical. If \code{TRUE}, overrides filtering steps related to survival assumptions (Default: \code{FALSE}).
+#' @param save_plots Logical. If \code{TRUE}, generates a Kaplan-Meier curve, the proportional hazards assumption plot,
+#'   plots related to the signature created and the derived score, and extra figures,
+#'   depending on the chosen parameters (Default: \code{FALSE}).
 #'
-#'   These can also be generated later using \code{plot_km()} and \code{plot_ph()}.
+#'   These can also be generated later using \code{plot_km()}, \code{plot_ph()}, \code{plot_swimmer()},
+#'   \code{plot_boxplot()}, \code{plot_scatter()}, \code{plot_wordcloud()},
+#'   \code{plot_barplot_score()}, and \code{plot_lineplot_score()}.
 #'   If \code{score_cutoff = "roc"}, a ROC curve can also be generated using \code{plot_roc()}.
-#'   If \code{multivariate = TRUE}, a forest plot can also be generated using \code{plot_forest()}.
+#'   If \code{run_multivariate = TRUE}, a forest plot can also be generated using \code{plot_forest()} and
+#'   a boxplot of clinical variables with \code{plot_clinics()}.
 #'   If bootstrap is performed, an extra summary barplot can also be generated using \code{plot_barplot()}.
-#' @param table Logical. If \code{TRUE}, writes output tables to disk (Default: \code{FALSE}).
+#' @param save_table Logical. If \code{TRUE}, writes output tables to disk (Default: \code{FALSE}).
 #'
 #'   These can also be done later using \code{write_signature()} for an updated signature file,
 #'   \code{write_score()} for a table showing the calculated clinprog scores, \code{write_univariate()}
 #'   for a file containing the univariate survival results, and \code{write_multivariate()}
-#'   for a file containing the multivariate survival results.
-#' @param saveJSON Logical. If \code{TRUE}, saves to disk the metadata in a JSON file (Default: \code{FALSE}).
+#'   for a file containing the run_multivariate survival results.
+#' @param save_json Logical. If \code{TRUE}, saves to disk the metadata in a JSON file (Default: \code{FALSE}).
 #'
 #'   This can also be done later using \code{write_metadata()} for a JSON with metadata.
-#' @param saveRDS Logical. If \code{TRUE}, saves to disk the R object in a RDS file (Default: \code{FALSE}).
+#' @param save_rds Logical. If \code{TRUE}, saves to disk the R object in a RDS file (Default: \code{FALSE}).
 #'
 #'   This can also be done later using \code{write_rds()} for a RDS object.
-#' @param report Logical or character. Whether to generate a final analysis report. Accepted values are:
+#' @param report_format Logical or character. Whether to generate a final analysis report_format. Accepted values are:
 #' \itemize{
-#'   \item \code{FALSE}: Do not generate a report (default).
-#'   \item \code{TRUE}: Generate a PDF report.
-#'   \item \code{"PDF"}: Generate a PDF report.
-#'   \item \code{"HTML"}: Generate an HTML report.
+#'   \item \code{FALSE}: Do not generate a report_format (default).
+#'   \item \code{TRUE}: Generate a PDF report_format.
+#'   \item \code{"PDF"}: Generate a PDF report_format.
+#'   \item \code{"HTML"}: Generate an HTML report_format.
 #' }
 #'
 #'   This can also be done later using \code{write_report()}.
-#' @param log Logical. If \code{TRUE}, writes a minimalist log file tracking the pipeline execution (Default: \code{FALSE}).
+#' @param verbose Integer or Logical. If \code{1} (or \code{TRUE}), prints progress messages to the console. On the
+#'   other hand, if \code{0} (or \code{FALSE}), runs silently (Default: \code{1}).
+#' @param save_log Logical. If \code{TRUE}, writes a minimalist log file tracking the pipeline execution (Default: \code{FALSE}).
+#'   This can also be done later using \code{write_log()}.
 #'
 #' @details
 #' The clinprog pipeline applies a sequence of analyses steps:
 #' \enumerate{
 #'   \item Checking minimum requirements in input datasets and parameters
-#'   \item Max followup definition to control for survival analysis
+#'   \item Max max_follow_up definition to control for survival analysis
 #'   \item Updating the molecular signature
 #'   \item Creating the signature scores for each patient/sample
 #'   \item Proportional hazards assumption testing (Schoenfeld residuals)
 #'   \item Categorizing the scores into low/high groups
 #'   \item Performing the univariate Cox regression for the score
 #'   \item Running multiple univariate Cox regression for other clinical variables
-#'   \item Performing the multivariate Cox regression with bootstrap resampling if the requirements are met
+#'   \item Performing the run_multivariate Cox regression with bootstrap resampling if the requirements are met
 #' }
 #'
 #' The final complete results consist of multiple tables and figures to show the association between the clinprog scores,
@@ -683,11 +678,20 @@ run_regression <- function(data,
 #' test smaller signatures (e.g., establishing a coefficient cutoff) and even to find a minimum signature related to
 #' patient survival.
 #'
-#' Change \code{followup} to adjust the maximum followup. Ideal when time-specific survival analyses are needed.
+#' Set \code{norm_exp} parameter to \code{TRUE} if a log2(expression + 1) transformation on expression data is required.
+#' Otherwise, keep it \code{FALSE}. Log2-transformed expression data are highly recommended for survival analyses.
+#'
+#' Change \code{score_cutoff} to adjust the cutoff applied to the score for the survival analyses. Options include
+#' simpler ones, such as \code{"median"} and \code{"mean"}. Also, \code{"signal"} can be used to split patients into
+#' positive and negative scores to facilitate interpretation. For a more complex and robust metric, choose \code{"roc"}
+#' to use a cutoff based on the ROC curve, which adopts the Nearest Neighbour Estimate (NNE) method and the
+#' J's Youden statistics (sensitivity + (specificity -1) strategy)
+#'
+#' Change \code{max_follow_up} to adjust the maximum max_follow_up. Ideal when time-specific survival analyses are needed.
 #' For instance, 1-year OS, or 3-year OS, or 5-year OS or even 10-year OS.
 #'
-#' Keeping \code{force = FALSE} parameter is recommended, especially if other endpoints can be evaluated.
-#' In case an error occurs, it is recommended to experiment changing \code{variancefilter} and \code{p.cutoff}
+#' Keeping \code{skip_survival_checks = FALSE} parameter is recommended, especially if other endpoints can be evaluated.
+#' In case an error occurs, it is recommended to experiment changing \code{variance_filter} and \code{p_value_cutoff}
 #' parameters first to make the follow up variance and variable selection filters more flexible.
 #'
 #' @seealso
@@ -696,32 +700,37 @@ run_regression <- function(data,
 #' Documentation and tutorials: \url{https://galantelab.github.io/clinprog/} \cr
 #'
 #' Other functions: \code{\link{plot_km}}, \code{\link{plot_ph}}, \code{\link{plot_roc}},
-#' \code{\link{plot_forest}}, \code{\link{plot_barplot}}, \code{\link{read_table}},
-#' \code{\link{read_rds}}, \code{\link{write_rds}}, \code{\link{write_signature}},
-#' \code{\link{write_score}}, \code{write_metadata()}, \code{\link{write_univariate}},
-#' \code{\link{write_multivariate}}, and \code{\link{write_report}}
+#' \code{\link{plot_swimmer}}, \code{\link{plot_forest}}, \code{\link{plot_barplot}},
+#' \code{\link{plot_clinics}}, \code{\link{plot_boxplot}}, \code{\link{plot_scatter}},
+#' \code{\link{plot_wordcloud}}, \code{\link{plot_barplot_score}}, \code{\link{plot_lineplot_score}},
+#' \code{\link{read_table}}, \code{\link{read_rds}}, \code{\link{write_rds}},
+#' \code{\link{write_signature}}, \code{\link{write_score}}, \code{write_metadata()},
+#' \code{\link{write_univariate}}, \code{\link{write_multivariate}},
+#' \code{\link{write_report}}, and \code{\link{write_log}}
 #'
 #' @examples
 #' \dontrun{
 #' # Example usage
 #' result <- run_survival(
-#'   data = expression_data,
+#'   data = "expression_data.tsv",
 #'   signature = "signature_data.tsv",
-#'   outprefix = "my_analysis",
-#'   multivariate = TRUE,
-#'   clindata = clinical_data,
+#'   output_prefix = "my_analysis",
+#'   norm_exp = TRUE,
+#'   run_multivariate = TRUE,
+#'   clinical_data = "clinical_data.tsv",
 #'   score_cutoff = "roc",
-#'   variancefilter = 0.01,
-#'   followup = NULL,
-#'   p.cutoff = 0.2,
+#'   variance_filter = 0.01,
+#'   max_follow_up = NULL,
+#'   p_value_cutoff = 0.2,
 #'   bootstrap = 100,
-#'   force = TRUE,
-#'   plots = TRUE,
-#'   table = TRUE,
-#'   saveJSON = TRUE,
-#'   saveRDS = TRUE,
-#'   report = TRUE,
-#'   log = TRUE
+#'   skip_survival_checks = TRUE,
+#'   save_plots = TRUE,
+#'   save_table = TRUE,
+#'   save_json = TRUE,
+#'   save_rds = TRUE,
+#'   report_format = TRUE,
+#'   verbose = 1,
+#'   save_log = TRUE
 #' )
 #'
 #' # Access signature through custom clinprog S3 methods
@@ -743,138 +752,132 @@ run_regression <- function(data,
 #' # Import clinical data manually
 #' clin <- read_table("clinical_data.tsv", row.names = TRUE)
 #'
-#' # Generate plots later (assuming multivariate analysis was performed)
-#' plot_roc(x = result$roc_result, outprefix = "my_analysis_roc")
+#' # Generate plots later (assuming run_multivariate analysis was performed)
+#' plot_roc(x = result$roc_result, output_prefix = "my_analysis_roc")
 #' plot_km(data = result$expression_data, cutoff = result$score_cutoff,
-#'           pval = result$survival$univariate$table$log.rank.pvalue, outprefix = "my_analysis_km")
-#' plot_ph(x = result$ph_result, is_multi = TRUE, outprefix = "my_analysis_phplot")
-#' plot_forest(model_object = result$survival$multivariate$model, outprefix = "my_analysis_forest")
-#' plot_barplot(plot_df = result$survival$multivariate$bootstrap.table,
-#'                outprefix = "my_analysis_bar")
+#'           pval = result$survival$univariate$table$log.rank.pvalue, output_prefix = "my_analysis_km")
+#' plot_ph(x = result$ph_result, is_multi = TRUE, output_prefix = "my_analysis_phplot")
+#' plot_forest(model_object = result$survival$multivariate$model, output_prefix = "my_analysis_forest")
+#' plot_clinics(data = result$clinical_data, output_prefix = "my_analysis_clinics-boxplot")
+#' plot_swimmer(data = result$expression_data, cutoff = result$score_cutoff,
+#'                output_prefix = "my_analysis_swimmer", facet_by = "score_group")
+#' plot_barplot(plot_df = result$survival$boot_table, output_prefix = "my_analysis_bar",
+#'                feature_type = "absolute", bootstrap = 100)
+#' plot_scatter(data = result$expression_data, signature = result$signature,
+#'                output_prefix = "my_analysis_scatterplot")
+#' plot_boxplot(data = result$expression_data, signature = result$signature,
+#'                output_prefix = "my_analysis_boxplot")
+#' plot_wordcloud(data = result$expression_data, signature = result$signature,
+#'                  output_prefix = "my_analysis_wordcloud")
+#' plot_barplot_score(data = result$clinical_data, score_cutoff = result$score_cutoff,
+#'                      output_prefix = "my_analysis_score-bar")
+#' plot_lineplot_score(data = result$clinical_data, score_cutoff = result$score_cutoff,
+#'                       output_prefix = "my_analysis_lineplot")
 #'
 #' # Export signature manually
 #' write_signature(result, "my_analysis_signature_updated.tsv")
 #'
 #' # Export scores manually
 #' write_score(result, "my_analysis_scoreCont.tsv") # for univariate mode only
-#' write_score(result, "my_analysis_scoreCat.tsv", clinics = TRUE) # if multivariate mode is on
+#' write_score(result, "my_analysis_scoreCat.tsv", include_clinical = TRUE) # if run_multivariate mode is on
 #'
 #' # Export survival results manually
 #' write_univariate(result, "my_analysis_uniCox.txt") # for univariate mode only
-#' write_multivariate(result, "my_analysis_multiCox.txt") # if multivariate mode is on
+#' write_multivariate(result, "my_analysis_multiCox.txt") # if run_multivariate mode is on
 #'
 #' # Export metadata manually
-#' write_metadata(module = "run_survival", outprefix = outprefix,
-#'                       parameters = list(...), command = "none")
+#' write_metadata(module = "run_survival", output_prefix = output_prefix,
+#'                parameters = list(...), command = "none")
 #'
 #' # Save result in RDS
 #' write_rds(object = result, file = "my_analysis.rds")
 #'
-#' # Generate final report
-#' write_report(object = result, format = report, file = "my_analysis_report.pdf")
+#' # Save LOG file
+#' write_log(file = "my_analysis.log")
+#'
+#' # Generate final report_format
+#' write_report(object = result, format = report_format, file = "my_analysis_report.pdf")
 #' }
 #'
 #' @export
 run_survival <- function(data,
                          signature,
-                         outprefix = "clinprog",
+                         output_prefix = "clinprog",
                          norm_exp = FALSE,
-                         multivariate = FALSE,
-                         clindata = NULL,
+                         run_multivariate = FALSE,
+                         clinical_data = NULL,
                          score_cutoff = "median",
-                         variancefilter = 0.01,
-                         followup = NULL,
-                         p.cutoff = 0.2,
+                         variance_filter = 0.01,
+                         max_follow_up = NULL,
+                         p_value_cutoff = 0.2,
                          bootstrap = 1,
-                         force = FALSE,
-                         plots = FALSE,
-                         table = FALSE,
-                         saveJSON = FALSE,
-                         saveRDS = FALSE,
-                         report = FALSE,
+                         skip_survival_checks = FALSE,
+                         save_plots = FALSE,
+                         save_table = FALSE,
+                         save_json = FALSE,
+                         save_rds = FALSE,
+                         report_format = FALSE,
                          verbose = 1,
-                         log = FALSE)
+                         save_log = FALSE)
 {
   # Start time counter
   start_time <- Sys.time()
 
   # Initializes specific multivariate objects
   multi_cox <- NULL
-  multi_cox_initial <- NULL
   multi_model <- NULL
+  multi_cox_initial <- NULL
   clin <- NULL
 
   # Checks LOG argument
-  if (!is.logical(log) || length(log) != 1) {log_stop("Argument 'log' must be a boolean [TRUE or FALSE]")}
-
-  # Checks output prefix argument
-  if (!is.character(outprefix) || length(outprefix) != 1) {log_stop("Argument 'outprefix' must be a string")}
+  if (!is.logical(save_log) || length(save_log) != 1) {log_stop("Argument 'save_log' must be a boolean [TRUE or FALSE]")}
 
   # Checks verbosity and updates environment
-  if (length(verbose) != 1 ||
-      is.na(verbose) ||
-      !verbose %in% c(0, 1, FALSE, TRUE)) {
+  if (!verbose %in% c(0, 1, FALSE, TRUE) || length(verbose) != 1)
+  {
     log_stop("Argument 'verbose' must be 0, 1, FALSE or TRUE")
   }
   .clinprog_env$verbose <- as.logical(verbose)
 
-  # Logging setup - creating
-  start_msg <- paste0(
-    "[", .timestamp(), "] [INFO] clinprog survival log started"
-  )
-  .clinprog_env$log_messages <- c(.clinprog_env$log_messages, start_msg)
+  # Checks output prefix argument
+  if (!is.character(output_prefix) || length(output_prefix) != 1) {log_stop("Argument 'output_prefix' must be a string")}
 
-  if (log) {
-    logfile <- paste0(outprefix, "_survival.log")
+  # Logging setup - creating
+  start_msg <- paste0("[", .timestamp(), "] [INFO] clinprog survival log started")
+  .clinprog_env$log_messages <- c(.clinprog_env$log_messages, start_msg)
+  if (save_log)
+  {
+    logfile <- paste0(output_prefix, "_survival.log")
     .clinprog_env$log_con <- file(logfile, open = "wt")
     writeLines(start_msg, .clinprog_env$log_con)
   }
 
   # Logging setup - closing
   on.exit({
-    finish_msg <- paste0(
-      "[", .timestamp(), "] [INFO] clinprog survival finished"
-    )
-    .clinprog_env$log_messages <- c(
-      .clinprog_env$log_messages, finish_msg
-    )
+    finish_msg <- paste0("[", .timestamp(), "] [INFO] clinprog survival finished")
+    .clinprog_env$log_messages <- c(.clinprog_env$log_messages, finish_msg)
 
-    if (!is.null(.clinprog_env$log_con) &&
-        isOpen(.clinprog_env$log_con)) {
+    if (!is.null(.clinprog_env$log_con) && isOpen(.clinprog_env$log_con))
+    {
       writeLines(finish_msg, .clinprog_env$log_con)
       close(.clinprog_env$log_con)
       .clinprog_env$log_con <- NULL
     }
   }, add = TRUE)
 
-  log_message("Validating input parameters...")
-
-  # Validate R data.frame
+  # Handles 2 scenarios: (I) file PATH; (II) R data.frame
+  log_message("Validating file parameters...")
   if (!is.data.frame(data)) {log_stop("'data' must be a data.frame")}
 
-  # Validates input parameters
-  if (!is.logical(multivariate) || length(multivariate) != 1) {log_stop("Argument 'multivariate' must be a boolean [TRUE or FALSE]")}
+  # Validates file input parameters
+  if (!is.logical(run_multivariate) || length(run_multivariate) != 1) {log_stop("Argument 'run_multivariate' must be a boolean [TRUE or FALSE]")}
 
-  # Validates clinical input for multivariate analysis
-  if (multivariate)
+  # Validates clinical input for run_multivariate analysis
+  if (run_multivariate)
   {
-    if (is.null(clindata)) {log_stop("'clindata' must be provided when 'multivariate = TRUE'")}
-    if (!is.data.frame(clindata)) {log_stop("'clindata' must be a data.frame")}
+    if (is.null(clinical_data)) {log_stop("'clinical_data' must be provided when 'run_multivariate = TRUE'")}
+    if (!is.data.frame(clinical_data)) {log_stop("'clinical_data' must be a data.frame")}
   }
-
-  if (!is.character(score_cutoff) ||
-      length(score_cutoff) != 1 ||
-      is.na(score_cutoff) ||
-      !tolower(score_cutoff) %in%
-        c("median", "mean", "signal", "roc")) {
-    log_stop(
-      "Argument 'score_cutoff' must be one of: ",
-      "'median', 'mean', 'signal', or 'roc'"
-    )
-  }
-
-  score_cutoff <- tolower(score_cutoff)
-
   log_message("Done.")
 
   # Loads molecular signature
@@ -897,10 +900,10 @@ run_survival <- function(data,
   raw_sig_df$prognostic <- ifelse(raw_sig_df$coefficient > 0, "worse", "better")
 
   # Writes updated signature table if requested
-  if (table)
+  if (save_table)
   {
     log_message("Writing updated signature table...")
-    write_signature(raw_sig_df, paste0(outprefix, "_signature_updated.tsv"))
+    write_signature(raw_sig_df, paste0(output_prefix, "_signature_updated.tsv"))
     log_message("Done.")
   }
 
@@ -908,46 +911,63 @@ run_survival <- function(data,
   sig_df <- raw_sig_df[,c(1, 2)]
 
   # Adjusts feature names to match the format of those found in the survival/expression table
-  sig_df$feature <- gsub("-", "__", sig_df$feature)
+  raw_sig_df$feature <- gsub("-", "__", raw_sig_df$feature, fixed = TRUE)
+  sig_df$feature <- gsub("-", "__", sig_df$feature, fixed = TRUE)
 
   # Validates other parameters
   log_message("Validating other parameters...")
-  if (!is.numeric(variancefilter) || length(variancefilter) != 1 || variancefilter <= 0 || variancefilter > 1)
+  if (!is.numeric(variance_filter) || length(variance_filter) != 1 || variance_filter <= 0 || variance_filter > 1)
   {
-    log_stop("Argument 'variancefilter' must be a positive numeric value in range (0, 1]")
+    log_stop("Argument 'variance_filter' must be a positive numeric value in range (0, 1]")
   }
-  if (!is.null(followup) && (!is.numeric(followup) || length(followup) != 1 || followup <= 0))
+  if (!is.null(max_follow_up) && (!is.numeric(max_follow_up) || length(max_follow_up) != 1 || max_follow_up <= 0))
   {
-    log_stop("Argument 'followup' must be a positive numeric value")
+    log_stop("Argument 'max_follow_up' must be a positive numeric value")
   }
-  if (!is.numeric(p.cutoff) || length(p.cutoff) != 1 || p.cutoff <= 0 || p.cutoff >= 1)
+  if (!is.numeric(p_value_cutoff) || length(p_value_cutoff) != 1 || p_value_cutoff <= 0 || p_value_cutoff >= 1)
   {
-    log_stop("'p.cutoff' must be a numeric value between 0 and 1")
+    log_stop("'p_value_cutoff' must be a numeric value between 0 and 1")
   }
   if (!is.numeric(bootstrap) || length(bootstrap) != 1 || bootstrap < 0 || bootstrap %% 1 != 0)
   {
     log_stop("Argument 'bootstrap' must be an integer")
   }
-  if (!is.logical(force) || length(force) != 1) {log_stop("Argument 'force' must be a boolean [TRUE or FALSE]")}
-  if (!is.logical(table) || length(table) != 1) {log_stop("Argument 'table' must be a boolean [TRUE or FALSE]")}
-  if (!is.logical(saveJSON) || length(saveJSON) != 1) {log_stop("Argument 'saveJSON' must be a boolean [TRUE or FALSE]")}
-  if (!is.logical(saveRDS) || length(saveRDS) != 1) {log_stop("Argument 'saveRDS' must be a boolean [TRUE or FALSE]")}
-  if (!is.logical(plots) || length(plots) != 1) {log_stop("Argument 'plots' must be a boolean [TRUE or FALSE]")}
-  if (!(is.logical(report) || (is.character(report) && length(report) == 1 && toupper(report) %in% c("PDF", "HTML"))))
+  score_cutoff <- tolower(score_cutoff)
+  if (!is.character(score_cutoff) || length(score_cutoff) != 1 ||
+      !score_cutoff %in% c("roc", "median", "mean", "signal"))
   {
-    log_stop("'report' must be a boolean [TRUE or FALSE] or a character ['PDF' or 'HTML']")
+    log_stop("Argument 'score_cutoff' must be one of: 'roc', 'median', 'mean', or 'signal'.")
+  }
+  if (!is.logical(norm_exp) || length(norm_exp) != 1) {log_stop("Argument 'norm_exp' must be a boolean [TRUE or FALSE]")}
+  if (!is.logical(skip_survival_checks) || length(skip_survival_checks) != 1) {log_stop("Argument 'skip_survival_checks' must be a boolean [TRUE or FALSE]")}
+  if (!is.logical(save_table) || length(save_table) != 1) {log_stop("Argument 'save_table' must be a boolean [TRUE or FALSE]")}
+  if (!is.logical(save_json) || length(save_json) != 1) {log_stop("Argument 'save_json' must be a boolean [TRUE or FALSE]")}
+  if (!is.logical(save_rds) || length(save_rds) != 1) {log_stop("Argument 'save_rds' must be a boolean [TRUE or FALSE]")}
+  if (!is.logical(save_plots) || length(save_plots) != 1) {log_stop("Argument 'save_plots' must be a boolean [TRUE or FALSE]")}
+  if (!(is.logical(report_format) || (is.character(report_format) && length(report_format) == 1 && toupper(report_format) %in% c("PDF", "HTML"))))
+  {
+    log_stop("'report_format' must be a boolean [TRUE or FALSE] or a character ['PDF' or 'HTML']")
   }
   log_message("Done.")
 
   # Loads INput with expression and survival data
-  log_message("Processing expression/survival data...")
-  colnames(data) <- gsub("-", "__", colnames(data))
+  log_message("Reading input expression/survival file...")
+  colnames(data) <- gsub("-", "__", colnames(data), fixed = TRUE)
   log_message("Done.")
 
   # Standardizes the column names of the survival metrics
   log_message("Renaming first two (survival) columns to 'OS' and 'OS.time'...")
   colnames(data)[1:2] <- c("OS", "OS.time")
   log_message("Done.")
+
+  # Log2(Expression + 1) transforms expression data if requested
+  if (norm_exp)
+  {
+    log_message("Transforming expression data with formula log2(expression + 1)...")
+    gene_cols <- 3:ncol(data)
+    data[, gene_cols] <- log2(data[, gene_cols] + 1)
+    log_message("Done.")
+  }
 
   # Validates input file
   log_message("Validating input...")
@@ -958,40 +978,40 @@ run_survival <- function(data,
   # OS survival column
   os_values <- data[,1]
   if (!is.numeric(os_values)) {log_stop("Column [OS] must be numeric and the first in the table")}
-  if (any(is.na(os_values))) {log_stop("Column [OS] must be the first in the table and contain no missing values")}
+  if (anyNA(os_values)) {log_stop("Column [OS] must be the first in the table and contain no missing values")}
   unique_os <- sort(unique(stats::na.omit(os_values)))
   if (!setequal(unique_os, c(0, 1))) {log_stop("Column [OS] must be the first in the table and contain only binary values: 0 and 1")}
 
   # OS.time survival column
   time_values <- data[,2]
   if (!is.numeric(time_values)) {log_stop("Column [OS.time] must be numeric and the second in the table")}
-  if (any(is.na(time_values))) {log_stop("Column [OS.time] must be the second in the table and contain no missing values")}
+  if (anyNA(time_values)) {log_stop("Column [OS.time] must be the second in the table and contain no missing values")}
   if (any(time_values < 0, na.rm = TRUE)) {log_stop("Column [OS.time] must be the second in the table and contain only positive values")}
   log_message("Done.")
 
   # Applies maximum follow-up censoring if requested
-  log_message("Applying maximum followup value...")
-  data <- clinprog_followup(data = data, followup = followup)
+  log_message("Applying maximum max_follow_up value...")
+  data <- clinprog_followup(data = data, max_follow_up = max_follow_up)
   log_message("Done.")
 
-  # Applies OS and OS.time filters if user set force = FALSE (default)
-  if (!force)
+  # Applies OS and OS.time filters if user set skip_survival_checks = FALSE (default)
+  if (!skip_survival_checks)
   {
     perc <- sum(data$OS) / nrow(data)
     if (perc < 0.2 || perc > 0.8)
     {
       log_stop(paste0("Survival status proportion outside acceptable range [between 20-80%]. ",
-                      "Consider other endpoints. If you want to continue anyway, set force = T."))
+                      "Consider other endpoints. If you want to continue anyway, set skip_survival_checks = T."))
     }
     fvar <- stats::var(data$OS.time / max(data$OS.time))
-    if (fvar < variancefilter)
+    if (fvar < variance_filter)
     {
-      log_stop(paste0("Follow-up variance: ", fvar, " below threshold. Consider changing the 'variancefilter' parameter",
-                      " or choosing other endpoints. If you want to continue anyway, set force = T."))
+      log_stop(paste0("Follow-up variance: ", fvar, " below threshold. Consider changing the 'variance_filter' parameter",
+                      " or choosing other endpoints. If you want to continue anyway, set skip_survival_checks = T."))
     }
   }
 
-  # Checks if all features in signature are present in the expression data
+  # Checks if all features in signature are present in the expression file
   log_message("Checking compatibility between expression/survival and signature files...")
   expr_features <- colnames(data)[-(1:2)]
   if (anyDuplicated(expr_features)) {log_stop("Duplicated features are not allowed in expression data")}
@@ -1013,7 +1033,7 @@ run_survival <- function(data,
   match_idx <- match(colnames(expr), sig_df$feature)
 
   # Safety check
-  if (any(is.na(match_idx))) {log_stop("Expression matrix and signature coefficients are not aligned")}
+  if (anyNA(match_idx)) {log_stop("Expression matrix and signature coefficients are not aligned")}
   coef_vector <- sig_df$coefficient[match_idx]
 
   # Calculates signature score
@@ -1026,59 +1046,32 @@ run_survival <- function(data,
   # Categorizes the clinprog score into high/low groups
   log_message("Categorizing score...")
 
-  # Based on user's choice, use the ROC curve or the median
+  # Based on user's choice, use either the ROC curve or the median or the mean or the signal
   if (score_cutoff == "roc")
   {
-    roc_obj <- survivalROC::survivalROC(
-      Stime = data$OS.time,
-      status = data$OS,
-      marker = data$score,
-      predict.time = stats::median(data$OS.time, na.rm = TRUE),
-      method = "NNE",
-      span = 0.25 * nrow(data)^(-0.20)
-    )
-
-    roc_cutoff <- clinprog_cutoff_roc(
-      data,
-      direction = ifelse(as.numeric(roc_obj$AUC) < 0.5, ">", "<")
-    )
-
+    # This value can be changed. By default, it uses the median max_follow_up time
+    roc_obj <- survivalROC::survivalROC(Stime = data$OS.time, status = data$OS, marker = data$score,
+                                        predict.time = stats::median(data$OS.time, na.rm = TRUE), method = "NNE",
+                                        span = 0.25*nrow(data)^(-0.20))
+    roc_cutoff <- clinprog_cutoff_roc(data, direction = ifelse(as.numeric(roc_obj$AUC) < 0.5, ">", "<"))
     score_cutoff_value <- roc_cutoff$cutoff
-
-    log_message(
-      paste0("ROC cutoff: ", round(score_cutoff_value, 4))
-    )
+    log_message(paste0("ROC cutoff: ", round(score_cutoff_value, 4)))
   } else {
     if (score_cutoff == "median")
     {
-      score_cutoff_value <- stats::median(
-        data$score,
-        na.rm = TRUE
-      )
-
-      log_message(
-        paste0("Median cutoff: ", round(score_cutoff_value, 4))
-      )
+      score_cutoff_value <- stats::median(data$score, na.rm = TRUE)
+      log_message(paste0("Median cutoff: ", round(score_cutoff_value, 4)))
     } else {
       if (score_cutoff == "mean")
       {
-        score_cutoff_value <- mean(
-          data$score,
-          na.rm = TRUE
-        )
-
-        log_message(
-          paste0("Mean cutoff: ", round(score_cutoff_value, 4))
-        )
+        score_cutoff_value <- mean(data$score, na.rm = TRUE)
+        log_message(paste0("Mean cutoff: ", round(score_cutoff_value, 4)))
       } else {
-        score_cutoff_value <- 0
-
-        log_message(
-          paste0(
-            "Signal cutoff (positive vs. negative): ",
-            round(score_cutoff_value, 4)
-          )
-        )
+        if (score_cutoff == "signal")
+        {
+          score_cutoff_value <- 0
+          log_message(paste0("Signal cutoff (positive vs. negative): ", round(score_cutoff_value, 4)))
+        }
       }
     }
   }
@@ -1089,11 +1082,11 @@ run_survival <- function(data,
   log_message("Done.")
 
   # Writes table with scores (both values and categories) if requested
-  if (table)
+  if (save_table)
   {
     log_message("Writing score table...")
     colnames(data)[colnames(data) == "score_group"] <- "Score"
-    write_score(x = data, file = paste0(outprefix, "_scoreCont.tsv"), clinics = FALSE)
+    write_score(x = data, file = paste0(output_prefix, "_scoreCont.tsv"), include_clinical = FALSE)
     colnames(data)[colnames(data) == "Score"] <- "score_group"
     log_message("Done.")
   }
@@ -1109,27 +1102,27 @@ run_survival <- function(data,
   if (is.null(res_logrank$table)) {log_stop("Cox model failed (convergence issue)")}
 
   # Writes table with univariate survival results if requested
-  if (table)
+  if (save_table)
   {
     log_message("Writing univariate survival results table...")
     res_logrank$table$feature[res_logrank$table$feature == "score"] <- "Score"
-    write_univariate(res_logrank$table, paste0(outprefix, "_uniCox.txt"))
+    write_univariate(res_logrank$table, paste0(output_prefix, "_uniCox.txt"))
     res_logrank$table$feature[res_logrank$table$feature == "Score"] <- "score"
     log_message("Done.")
   }
 
-  # Performs multivariate survival analysis
-  if (multivariate)
+  # Performs run_multivariate survival analysis
+  if (run_multivariate)
   {
     log_message("Running multivariate survival analysis...")
 
     # Reads clinical data
-    log_message("Preparing clinical data...")
-    clin <- clindata
+    log_message("Reading input clinical file...")
+    if (is.character(clinical_data)) {clin <- read_table(clinical_data, sep = "\t")} else {clin <- clinical_data}
     log_message("Done.")
 
     # Checks if all samples are present in both datasets
-    log_message("Checking compatibility between expression/survival and clinical data...")
+    log_message("Checking compatibility between expression/survival and clinical files...")
     if (!identical(sort(rownames(clin)), sort(rownames(data))))
     {
       miss_in_clin <- setdiff(rownames(data), rownames(clin))
@@ -1149,7 +1142,7 @@ run_survival <- function(data,
     clin <- cbind(data_surv, clin)
 
     # Validates if all clinical variables are binary categorical
-    log_message("Checking if all variables in clinical data are binary...")
+    log_message("Checking if all variables in clinical file are binary...")
     for (i in seq_len(ncol(clin))[-(1:4)])
     {
       if (nlevels(as.factor(clin[, i])) != 2)
@@ -1164,10 +1157,10 @@ run_survival <- function(data,
     uni_covariates <- colnames(clin)[5:ncol(clin)]
 
     # Runs multiple univariate Cox analyses
-    univ_cox <- clinprog_uniCox_test(data = clin, covariates = uni_covariates, p.cutoff = p.cutoff)
+    univ_cox <- clinprog_uniCox_test(data = clin, covariates = uni_covariates, p_value_cutoff = p_value_cutoff)
 
     # Selects covariates with p-value < user-defined cutoff (ex: 0.2)
-    selected <- univ_cox[!is.na(univ_cox$Cox.pvalue) & univ_cox$Cox.pvalue < p.cutoff, , drop = FALSE]
+    selected <- univ_cox[!is.na(univ_cox$Cox.pvalue) & univ_cox$Cox.pvalue < p_value_cutoff, , drop = FALSE]
     log_message("Done.")
 
     # Checks if any covariate passed univariate filtering
@@ -1176,22 +1169,22 @@ run_survival <- function(data,
       log_warning("No covariables passed univariate filtering. Multivariate analysis could not be performed.")
     } else {
       # Transforms clinical covariate names
-      selected_covariates <- sapply(selected$variable, function(var)
+      selected_covariates <- vapply(selected$variable, function(var)
       {
-        matched <- uni_covariates[sapply(uni_covariates, function(x) grepl(paste0("^", x), var))]
+        matched <- uni_covariates[vapply(uni_covariates, function(x) grepl(paste0("^", x), var), FUN.VALUE = logical(1))]
         if (length(matched) > 0) matched[[1]] else var
-      })
+      }, FUN.VALUE = character(1))
       selected_covariates <- unique(selected_covariates)
       log_message("Covariables selected: ", paste(selected_covariates, collapse = ", "))
 
       # Runs initial multivariate Cox regression and builds initial model
       log_message("Building initial model...")
       multi_cox_initial <- clinprog_multiCox_test(data = clin, univ_result = univ_cox, logrank_result = res_logrank$table,
-                                                covariates = selected_covariates, all_covariates = uni_covariates,
-                                                use.bootstrap = TRUE, bootstrap = bootstrap, bootstrap.freq = 0.25, multi.p.cutoff = 0.1)
+                                                  covariates = selected_covariates, all_covariates = uni_covariates,
+                                                  use_bootstrap = TRUE, bootstrap = bootstrap, bootstrap_freq = 0.25, multi_p_value_cutoff = 0.1)
       if (multi_cox_initial$bootstrap.used)
       {
-        log_message(paste0("Bootstrap resampling performed with ", bootstrap, " iterations."))
+        log_message(paste0("Bootstrap resampling performed (seed = ", seed, ") with ", bootstrap, " iterations."))
       } else {
         if (bootstrap == 1)
         {
@@ -1216,98 +1209,55 @@ run_survival <- function(data,
         # Runs final multivariate Cox regression and builds final model
         log_message("Building final model...")
         multi_cox <- clinprog_multiCox_test(data = clin, univ_result = univ_cox, logrank_result = res_logrank$table,
-                                          covariates = ph_covariates, all_covariates = uni_covariates, use.bootstrap = FALSE)
+                                            covariates = ph_covariates, all_covariates = uni_covariates, use_bootstrap = FALSE)
         multi_model <- multi_cox$model
         log_message("Done.")
 
-        # Writes tables with multivariate survival results and score + clinics variables if requested
-        if (table)
+        # Writes tables with multivariate survival results and score + clinical variables if requested
+        if (save_table)
         {
           log_message("Writing clinical and multivariate survival results tables...")
           colnames(clin)[colnames(clin) == "score_group"] <- "Score"
-          write_score(x = clin, file = paste0(outprefix, "_scoreCat.tsv"), clinics = TRUE)
+          write_score(x = clin, file = paste0(output_prefix, "_scoreCat.tsv"), include_clinical = TRUE)
           colnames(clin)[colnames(clin) == "Score"] <- "score_group"
           multi_cox$table$variable[multi_cox$table$variable == "score_group"] <- "Score"
-          write_multivariate(multi_cox$table, paste0(outprefix, "_multiCox.txt"))
+          write_multivariate(multi_cox$table, paste0(output_prefix, "_multiCox.txt"))
           log_message("Done.")
         }
       }
     }
-    log_message("Done.")
   }
 
   # Produces uni and multivariate plots
   plot_list <- NULL
-  if (plots)
+  if (save_plots)
   {
     log_message("Making plots from univariate and multivariate (if applicable) survival analyses...")
     plot_list <- list(
-      km_plot = plot_km(
-        data = data,
-        cutoff = score_cutoff_value,
-        outprefix = outprefix,
-        pval = paste0(
-          "p = ", res_logrank$table$log.rank.pvalue,
-          "\nHR: ", res_logrank$table$hazard.ratio
-        )
-      ),
-      swim_plot = plot_swimmer(
-        data = data,
-        cutoff = score_cutoff_value,
-        outprefix = outprefix,
-        facet_by = "score_group"
-      ),
-      ph_plot = if (!is.null(multi_model)) {
-        plot_ph(x = ph_test, is_multi = TRUE, outprefix = outprefix)
-      } else {
-        plot_ph(x = res_logrank$ph, outprefix = outprefix)
-      },
-      box_plot = plot_boxplot(
-        data = data,
-        signature = raw_sig_df,
-        outprefix = outprefix
-      ),
-      scatter_plot = plot_scatter(
-        data = data,
-        signature = raw_sig_df,
-        outprefix = outprefix
-      ),
-      wordcloud_plot = plot_wordcloud(
-        data = data,
-        signature = raw_sig_df,
-        outprefix = outprefix
-      ),
-      score_bar_plot = plot_barplot_score(
-        data = data,
-        score_cutoff = score_cutoff_value,
-        outprefix = outprefix
-      ),
-      line_plot = plot_lineplot_score(
-        data = data,
-        score_cutoff = score_cutoff_value,
-        outprefix = outprefix
-      ),
-      roc_plot = if (score_cutoff == "roc") {
-        plot_roc(x = roc_cutoff, outprefix = outprefix)
-      } else NULL,
-      forest_plot = if (!is.null(multi_model)) {
-        plot_forest(model_object = multi_model, outprefix = outprefix)
-      } else NULL,
-      clinics_box_plot = if (!is.null(multi_model)) {
-        plot_clinics(data = clin, outprefix = outprefix)
-      } else NULL,
+      km_plot = plot_km(data = data, score_cutoff_value = score_cutoff_value, output_prefix = output_prefix,
+                        p_value = paste0("p = ", res_logrank$table$log.rank.pvalue,
+                                         "\nHR: ", res_logrank$table$hazard.ratio)),
+      swim_plot = plot_swimmer(data = data, score_cutoff_value = score_cutoff_value, output_prefix = output_prefix,
+                               facet_by = "score_group"),
+      ph_plot = if (!is.null(multi_model)) plot_ph(x = ph_test, is_multi = TRUE,
+                                                   output_prefix = output_prefix) else plot_ph(x = res_logrank$ph,
+                                                                                       output_prefix = output_prefix),
+      box_plot = plot_boxplot(data = data, signature = raw_sig_df, output_prefix = output_prefix, norm_exp = norm_exp),
+      scatter_plot = plot_scatter(data = data, signature = raw_sig_df, output_prefix = output_prefix,
+                                  norm_exp = norm_exp),
+      wordcloud_plot = plot_wordcloud(data = data, signature = raw_sig_df, output_prefix = output_prefix),
+      score_bar_plot = plot_barplot_score(data = data, score_cutoff_value = score_cutoff_value, output_prefix = output_prefix),
+      line_plot = plot_lineplot_score(data = data, score_cutoff_value = score_cutoff_value, output_prefix = output_prefix),
+      roc_plot = if (score_cutoff == "roc") plot_roc(x = roc_cutoff, output_prefix = output_prefix) else NULL,
+      forest_plot = if (!is.null(multi_model)) plot_forest(model_object = multi_model,
+                                                           output_prefix = output_prefix) else NULL,
+      clinics_box_plot = if (!is.null(multi_model)) plot_clinics(data = clin, output_prefix = output_prefix) else NULL,
       bar_plot = if (!is.null(multi_cox_initial$model) &&
                      isTRUE(multi_cox_initial$bootstrap.used) &&
-                     !is.null(multi_cox_initial$bootstrap.table)) {
-        plot_barplot(
-          plot_df = multi_cox_initial$bootstrap.table,
-          outprefix = outprefix,
-          type = "absolute",
-          n_bootstraps = bootstrap,
-          frequency.threshold = 25
-        )
-      } else NULL
-    )
+                     !is.null(multi_cox_initial$bootstrap.table)) plot_barplot(plot_df = multi_cox_initial$bootstrap.table,
+                                                                               output_prefix = output_prefix, feature_type = "absolute",
+                                                                               bootstrap = bootstrap,
+                                                                               frequency_threshold = 25) else NULL)
     log_message("Done.")
   }
 
@@ -1315,7 +1265,7 @@ run_survival <- function(data,
   # Listed parameters are only those directly affecting the scientific results/model
   result <- new_clinprog_survival(
     signature = raw_sig_df,
-    score_cutoff = score_cutoff_value,
+    score_cutoff_value = score_cutoff_value,
     expression_data = data,
     clinical_data = clin,
     survival = list(
@@ -1329,12 +1279,12 @@ run_survival <- function(data,
     params = list(
       norm_exp = norm_exp,
       score_cutoff = score_cutoff,
-      multivariate = multivariate,
-      variancefilter = variancefilter,
-      followup = followup,
-      p.cutoff = p.cutoff,
+      run_multivariate = run_multivariate,
+      variance_filter = variance_filter,
+      max_follow_up = max_follow_up,
+      p_value_cutoff = p_value_cutoff,
       bootstrap = bootstrap,
-      force = force
+      skip_survival_checks = skip_survival_checks
     ),
     metadata = list(
       timestamp = Sys.time(),
@@ -1345,32 +1295,32 @@ run_survival <- function(data,
   )
 
   # Writes execution metadata
-  if (saveJSON)
+  if (save_json)
   {
     log_message("Writing JSON metadata...")
     write_metadata(
       module = "run_survival",
-      outprefix = outprefix,
+      output_prefix = output_prefix,
       parameters = list(
         data = "data.frame",
-        clindata = if (is.null(clindata)) {NULL} else {"data.frame"},
+        clinical_data = "data.frame",
         signature = class(signature)[1],
-        outprefix = outprefix,
+        output_prefix = output_prefix,
         norm_exp = norm_exp,
-        multivariate = multivariate,
+        run_multivariate = run_multivariate,
         score_cutoff = score_cutoff,
-        variancefilter = variancefilter,
-        followup = followup,
-        p.cutoff = p.cutoff,
+        variance_filter = variance_filter,
+        max_follow_up = max_follow_up,
+        p_value_cutoff = p_value_cutoff,
         bootstrap = bootstrap,
-        force = force,
-        plots = plots,
-        table = table,
-        saveJSON = saveJSON,
-        saveRDS = saveRDS,
-        report = report,
+        skip_survival_checks = skip_survival_checks,
+        save_plots = save_plots,
+        save_table = save_table,
+        save_json = save_json,
+        save_rds = save_rds,
+        report_format = report_format,
         verbose = verbose,
-        log = log
+        save_log = save_log
       ),
       command = "none"
     )
@@ -1378,18 +1328,18 @@ run_survival <- function(data,
   }
 
   # Writes RDS object
-  if (saveRDS)
+  if (save_rds)
   {
     log_message("Writing RDS object...")
-    write_rds(object = result, file = paste0(outprefix, "_survival.rds"))
+    write_rds(object = result, file = paste0(output_prefix, "_survival.rds"))
     log_message("Done.")
   }
 
-  # Generates report if requested
-  if (!isFALSE(report))
+  # Generates report_format if requested
+  if (!isFALSE(report_format))
   {
-    log_message("Writing clinprog report...")
-    write_report(object = result, format = report, file = paste0(outprefix, "_report_survival.pdf"))
+    log_message("Writing clinprog report_format...")
+    write_report(object = result, format = report_format, file = paste0(output_prefix, "_report_survival.pdf"))
     log_message("Done.")
   }
 
@@ -1417,51 +1367,47 @@ run_survival <- function(data,
 #'   \item \code{run_survival()} (module 2)
 #' }
 #'
-#' @param data Data.frame. A data.frame to expression/survival table.
-#' @param outprefix Character. Output prefix used for generated files (Default: \code{"clinprog"}).
+#' @param data Character or data.frame. A data.frame or a path to a tab-separated expression/survival file
+#' @param output_prefix Character. Output prefix used for generated files (Default: \code{"clinprog"}).
+#' @param norm_exp Logical. If \code{TRUE}, log2(exp+1) transforms expression data in both \code{run_regression()}
+#'   and \code{run_survival()} modules (Default: \code{FALSE}).
 #' @param bootstrap Integer. Number of bootstraps iterations used in both \code{run_regression()} and
-#' \code{run_survival()} modules (Default: \code{1}).
-#' @param groupsize Integer. Number of features per iteration in \code{run_regression()} module (Default: \code{10}).
-#' @param percentagefilter Numeric. Correlation filter threshold used in \code{run_regression()} (Default: \code{0.3}).
-#' @param variancefilter Numeric. Variance filter threshold used in both \code{run_regression()}
-#' and \code{run_survival()} modules (Default: \code{0.01}).
-#' @param followup Numeric. Maximum followup time.
-#' @param type Character. Feature type: either \code{"gene"} (default) or \code{"transcript"} used in \code{run_regression()}.
-#' @param min_signature_size Integer or NULL. Minimum number of features to
-#'   retain when searching for a smaller prognostic signature. If \code{NULL},
-#'   no minimum-signature search is performed (Default: \code{NULL}).
-#' @param min_signature_cutoff Character or NULL. Score cutoff strategy used
-#'   during the minimum-signature search. Must be one of \code{"median"},
-#'   \code{"mean"}, \code{"signal"}, or \code{"roc"}. If
-#'   \code{min_signature_size} is provided and this argument is \code{NULL},
-#'   \code{"median"} is used (Default: \code{NULL}).
-#' @param multivariate Logical. If \code{TRUE}, performs multivariate survival analysis
-#' in \code{run_survival()} (Default: \code{FALSE}).
-#' @param clindata Data.frame. A data.frame to a clinical table used for multivariate analysis.
-#' @param score_cutoff Character. Strategy used to determine the cutoff for
-#'   categorizing signature scores. Must be one of \code{"median"},
-#'   \code{"mean"}, \code{"signal"}, or \code{"roc"} (Default:
-#'   \code{"median"}).
-#' @param p.cutoff Numeric. Univariate covariate filtering cutoff used for multivariate analysis
-#' in \code{run_survival()} (Default: \code{0.2}).
-#' @param force Logical. If \code{TRUE}, overrides filtering steps related to survival assumptions (Default: \code{FALSE}).
-#' @param plots Logical. If \code{TRUE}, generates a Kaplan-Meier curve, the proportional hazards assumption plot, and
-#'   extra figures, depending on the chosen parameters (Default: \code{FALSE}).
-#'
-#'   These can also be generated later using \code{plot_km()} and \code{plot_ph()}.
-#'   If \code{score_cutoff = "roc"}, a ROC curve can also be generated using \code{plot_roc()}.
-#'   If \code{multivariate = TRUE}, a forest plot can also be generated using \code{plot_forest()}.
-#'   If bootstrap is performed, an extra summary barplot can also be generated using \code{plot_barplot()}.
-#' @param table Logical. If \code{TRUE}, writes output tables from both modules (Default: \code{FALSE}).
-#' @param saveJSON Logical. If \code{TRUE}, saves to disk the metadata in a JSON file (Default: \code{FALSE}).
-#' @param saveRDS Logical. If \code{TRUE}, saves to disk the R object in a RDS file (Default: \code{FALSE}).
-#' @param report Logical or character. Report generation mode. Use \code{FALSE} (default) to disable report generation,
-#' \code{TRUE} or \code{"PDF"} to generate a PDF report, or \code{"HTML"} to generate an HTML report.
-#' @param log Logical. If \code{TRUE}, writes log files for both modules (Default: \code{FALSE}).
-#' @param ncores Integer. Number of CPU cores used for parallel bootstrap regression
-#'   in \code{run_regression()} (Default: \code{1}).
-#' @param seed Integer. Random seed used for reproducible bootstrap regression
-#'   in \code{run_regression()} (Default: \code{123}).
+#'   \code{run_survival()} modules (Default: \code{1}).
+#' @param group_size Integer. Number of features per iteration in \code{run_regression()} module (Default: \code{10}).
+#' @param percentage_filter Numeric. Correlation filter threshold used in \code{run_regression()} (Default: \code{0.3}).
+#' @param variance_filter Numeric. Variance filter threshold used in both \code{run_regression()} and
+#'   \code{run_survival()} modules (Default: \code{0.01}).
+#' @param max_follow_up Numeric or \code{NULL}. Maximum max_follow_up time used in both \code{run_regression()} and
+#'   \code{run_survival()} modules (Default: \code{NULL}).
+#' @param feature_type Character. Feature feature_type: either \code{"gene"} (default) or \code{"transcript"} used in \code{run_regression()}.
+#' @param min_signature_size Integer or \code{NULL} (disabled). Searches for the smallest signature that still yields
+#'   a significant univariate log-rank test on the same dataset.
+#' @param min_signature_cutoff Character or \code{NULL} (default). Strategy used to split scores into low/high
+#'   groups during the minimum signature search.
+#' @param run_multivariate Logical. If \code{TRUE}, performs run_multivariate survival analysis in
+#'   \code{run_survival()} (Default: \code{FALSE}).
+#' @param clinical_data Character or data.frame or \code{NULL}. A data.frame or a path to a tab-separated clinical file used
+#'   for run_multivariate analysis.
+#' @param score_cutoff Character. Uses the \code{"median"}, the \code{"mean"}, the \code{"signal"}, or a
+#'   \code{"roc"} curve to define the score cutoff used in \code{run_survival()} (Default: \code{"median"}).
+#' @param p_value_cutoff Numeric. Univariate covariate filtering cutoff used for run_multivariate analysis in
+#'   \code{run_survival()} (Default: \code{0.2}).
+#' @param skip_survival_checks Logical. If \code{TRUE}, overrides filtering steps related to survival assumptions in both
+#'   modules (Default: \code{FALSE}).
+#' @param save_plots Logical. If \code{TRUE}, generates plots from both modules (Default: \code{FALSE}).
+#' @param save_table Logical. If \code{TRUE}, writes output tables from both modules (Default: \code{FALSE}).
+#' @param save_json Logical. If \code{TRUE}, saves to disk the metadata in a JSON file (Default: \code{FALSE}).
+#' @param save_rds Logical. If \code{TRUE}, saves to disk the R object in a RDS file (Default: \code{FALSE}).
+#' @param report_format Logical or character. Report generation mode. Use \code{FALSE} (default) to disable report_format generation,
+#'   \code{TRUE} or \code{"PDF"} to generate a PDF report_format, or \code{"HTML"} to generate an HTML report_format.
+#' @param verbose Integer or Logical. Prints progress messages to the console if \code{1} (or \code{TRUE}) (default).
+#'   On the other hand, if \code{0} (or \code{FALSE}), runs silently (Default: \code{1}).
+#' @param save_log Logical. If \code{TRUE}, writes log files for both modules (Default: \code{FALSE}).
+#' @param n_cores Integer. Number of CPU cores used for parallel bootstrap regression
+#'   (Default: \code{1}, i.e. sequential execution).
+#' @param seed Integer or \code{NULL}. Random seed controlling every stochastic step in both \code{run_regression()}
+#'   and \code{run_survival()}, so that results are reproducible across runs for the same input and parameters
+#'   Set to \code{NULL} to disable seeding (Default: \code{123}).
 #'
 #' @details
 #' The molecular signature generated during the regression step is automatically passed to the survival analysis step.
@@ -1486,27 +1432,31 @@ run_survival <- function(data,
 #' \dontrun{
 #' # Example usage
 #' result <- run_complete(
-#'   data = expression_data,
-#'   outprefix = "my_analysis",
+#'   data = "expression_data.tsv",
+#'   output_prefix = "my_analysis",
+#'   norm_exp = FALSE,
 #'   bootstrap = 100,
-#'   groupsize = 10,
-#'   percentagefilter = 0.3,
-#'   variancefilter = 0.01,
-#'   followup = NULL,
-#'   type = "gene",
-#'   multivariate = TRUE,
-#'   clindata = clinical_data,
+#'   group_size = 10,
+#'   percentage_filter = 0.3,
+#'   variance_filter = 0.01,
+#'   max_follow_up = NULL,
+#'   feature_type = "gene",
+#'   min_signature_size = NULL,
+#'   min_signature_cutoff = NULL,
+#'   run_multivariate = TRUE,
+#'   clinical_data = "clinical_data.tsv",
 #'   score_cutoff = "roc",
-#'   p.cutoff = 0.2,
-#'   force = TRUE,
-#'   plots = TRUE,
-#'   table = TRUE,
-#'   saveJSON = TRUE,
-#'   saveRDS = TRUE,
-#'   report = TRUE,
-#'   log = TRUE,
-#'   ncores = 4,
-#'   seed = 123
+#'   p_value_cutoff = 0.2,
+#'   skip_survival_checks = TRUE,
+#'   save_plots = TRUE,
+#'   save_table = TRUE,
+#'   save_json = TRUE,
+#'   save_rds = TRUE,
+#'   report_format = TRUE,
+#'   verbose = 1,
+#'   n_cores = 1,
+#'   seed = 123,
+#'   save_log = TRUE
 #' )
 #'
 #' # Explore complete analysis results
@@ -1526,70 +1476,73 @@ run_survival <- function(data,
 #'
 #' @export
 run_complete <- function(data,
-                         outprefix = "clinprog",
+                         output_prefix = "clinprog",
                          norm_exp = FALSE,
                          bootstrap = 1,
-                         groupsize = 10,
-                         percentagefilter = 0.3,
-                         variancefilter = 0.01,
-                         followup = NULL,
-                         type = "gene",
+                         group_size = 10,
+                         percentage_filter = 0.3,
+                         variance_filter = 0.01,
+                         max_follow_up = NULL,
+                         feature_type = "gene",
                          min_signature_size = NULL,
                          min_signature_cutoff = NULL,
-                         multivariate = FALSE,
-                         clindata = NULL,
+                         run_multivariate = FALSE,
+                         clinical_data = NULL,
                          score_cutoff = "median",
-                         p.cutoff = 0.2,
-                         force = FALSE,
-                         plots = FALSE,
-                         table = FALSE,
-                         saveJSON = FALSE,
-                         saveRDS = FALSE,
-                         report = FALSE,
+                         p_value_cutoff = 0.2,
+                         skip_survival_checks = FALSE,
+                         save_plots = FALSE,
+                         save_table = FALSE,
+                         save_json = FALSE,
+                         save_rds = FALSE,
+                         report_format = FALSE,
                          verbose = 1,
-                         log = FALSE,
-                         ncores = 1,
-                         seed = 123)
+                         n_cores = 1,
+                         seed = 123,
+                         save_log = FALSE)
 {
   # Reset LOG
   .clinprog_env$log_messages <- character()
 
+  # Checks LOG argument
+  if (!is.logical(save_log) || length(save_log) != 1) {log_stop("Argument 'save_log' must be a boolean [TRUE or FALSE]")}
+
   # Checks verbosity and updates environment
-  if (length(verbose) != 1 ||
-      is.na(verbose) ||
-      !verbose %in% c(0, 1, FALSE, TRUE)) {
+  if (!verbose %in% c(0, 1, FALSE, TRUE) || length(verbose) != 1)
+  {
     log_stop("Argument 'verbose' must be 0, 1, FALSE or TRUE")
   }
   .clinprog_env$verbose <- as.logical(verbose)
 
   # Start time counter
   start_time <- Sys.time()
+
   log_message("clinprog complete log started")
 
   # Runs module 1 (regression)
   log_message("=============== clinprog: module I - regression ===============")
   regression_result <- run_regression(
     data = data,
+    output_prefix = output_prefix,
     norm_exp = norm_exp,
-    outprefix = outprefix,
     bootstrap = bootstrap,
-    groupsize = groupsize,
-    percentagefilter = percentagefilter,
-    variancefilter = variancefilter,
-    followup = followup,
-    type = type,
+    group_size = group_size,
+    percentage_filter = percentage_filter,
+    variance_filter = variance_filter,
+    max_follow_up = max_follow_up,
+    feature_type = feature_type,
     min_signature_size = min_signature_size,
     min_signature_cutoff = min_signature_cutoff,
-    force = force,
-    plots = plots,
-    table = table,
-    saveJSON = FALSE,
-    saveRDS = FALSE,
-    report = FALSE,
+    skip_survival_checks = skip_survival_checks,
+    save_plots = save_plots,
+    save_table = save_table,
+    save_json = save_json,
+    save_rds = save_rds,
+    report_format = report_format,
     verbose = verbose,
-    log = log,
-    ncores = ncores,
-    seed = seed
+    n_cores = n_cores,
+    seed = seed,
+    save_log = save_log
   )
   log_message("============================================================")
 
@@ -1597,24 +1550,24 @@ run_complete <- function(data,
   log_message("=============== clinprog: module II - survival ===============")
   survival_result <- run_survival(
     data = data,
-    norm_exp = norm_exp,
     signature = regression_result,
-    outprefix = outprefix,
-    multivariate = multivariate,
-    clindata = clindata,
+    output_prefix = output_prefix,
+    norm_exp = norm_exp,
+    run_multivariate = run_multivariate,
+    clinical_data = clinical_data,
     score_cutoff = score_cutoff,
-    variancefilter = variancefilter,
-    followup = followup,
-    p.cutoff = p.cutoff,
+    variance_filter = variance_filter,
+    max_follow_up = max_follow_up,
+    p_value_cutoff = p_value_cutoff,
     bootstrap = bootstrap,
-    force = force,
-    plots = plots,
-    table = table,
-    saveJSON = FALSE,
-    saveRDS = FALSE,
-    report = FALSE,
+    skip_survival_checks = skip_survival_checks,
+    save_plots = save_plots,
+    save_table = save_table,
+    save_json = save_json,
+    save_rds = save_rds,
+    report_format = report_format,
     verbose = verbose,
-    log = log
+    save_log = save_log
   )
   log_message("============================================================")
 
@@ -1626,17 +1579,18 @@ run_complete <- function(data,
     params = list(
       norm_exp = norm_exp,
       bootstrap = bootstrap,
-      groupsize = groupsize,
-      percentagefilter = percentagefilter,
-      variancefilter = variancefilter,
-      followup = followup,
-      type = type,
-      multivariate = multivariate,
-      clindata = clindata,
+      group_size = group_size,
+      percentage_filter = percentage_filter,
+      variance_filter = variance_filter,
+      max_follow_up = max_follow_up,
+      feature_type = feature_type,
+      min_signature_size = min_signature_size,
+      min_signature_cutoff = min_signature_cutoff,
+      run_multivariate = run_multivariate,
       score_cutoff = score_cutoff,
-      p.cutoff = p.cutoff,
-      force = force,
-      ncores = ncores,
+      p_value_cutoff = p_value_cutoff,
+      skip_survival_checks = skip_survival_checks,
+      n_cores = n_cores,
       seed = seed
     ),
     metadata = list(
@@ -1648,36 +1602,39 @@ run_complete <- function(data,
   )
 
   # Writes execution metadata
-  if (saveJSON)
+  if (save_json)
   {
     log_message("Writing JSON metadata...")
     write_metadata(
       module = "run_complete",
-      outprefix = outprefix,
+      output_prefix = output_prefix,
       parameters = list(
         data = "data.frame",
-        clindata = if (is.null(clindata)) {NULL} else {"data.frame"},
+        clinical_data = if (is.null(clinical_data)) {NULL} else {"data.frame"},
         signature = "data.frame",
-        outprefix = outprefix,
+        output_prefix = output_prefix,
         norm_exp = norm_exp,
-        multivariate = multivariate,
+        run_multivariate = run_multivariate,
         score_cutoff = score_cutoff,
-        groupsize = groupsize,
-        percentagefilter = percentagefilter,
-        variancefilter = variancefilter,
-        followup = followup,
-        p.cutoff = p.cutoff,
+        group_size = group_size,
+        percentage_filter = percentage_filter,
+        variance_filter = variance_filter,
+        max_follow_up = max_follow_up,
+        p_value_cutoff = p_value_cutoff,
         bootstrap = bootstrap,
-        type = type,
-        force = force,
-        ncores = ncores,
+        feature_type = feature_type,
+        min_signature_size = min_signature_size,
+        min_signature_cutoff = min_signature_cutoff,
+        skip_survival_checks = skip_survival_checks,
+        save_plots = save_plots,
+        save_table = save_table,
+        save_json = save_json,
+        save_rds = save_rds,
+        report_format = report_format,
+        verbose = verbose,
+        n_cores = n_cores,
         seed = seed,
-        plots = plots,
-        table = table,
-        saveJSON = saveJSON,
-        saveRDS = saveRDS,
-        report = report,
-        log = log
+        save_log = save_log
       ),
       command = "none"
     )
@@ -1685,18 +1642,18 @@ run_complete <- function(data,
   }
 
   # Writes RDS object
-  if (saveRDS)
+  if (save_rds)
   {
     log_message("Writing RDS object...")
-    write_rds(object = result, file = paste0(outprefix, "_complete.rds"))
+    write_rds(object = result, file = paste0(output_prefix, "_complete.rds"))
     log_message("Done.")
   }
 
-  # Generates report if requested
-  if (!isFALSE(report))
+  # Generates report_format if requested
+  if (!isFALSE(report_format))
   {
-    log_message("Writing clinprog report...")
-    write_report(object = result, format = report, file = paste0(outprefix, "_report_complete.pdf"))
+    log_message("Writing clinprog report_format...")
+    write_report(object = result, format = report_format, file = paste0(output_prefix, "_report_complete.pdf"))
     log_message("Done.")
   }
 

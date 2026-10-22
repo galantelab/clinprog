@@ -264,7 +264,7 @@ print.clinprog_survival <- function(x, ...) {
   if (!is.null(x$expression_data)) {cat("Samples:", nrow(x$expression_data), "\n")}
 
   # Cutoff
-  if (!is.null(x$score_cutoff)) {cat("Score cutoff:", signif(x$score_cutoff, 4), "\n")}
+  if (!is.null(x$score_cutoff_value)) {cat("Score cutoff:", signif(x$score_cutoff_value, 4), "\n")}
 
   # ROC
   cat("ROC analysis:", ifelse(is.null(x$roc_result), "No", "Yes"), "\n")
@@ -299,7 +299,7 @@ summary.clinprog_survival <- function(object, ...) {
   out <- list(
     n_features = nrow(object$signature),
     n_samples = if (!is.null(object$expression_data)) {nrow(object$expression_data)} else {NA_integer_},
-    cutoff = object$score_cutoff,
+    cutoff = object$score_cutoff_value,
     score_summary = if (!is.null(object$expression_data$score)) {summary(object$expression_data$score)} else {NULL},
     score_groups = if (!is.null(object$clinical_data$score_group))
     {
@@ -431,8 +431,8 @@ plot.clinprog_survival <- function(x, type = "all", ...)
   # KM plot
   if (type == "km")
   {
-    return(plot_km(data = x$expression_data, cutoff = x$score_cutoff,
-                     pval = x$survival$univariate$table$log.rank.pvalue, ...))
+    return(plot_km(data = x$expression_data, score_cutoff_value = x$score_cutoff_value,
+                   p_value = x$survival$univariate$table$log.rank.pvalue, ...))
   }
 
   # PH plot
@@ -496,14 +496,14 @@ print.clinprog_complete <- function(x, ...)
   # Regression module
   cat("[Module 1 - Regression]\n")
   cat("Selected features :", nrow(x$regression$signature), "\n")
-  cat("Feature type :", x$regression$params$type, "\n")
+  cat("Feature type :", x$regression$params$feature_type, "\n")
   cat("Bootstraps :", x$regression$params$bootstrap, "\n\n")
 
   # Survival module
   cat("[Module 2 - Survival]\n")
   cat("Samples :", nrow(x$survival$expression_data), "\n")
-  cat("ROC :", x$survival$params$roc, "\n")
-  cat("Multivariate :", x$survival$params$multivariate, "\n")
+  cat("Score cutoff :", x$survival$params$score_cutoff, "\n")
+  cat("Multivariate :", x$survival$params$run_multivariate, "\n")
 
   # Clinical covariates - removing survival/score columns
   if (!is.null(x$survival$clinical_data))

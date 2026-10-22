@@ -4,13 +4,13 @@
 \alias{write_metadata}
 \title{Write clinprog execution metadata to JSON}
 \usage{
-write_metadata(module, outprefix, parameters, command = NULL)
+write_metadata(module, output_prefix, parameters, command = NULL)
 }
 \arguments{
 \item{module}{Character. Name of the executed clinprog module.
 Must be either "run_regression", or "run_survival" or "run_complete".}
 
-\item{outprefix}{Character. Output prefix used to generate the JSON file.}
+\item{output_prefix}{Character. Output prefix used to generate the JSON file.}
 
 \item{parameters}{Named list containing user-defined parameters.}
 

@@ -6,16 +6,16 @@
 \usage{
 plot_km(
   data,
-  cutoff = NULL,
-  outprefix = NULL,
-  pval = FALSE,
+  score_cutoff_value = NULL,
+  output_prefix = NULL,
+  p_value = FALSE,
   palette = c("#D73027", "#1A9850"),
-  ylab = "Survival probability",
-  xlab = "Time",
+  y_label = "Survival probability",
+  x_label = "Time",
   title = NULL,
-  legend.title = "Score cutoff",
+  legend_title = "Score cutoff",
   theme = survminer::theme_survminer(),
-  tables.theme = survminer::theme_cleantable(),
+  tables_theme = survminer::theme_cleantable(),
   width = 8,
   height = 5
 )
@@ -24,26 +24,26 @@ plot_km(
 \item{data}{Data.frame containing survival information and categorized scores.
 Must contain columns \code{OS}, \code{OS.time}, and \code{score_group}.}
 
-\item{cutoff}{Numeric. Cutoff value used to categorize scores. Displayed in legend labels (optional).}
+\item{score_cutoff_value}{Numeric. Cutoff value used to categorize scores. Displayed in legend labels (optional).}
 
-\item{outprefix}{Character. Output prefix for saving the plot (optional).
+\item{output_prefix}{Character. Output prefix for saving the plot (optional).
 If \code{NULL}, the plot is not written to disk.}
 
-\item{pval}{Logical, Numeric or Character. Value to display in the plot. Typically extracted from \code{clinprog_uniCox_model()} (optional).}
+\item{p_value}{Logical, Numeric or Character. Value to display in the plot. Typically extracted from \code{clinprog_uniCox_model()} (optional).}
 
 \item{palette}{Character vector. Color palette for Kaplan-Meier curves (default: \code{c("#D73027", "#1A9850")}).}
 
-\item{ylab}{Character. Title for the Y-axis (default: \code{"Survival probability"}).}
+\item{y_label}{Character. Title for the Y-axis (default: \code{"Survival probability"}).}
 
-\item{xlab}{Character. Title for the X-axis (default: \code{"Time"}).}
+\item{x_label}{Character. Title for the X-axis (default: \code{"Time"}).}
 
 \item{title}{Character. Title for the plot (default: \code{NULL}).}
 
-\item{legend.title}{Character. Title for the legend (default: \code{"Score cutoff"}).}
+\item{legend_title}{Character. Title for the legend (default: \code{"Score cutoff"}).}
 
 \item{theme}{ggplot2 theme used in the Kaplan-Meier plot (default: \code{survminer::theme_survminer()}).}
 
-\item{tables.theme}{ggplot2 theme used in the risk table (default: \code{survminer::theme_cleantable()}).}
+\item{tables_theme}{ggplot2 theme used in the risk table (default: \code{survminer::theme_cleantable()}).}
 
 \item{width}{Numeric. Plot width in inches (default: \code{8}).}
 

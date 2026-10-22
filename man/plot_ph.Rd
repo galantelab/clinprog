@@ -7,7 +7,7 @@
 plot_ph(
   x,
   is_multi = FALSE,
-  outprefix = NULL,
+  output_prefix = NULL,
   individual = FALSE,
   theme = theme_clinprog(),
   width = NULL,
@@ -24,12 +24,12 @@ plot_ph(
 
 \item{is_multi}{Logical. Whether the model corresponds to a multivariate Cox analysis (default: \code{FALSE}).}
 
-\item{outprefix}{Character. Output prefix for saving the plot (optional).
+\item{output_prefix}{Character. Output prefix for saving the plot (optional).
 If \code{NULL}, the plot is not written to disk.}
 
-\item{individual}{Logical. If \code{TRUE} and \code{outprefix} is provided, saves each Schoenfeld
-plot as its own PDF file named \code{{outprefix}_ph_assumptions_{variable}.pdf}. The combined grid
-is still saved as \code{{outprefix}_ph_assumptions_plot.pdf} (default: \code{FALSE}).}
+\item{individual}{Logical. If \code{TRUE} and \code{output_prefix} is provided, saves each Schoenfeld
+plot as its own PDF file named \code{{output_prefix}_ph_assumptions_{variable}.pdf}. The combined grid
+is still saved as \code{{output_prefix}_ph_assumptions_plot.pdf} (default: \code{FALSE}).}
 
 \item{theme}{A ggplot2 theme object. Defaults to \code{theme_clinprog()}.}
 

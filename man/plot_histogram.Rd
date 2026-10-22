@@ -6,9 +6,9 @@
 \usage{
 plot_histogram(
   signature,
-  outprefix = NULL,
+  output_prefix = NULL,
   theme = theme_clinprog(),
-  binwidth = NULL,
+  bin_width = NULL,
   width = 8,
   height = 5,
   dpi = 300
@@ -17,11 +17,11 @@ plot_histogram(
 \arguments{
 \item{signature}{A data.frame with 'feature' and 'coefficient'.}
 
-\item{outprefix}{Character. Output prefix for saving the plot (optional).}
+\item{output_prefix}{Character. Output prefix for saving the plot (optional).}
 
 \item{theme}{A ggplot2 theme object. Defaults to \code{theme_clinprog()}.}
 
-\item{binwidth}{Numeric. Width of the histogram bins (Default: \code{NULL})}
+\item{bin_width}{Numeric. Width of the histogram bins (Default: \code{NULL})}
 
 \item{width}{Numeric. Plot width in inches (Default: \code{8})}
 

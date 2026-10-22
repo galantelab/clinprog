@@ -6,22 +6,22 @@
 \usage{
 plot_swimmer(
   data,
-  cutoff,
+  score_cutoff_value,
   group_col = "score_group",
   score_col = "score",
   os_col = "OS",
   time_col = "OS.time",
   id_col = NULL,
-  outprefix = NULL,
+  output_prefix = NULL,
   palette = c("#1A9850", "#D73027"),
-  ylab = "Patients",
-  xlab = "Follow-up time",
+  y_label = "Patients",
+  x_label = "Follow-up time",
   title = NULL,
-  legend.title = "Score cutoff",
+  legend_title = "Score cutoff",
   theme = theme_clinprog(),
   width = 8,
   height = 6,
-  show.labels = NULL,
+  show_labels = NULL,
   sort_by = c("time", "score", "none"),
   time_cutoff = NULL,
   facet_by = NULL,
@@ -38,13 +38,13 @@ plot_swimmer(
 \item{data}{Data.frame containing clinical/survival information. Must contain at least the columns
 referenced by \code{group_col}, \code{score_col}, \code{os_col}, and \code{time_col}.}
 
-\item{cutoff}{Numeric. Cutoff used to dichotomize the score into \code{"Low"} and \code{"High"}.}
+\item{score_cutoff_value}{Numeric. Cutoff used to dichotomize the score into \code{"Low"} and \code{"High"}.}
 
 \item{group_col}{Character. Column name with the dichotomized score group. Validated for existence, but the
-actual coloring is derived from \code{score_col} and \code{cutoff} (default: \code{"score_group"}).}
+actual coloring is derived from \code{score_col} and \code{score_cutoff_value} (default: \code{"score_group"}).}
 
 \item{score_col}{Character. Column name with the numeric score (default: \code{"score"}). Used together with
-\code{cutoff} to define the Low/High color group.}
+\code{score_cutoff_value} to define the Low/High color group.}
 
 \item{os_col}{Character. Column name for OS status (default: \code{"OS"}). Values are expected to be
 0/1 (0 = Alive/censored, 1 = Dead/event).}
@@ -54,19 +54,19 @@ actual coloring is derived from \code{score_col} and \code{cutoff} (default: \co
 \item{id_col}{Character or \code{NULL}. Column name used as patient ID for the Y axis. If \code{NULL} (default),
 row names are used when they differ from the default integer sequence; otherwise an internal index is generated.}
 
-\item{outprefix}{Character. Output prefix for saving the plot (optional).
+\item{output_prefix}{Character. Output prefix for saving the plot (optional).
 If \code{NULL}, the plot is not written to disk.}
 
 \item{palette}{Character vector of length 2.
-Colors for below/equal and above cutoff (default: \code{c("#1A9850", "#D73027")}).}
+Colors for below/equal and above score_cutoff_value (default: \code{c("#1A9850", "#D73027")}).}
 
-\item{ylab}{Character. Title for the Y-axis (default: \code{"Patients"}).}
+\item{y_label}{Character. Title for the Y-axis (default: \code{"Patients"}).}
 
-\item{xlab}{Character. Title for the X-axis (default: \code{"Follow-up time"}).}
+\item{x_label}{Character. Title for the X-axis (default: \code{"Follow-up time"}).}
 
 \item{title}{Character. Plot title (default: \code{NULL}).}
 
-\item{legend.title}{Character. Title for the color legend (default: \code{"Score cutoff"}).}
+\item{legend_title}{Character. Title for the color legend (default: \code{"Score score_cutoff_value"}).}
 
 \item{theme}{A ggplot2 theme object. Defaults to \code{theme_clinprog()}.}
 
@@ -74,7 +74,7 @@ Colors for below/equal and above cutoff (default: \code{c("#1A9850", "#D73027")}
 
 \item{height}{Numeric. Plot height in inches (default: \code{6}).}
 
-\item{show.labels}{Logical or character vector. If \code{NULL} (default) or \code{FALSE}, no patient labels are
+\item{show_labels}{Logical or character vector. If \code{NULL} (default) or \code{FALSE}, no patient labels are
 shown on the Y axis. If \code{TRUE}, all patients are labeled. If a character vector, only the matching
 patient IDs are labeled (others are blank).}
 
@@ -106,6 +106,6 @@ A \code{ggplot} object.
 Creates a swimmer plot (a.k.a. swimlane plot) where each horizontal bar represents one patient.
 The bar length corresponds to the follow-up time (from time = 0 up to the observed \code{time_col}), and the
 bar color encodes whether the patient's clinprog score is below or equal (low) or strictly above (high) the
-specified \code{cutoff}. At the end of each bar, a symbol indicates the patient's status at last follow-up:
+specified \code{score_cutoff_value}. At the end of each bar, a symbol indicates the patient's status at last follow-up:
 a circle for alive/censored and a triangle for dead/event (shapes are configurable).
 }

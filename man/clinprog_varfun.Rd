@@ -4,14 +4,14 @@
 \alias{clinprog_varfun}
 \title{Variance filtering for clinprog pipeline}
 \usage{
-clinprog_varfun(cmatrix, var_threshold, force)
+clinprog_varfun(cmatrix, var_threshold, skip_survival_checks)
 }
 \arguments{
 \item{cmatrix}{A data.frame with survival data (first two columns) and expression values.}
 
 \item{var_threshold}{Numeric. Variance threshold for filtering.}
 
-\item{force}{Logical. Whether to bypass survival-related checks.}
+\item{skip_survival_checks}{Logical. Whether to bypass survival-related checks.}
 }
 \value{
 A filtered data.frame.

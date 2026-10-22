@@ -6,101 +6,103 @@
 \usage{
 run_regression(
   data,
-  outprefix = "clinprog",
+  output_prefix = "clinprog",
   norm_exp = FALSE,
   bootstrap = 1,
-  groupsize = 10,
-  percentagefilter = 0.3,
-  variancefilter = 0.01,
-  followup = NULL,
-  type = "gene",
+  group_size = 10,
+  percentage_filter = 0.3,
+  variance_filter = 0.01,
+  max_follow_up = NULL,
+  feature_type = "gene",
   min_signature_size = NULL,
   min_signature_cutoff = NULL,
-  force = FALSE,
-  plots = FALSE,
-  table = FALSE,
-  saveJSON = FALSE,
-  saveRDS = FALSE,
-  report = FALSE,
+  skip_survival_checks = FALSE,
+  save_plots = FALSE,
+  save_table = FALSE,
+  save_json = FALSE,
+  save_rds = FALSE,
+  report_format = FALSE,
   verbose = 1,
-  log = FALSE,
-  ncores = 1,
-  seed = 123
+  n_cores = 1,
+  seed = 123,
+  save_log = FALSE
 )
 }
 \arguments{
-\item{data}{Data.frame. A data.frame containing survival data
-(e.g., OS, OS.time) and expression values (genes or transcripts).}
+\item{data}{Character or data.frame. A data.frame or a path to a tab-separated file containing survival data
+(e.g., OS, OS.time) and expression values (genes or transcripts). Example: \code{"myPATH/myTPM.tsv"}.}
 
-\item{outprefix}{Character. Output prefix used for generated files (Default: \code{"clinprog"}).}
+\item{output_prefix}{Character. Output prefix used for generated files (Default: \code{"clinprog"}).}
 
-\item{norm_exp}{Logical. If \code{TRUE}, applies a log2(expression + 1)
-transformation to expression data before downstream filtering and regression
-(Default: \code{FALSE}).}
+\item{norm_exp}{Logical. If \code{TRUE}, log2(exp+1) transforms expression data (Default: \code{FALSE}).}
 
 \item{bootstrap}{Integer. Number of bootstrap iterations (Default: \code{1}).}
 
-\item{groupsize}{Integer. Number of genes/transcripts sampled per iteration (Default: \code{10}).}
+\item{group_size}{Integer. Number of genes/transcripts sampled per iteration (Default: \code{10}).}
 
-\item{percentagefilter}{Numeric. Correlation filter threshold (0–1; Default: \code{0.3}).}
+\item{percentage_filter}{Numeric. Correlation filter threshold (0–1; Default: \code{0.3}).}
 
-\item{variancefilter}{Numeric. Variance filter threshold (0–1; Default: \code{0.01}).}
+\item{variance_filter}{Numeric. Variance filter threshold (0–1; Default: \code{0.01}).}
 
-\item{followup}{Numeric. Maximum followup time (Default: \code{NULL}).}
+\item{max_follow_up}{Numeric or \code{NULL}. Maximum max_follow_up time (Default: \code{NULL}).}
 
-\item{type}{Character. Feature type: either \code{"gene"} (default) or \code{"transcript"}.}
+\item{feature_type}{Character. Feature feature_type: either \code{"gene"} (default) or \code{"transcript"}.}
 
-\item{min_signature_size}{Integer or NULL. Minimum number of features to
-retain when searching for a smaller prognostic signature. If \code{NULL},
-no minimum-signature search is performed (Default: \code{NULL}).}
+\item{min_signature_size}{Integer or \code{NULL} (disabled). If provided, after the bootstrap/Cox LASSO regression
+step, searches for the smallest signature (top-ranked features by absolute coefficient) that still yields a
+significant univariate log-rank test on the same dataset. The search starts at \code{min_signature_size} features
+and increases one feature at a time until the log-rank p-value drops below \code{0.05}.}
 
-\item{min_signature_cutoff}{Character or NULL. Score cutoff strategy used
-during the minimum-signature search. Must be one of \code{"median"},
-\code{"mean"}, \code{"signal"}, or \code{"roc"}. If
-\code{min_signature_size} is provided and this argument is \code{NULL},
-\code{"median"} is used (Default: \code{NULL}).}
+\item{min_signature_cutoff}{Character or \code{NULL} (default). Strategy used to split scores into low/high
+groups during the minimum signature search. One of \code{"median"}, \code{"mean"}, \code{"signal"}, or
+\code{"roc"}.}
 
-\item{force}{Logical. If \code{TRUE}, overrides filtering steps related to survival assumptions (Default: \code{FALSE}).}
+\item{skip_survival_checks}{Logical. If \code{TRUE}, overrides filtering steps related to survival assumptions (Default: \code{FALSE}).}
 
-\item{plots}{Logical. If \code{TRUE}, generates histogram and lollipop plots (Default: \code{FALSE}).
+\item{save_plots}{Logical. If \code{TRUE}, generates histogram and lollipop plots (Default: \code{FALSE}).
 
 These can also be generated later using \code{plot_histogram()} and \code{plot_lollipop()}.}
 
-\item{table}{Logical. If \code{TRUE}, writes signature table to disk (Default: \code{FALSE}).
+\item{save_table}{Logical. If \code{TRUE}, writes signature table to disk (Default: \code{FALSE}).
 
 This can also be done later using \code{write_signature()} for the signature file.}
 
-\item{saveJSON}{Logical. If \code{TRUE}, saves to disk the metadata in a JSON file (Default: \code{FALSE}).
+\item{save_json}{Logical. If \code{TRUE}, saves to disk the metadata in a JSON file (Default: \code{FALSE}).
 
 This can also be done later using \code{write_metadata()} for a JSON with metadata.}
 
-\item{saveRDS}{Logical. If \code{TRUE}, saves to disk the R object in a RDS file (Default: \code{FALSE}).
+\item{save_rds}{Logical. If \code{TRUE}, saves to disk the R object in a RDS file (Default: \code{FALSE}).
 
 This can also be done later using \code{write_rds()}.}
 
-\item{report}{Logical or character. Whether to generate a final analysis report. Accepted values are:
+\item{report_format}{Logical or character. Whether to generate a final analysis report_format. Accepted values are:
 \itemize{
-\item \code{FALSE}: Do not generate a report (default).
-\item \code{TRUE}: Generate a PDF report.
-\item \code{"PDF"}: Generate a PDF report.
-\item \code{"HTML"}: Generate an HTML report.
+\item \code{FALSE}: Do not generate a report_format (default).
+\item \code{TRUE}: Generate a PDF report_format.
+\item \code{"PDF"}: Generate a PDF report_format.
+\item \code{"HTML"}: Generate an HTML report_format.
 }
 
 This can also be done later using \code{write_report()}.}
 
-\item{log}{Logical. If \code{TRUE}, writes a minimalist log file tracking the pipeline execution (Default: \code{FALSE}).}
+\item{verbose}{Integer or Logical. If \code{1} (or \code{TRUE}), prints progress messages to the console. On the
+other hand, if \code{0} (or \code{FALSE}), runs silently (Default: \code{1}).}
 
-\item{ncores}{Integer. Number of CPU cores used for parallel bootstrap regression
+\item{n_cores}{Integer. Number of CPU cores used for parallel bootstrap regression
 (Default: \code{1}, i.e. sequential execution).}
 
-\item{seed}{Integer. Random seed used for reproducible bootstrap regression
-in \code{run_regression()} (Default: \code{123}).}
+\item{seed}{Integer or \code{NULL}. Random seed controlling every stochastic step in the pipeline
+(missing-value imputation, bootstrap feature subsampling, and LASSO cross-validation folds), so
+that results are reproducible across runs for the same input and parameters (Default: \code{123}).}
+
+\item{save_log}{Logical. If \code{TRUE}, writes a minimalist log file tracking the pipeline execution (Default: \code{FALSE}).
+This can also be done later using \code{write_log()}.}
 }
 \value{
 An S3 object of class \code{"clinprog_signature"} containing:
 \itemize{
 \item \code{signature}: data.frame with selected features and coefficients
-\item \code{plots}: list of generated plots (if requested)
+\item \code{save_plots}: list of generated plots (if requested)
 \item \code{params}: list of parameters used in the analysis
 \item \code{metadata}: list of metadata information such as timestamp, R version, and clinprog package version
 \item \code{call}: original function call
@@ -113,7 +115,7 @@ Main function for finding a molecular signature using bootstrap resampling and p
 The clinprog pipeline applies a sequence of preprocessing and modeling steps:
 \enumerate{
 \item Checking minimum requirements in input dataset and parameters
-\item Max followup definition to control for survival analysis
+\item Max max_follow_up definition to control for survival analysis
 \item Variance filtering to remove low-variance features
 \item Proportional hazards assumption testing (Schoenfeld residuals)
 \item Optional simplified regression (if dataset is small)
@@ -121,48 +123,63 @@ The clinprog pipeline applies a sequence of preprocessing and modeling steps:
 \item Features (pairs) correlation filtering for every iteration
 \item Custom coefficient filtering for genes/transcripts
 \item Aggregation and ranking of selected features
+\item Optional search for the most parsimonious signature with significant results (top-k prefix search)
 }
 
 The final signature consists of features with stable and non-zero coefficients across bootstrap iterations.
 }
 \note{
-Runtime may increase substantially with larger values of \code{bootstrap} (e.g., >1000 iterations) in combination with \code{groupsize}.
+Runtime may increase substantially with larger values of \code{bootstrap} (e.g., >1000 iterations) in combination with \code{group_size}.
 Large dataset sizes (samples and/or features) may also significantly increase runtime.
 
 For exploratory analyses, smaller values are recommended.
 Input data must be properly formatted and free of missing or infinite values after preprocessing steps to avoid errors.
 
-Change \code{percentagefilter} and \code{variancefilter} parameters to make the filters more or less flexible and,
+Set \code{norm_exp} parameter to \code{TRUE} if a log2(expression + 1) transformation on expression data is required.
+Otherwise, keep it \code{FALSE}. Log2-transformed expression data are highly recommended for survival analyses.
+
+Change \code{percentage_filter} and \code{variance_filter} parameters to make the filters more or less flexible and,
 as a result, obtaining bigger or smaller signatures.
 
-Change \code{followup} to adjust the maximum followup. Ideal when time-specific survival analyses are needed.
+Change \code{max_follow_up} to adjust the maximum max_follow_up. Ideal when time-specific survival analyses are needed.
 For instance, 1-year OS, or 3-year OS, or 5-year OS or even 10-year OS.
 
-Careful with the \code{type} parameter to get proper results, depending on the input (genes or transcripts).
+Careful with the \code{feature_type} parameter to get proper results, depending on the input (genes or transcripts).
 
-Keeping \code{force = FALSE} parameter is recommended, especially if other endpoints can be evaluated.
+Keeping \code{skip_survival_checks = FALSE} parameter is recommended, especially if other endpoints can be evaluated.
+
+Setting \code{min_signature_size} is useful when the user wants to obtain the smallest signature that still shows a
+significant univariate association with survival, trading off statistical power for parsimony. This search uses the
+same dataset used to derive the signature, so it should be interpreted as a heuristic rather than a formal validation.
+
+Set \code{seed} parameter to \code{NULL} to disable seeding and restore the previous (non-reproducible) behavior.
+The seed is applied locally and the caller's R session RNG state is restored afterwards.
 }
 \examples{
 \dontrun{
 # Example usage
 result <- run_regression(
-  data = expression_data,
-  outprefix = "my_analysis",
+  data = "expression_data.tsv",
+  output_prefix = "my_analysis",
+  norm_exp = TRUE,
   bootstrap = 100,
-  groupsize = 10,
-  percentagefilter = 0.3,
-  variancefilter = 0.01,
-  followup = NULL,
-  type = "gene",
-  force = TRUE,
-  plots = TRUE,
-  table = TRUE,
-  saveJSON = TRUE,
-  saveRDS = TRUE,
-  report = TRUE,
-  log = TRUE,
-  ncores = 4,
-  seed = 123
+  group_size = 10,
+  percentage_filter = 0.3,
+  variance_filter = 0.01,
+  max_follow_up = NULL,
+  feature_type = "gene",
+  min_signature_size = NULL,
+  min_signature_cutoff = NULL,
+  skip_survival_checks = TRUE,
+  save_plots = TRUE,
+  save_table = TRUE,
+  save_json = TRUE,
+  save_rds = TRUE,
+  report_format = TRUE,
+  verbose = 1,
+  n_cores = 4,
+  seed = 123,
+  save_log = TRUE
 )
 
 # Access signature through custom clinprog S3 methods
@@ -186,14 +203,29 @@ plot_lollipop(result$signature, "my_analysis_lolli")
 write_signature(result, "my_analysis_signature.txt")
 
 # Export metadata manually
-write_metadata(module = "run_regression", outprefix = outprefix,
-                      parameters = list(...), command = "none")
+write_metadata(module = "run_regression", output_prefix = output_prefix,
+               parameters = list(...), command = "none")
 
 # Save result in RDS
 write_rds(object = result, file = "my_analysis.rds")
 
-# Generate final report
-write_report(object = result, format = report, file = "my_analysis_report.pdf")
+# Save LOG file
+write_log(file = "my_analysis.log")
+
+# Generate final report_format
+write_report(object = result, format = report_format, file = "my_analysis_report.pdf")
+
+# Search for the smallest signature with significant univariate survival
+result_min <- run_regression(
+  data = "expression_data.tsv",
+  output_prefix = "my_analysis_min",
+  bootstrap = 100,
+  min_signature_size = 2,
+  min_signature_cutoff = "roc",
+  skip_survival_checks = TRUE,
+  n_cores = 4,
+  seed = 123
+)
 }
 
 }
@@ -204,5 +236,5 @@ Documentation and tutorials: \url{https://galantelab.github.io/clinprog/} \cr
 
 Other functions: \code{\link{plot_histogram}}, \code{\link{plot_lollipop}}, \code{\link{read_table}},
 \code{\link{read_rds}}, \code{\link{write_rds}}, \code{\link{write_metadata}},
-\code{\link{write_signature}}, and \code{\link{write_report}}
+\code{\link{write_signature}}, \code{\link{write_report}}, and \code{\link{write_log}}.
 }

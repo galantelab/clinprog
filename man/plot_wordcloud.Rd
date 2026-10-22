@@ -11,7 +11,7 @@ plot_wordcloud(
   coef_col = "coefficient",
   pos_color = "#D73027",
   neg_color = "#1A9850",
-  outprefix = NULL,
+  output_prefix = NULL,
   theme = theme_clinprog(),
   width = NULL,
   height = NULL,
@@ -33,7 +33,7 @@ plot_wordcloud(
 
 \item{neg_color}{Character. Color for negative coefficients (default: \code{"#1A9850"}).}
 
-\item{outprefix}{Character. Output prefix for saving the plot (optional).}
+\item{output_prefix}{Character. Output prefix for saving the plot (optional).}
 
 \item{theme}{A ggplot2 theme object. Defaults to \code{theme_clinprog()}.}
 

@@ -7,10 +7,10 @@ test_that("run_regression runs on toy data", {
   result <- run_regression(
     data = example_data,
     bootstrap = 4,
-    groupsize = 3,
-    type = "transcript",
-    force = TRUE,
-    ncores = 1,
+    group_size = 3,
+    feature_type = "transcript",
+    skip_survival_checks = TRUE,
+    n_cores = 1,
     seed = 123
   )
 
@@ -19,7 +19,7 @@ test_that("run_regression runs on toy data", {
   expect_true(nrow(result$signature) > 0)
   expect_true(all(c("feature", "coefficient") %in% colnames(result$signature)))
 
-  expect_equal(result$params$ncores, 1)
+  expect_equal(result$params$n_cores, 1)
   expect_equal(result$params$seed, 123)
 })
 
@@ -31,20 +31,20 @@ test_that("run_regression is reproducible with the same seed", {
   result1 <- run_regression(
     data = example_data,
     bootstrap = 4,
-    groupsize = 3,
-    type = "transcript",
-    force = TRUE,
-    ncores = 1,
+    group_size = 3,
+    feature_type = "transcript",
+    skip_survival_checks = TRUE,
+    n_cores = 1,
     seed = 123
   )
 
   result2 <- run_regression(
     data = example_data,
     bootstrap = 4,
-    groupsize = 3,
-    type = "transcript",
-    force = TRUE,
-    ncores = 1,
+    group_size = 3,
+    feature_type = "transcript",
+    skip_survival_checks = TRUE,
+    n_cores = 1,
     seed = 123
   )
 
@@ -59,20 +59,20 @@ test_that("run_regression gives identical results in serial and parallel modes",
   result_serial <- run_regression(
     data = example_data,
     bootstrap = 4,
-    groupsize = 3,
-    type = "transcript",
-    force = TRUE,
-    ncores = 1,
+    group_size = 3,
+    feature_type = "transcript",
+    skip_survival_checks = TRUE,
+    n_cores = 1,
     seed = 123
   )
 
   result_parallel <- run_regression(
     data = example_data,
     bootstrap = 4,
-    groupsize = 3,
-    type = "transcript",
-    force = TRUE,
-    ncores = 2,
+    group_size = 3,
+    feature_type = "transcript",
+    skip_survival_checks = TRUE,
+    n_cores = 2,
     seed = 123
   )
 
@@ -80,7 +80,7 @@ test_that("run_regression gives identical results in serial and parallel modes",
 })
 
 
-test_that("run_regression validates ncores and seed", {
+test_that("run_regression validates n_cores and seed", {
   example_file <- system.file("extdata", "toy_expression.tsv", package = "clinprog")
   example_data <- read_table(example_file, sep = "\t")
 
@@ -88,10 +88,10 @@ test_that("run_regression validates ncores and seed", {
     run_regression(
       data = example_data,
       bootstrap = 4,
-      groupsize = 3,
-      type = "transcript",
-      force = TRUE,
-      ncores = 0
+      group_size = 3,
+      feature_type = "transcript",
+      skip_survival_checks = TRUE,
+      n_cores = 0
     )
   )
 
@@ -99,10 +99,10 @@ test_that("run_regression validates ncores and seed", {
     run_regression(
       data = example_data,
       bootstrap = 4,
-      groupsize = 3,
-      type = "transcript",
-      force = TRUE,
-      ncores = 1.5
+      group_size = 3,
+      feature_type = "transcript",
+      skip_survival_checks = TRUE,
+      n_cores = 1.5
     )
   )
 
@@ -110,9 +110,9 @@ test_that("run_regression validates ncores and seed", {
     run_regression(
       data = example_data,
       bootstrap = 4,
-      groupsize = 3,
-      type = "transcript",
-      force = TRUE,
+      group_size = 3,
+      feature_type = "transcript",
+      skip_survival_checks = TRUE,
       seed = 1.5
     )
   )
@@ -128,11 +128,11 @@ test_that("run_regression restores the global RNG state", {
   run_regression(
     data = example_data,
     bootstrap = 4,
-    groupsize = 3,
-    type = "transcript",
-    force = TRUE,
+    group_size = 3,
+    feature_type = "transcript",
+    skip_survival_checks = TRUE,
     seed = 123,
-    ncores = 1
+    n_cores = 1
   )
 
   expect_identical(.Random.seed, expected)
@@ -149,11 +149,11 @@ test_that("run_regression restores absence of the global RNG state", {
   run_regression(
     data = example_data,
     bootstrap = 4,
-    groupsize = 3,
-    type = "transcript",
-    force = TRUE,
+    group_size = 3,
+    feature_type = "transcript",
+    skip_survival_checks = TRUE,
     seed = 123,
-    ncores = 1
+    n_cores = 1
   )
 
   expect_false(
@@ -168,8 +168,8 @@ test_that("run_complete runs on toy data", {
   # Temporary output directory
   tmp_dir <- tempdir()
   message("Using temporary directory: ", tmp_dir)
-  outprefix <- file.path(tmp_dir, "run_complete")
-  # outprefix <- "run_complete"
+  output_prefix <- file.path(tmp_dir, "run_complete")
+  # output_prefix <- "run_complete"
 
   # Loads toy datasets
   example_file <- system.file("extdata", "toy_expression.tsv", package = "clinprog")
@@ -180,25 +180,25 @@ test_that("run_complete runs on toy data", {
   # Runs clinprog modules I + II - regression + survival
   result <- run_complete(
     data = example_data,
-    outprefix = outprefix,
+    output_prefix = output_prefix,
     bootstrap = 10,
-    groupsize = 10,
-    percentagefilter = 0.3,
-    variancefilter = 0.01,
-    followup = NULL,
-    type = "transcript",
-    multivariate = TRUE,
-    clindata = clinical_data,
+    group_size = 10,
+    percentage_filter = 0.3,
+    variance_filter = 0.01,
+    max_follow_up = NULL,
+    feature_type = "transcript",
+    run_multivariate = TRUE,
+    clinical_data = clinical_data,
     score_cutoff = "roc",
-    p.cutoff = 0.2,
-    force = TRUE,
-    plots = TRUE,
-    table = TRUE,
-    saveJSON = TRUE,
-    saveRDS = TRUE,
-    report = FALSE,
-    log = TRUE,
-    ncores = 1,
+    p_value_cutoff = 0.2,
+    skip_survival_checks = TRUE,
+    save_plots = TRUE,
+    save_table = TRUE,
+    save_json = TRUE,
+    save_rds = TRUE,
+    report_format = FALSE,
+    save_log = TRUE,
+    n_cores = 1,
     seed = 123
   )
 
@@ -220,10 +220,10 @@ test_that("run_complete runs on toy data", {
   # Parameters
   expect_true(is.list(result$params))
   expect_equal(result$params$bootstrap, 10)
-  expect_equal(result$params$ncores, 1)
+  expect_equal(result$params$n_cores, 1)
   expect_equal(result$params$seed, 123)
-  expect_equal(result$params$variancefilter, 0.01)
-  expect_true(result$params$multivariate)
+  expect_equal(result$params$variance_filter, 0.01)
+  expect_true(result$params$run_multivariate)
   expect_equal(result$params$score_cutoff, "roc")
 
   # Metadata and reproducibility
@@ -231,7 +231,7 @@ test_that("run_complete runs on toy data", {
   expect_true(is.list(result$metadata))
   expect_true(!is.null(result$metadata$package_version))
 })
-#######################################################################################################################
+######################################################################################################################
 
 test_that("run_regression validates norm_exp", {
   expect_error(
@@ -270,7 +270,7 @@ test_that("clinprog_min_signature validates arguments", {
       signature = signature,
       data = data,
       min_size = 0,
-      score.cutoff = "median"
+      score_cutoff = "median"
     ),
     "min_size"
   )
@@ -280,7 +280,7 @@ test_that("clinprog_min_signature validates arguments", {
       signature = signature,
       data = data,
       min_size = 1.5,
-      score.cutoff = "median"
+      score_cutoff = "median"
     ),
     "min_size"
   )
@@ -314,7 +314,7 @@ test_that("clinprog_min_signature returns full signature when min_size is too la
     signature = signature,
     data = data,
     min_size = 3,
-    score.cutoff = "median"
+    score_cutoff = "median"
   )
 
   expect_equal(result$size, 2)
@@ -355,7 +355,7 @@ test_that("clinprog_min_signature ranks features by absolute coefficient", {
     signature = signature,
     data = data,
     min_size = 1,
-    score.cutoff = "median"
+    score_cutoff = "median"
   )
 
   expect_equal(
@@ -390,12 +390,3 @@ test_that("run_regression validates minimum signature parameters", {
     "min_signature_cutoff"
   )
 })
-
-expect_error(
-  run_survival(
-    data = toy_expression,
-    signature = toy_signature,
-    score_cutoff = "invalid"
-  ),
-  "score_cutoff"
-)

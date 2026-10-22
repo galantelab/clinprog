@@ -6,100 +6,98 @@
 \usage{
 run_complete(
   data,
-  outprefix = "clinprog",
+  output_prefix = "clinprog",
   norm_exp = FALSE,
   bootstrap = 1,
-  groupsize = 10,
-  percentagefilter = 0.3,
-  variancefilter = 0.01,
-  followup = NULL,
-  type = "gene",
+  group_size = 10,
+  percentage_filter = 0.3,
+  variance_filter = 0.01,
+  max_follow_up = NULL,
+  feature_type = "gene",
   min_signature_size = NULL,
   min_signature_cutoff = NULL,
-  multivariate = FALSE,
-  clindata = NULL,
+  run_multivariate = FALSE,
+  clinical_data = NULL,
   score_cutoff = "median",
-  p.cutoff = 0.2,
-  force = FALSE,
-  plots = FALSE,
-  table = FALSE,
-  saveJSON = FALSE,
-  saveRDS = FALSE,
-  report = FALSE,
+  p_value_cutoff = 0.2,
+  skip_survival_checks = FALSE,
+  save_plots = FALSE,
+  save_table = FALSE,
+  save_json = FALSE,
+  save_rds = FALSE,
+  report_format = FALSE,
   verbose = 1,
-  log = FALSE,
-  ncores = 1,
-  seed = 123
+  n_cores = 1,
+  seed = 123,
+  save_log = FALSE
 )
 }
 \arguments{
-\item{data}{Data.frame. A data.frame to expression/survival table.}
+\item{data}{Character or data.frame. A data.frame or a path to a tab-separated expression/survival file}
 
-\item{outprefix}{Character. Output prefix used for generated files (Default: \code{"clinprog"}).}
+\item{output_prefix}{Character. Output prefix used for generated files (Default: \code{"clinprog"}).}
+
+\item{norm_exp}{Logical. If \code{TRUE}, log2(exp+1) transforms expression data in both \code{run_regression()}
+and \code{run_survival()} modules (Default: \code{FALSE}).}
 
 \item{bootstrap}{Integer. Number of bootstraps iterations used in both \code{run_regression()} and
 \code{run_survival()} modules (Default: \code{1}).}
 
-\item{groupsize}{Integer. Number of features per iteration in \code{run_regression()} module (Default: \code{10}).}
+\item{group_size}{Integer. Number of features per iteration in \code{run_regression()} module (Default: \code{10}).}
 
-\item{percentagefilter}{Numeric. Correlation filter threshold used in \code{run_regression()} (Default: \code{0.3}).}
+\item{percentage_filter}{Numeric. Correlation filter threshold used in \code{run_regression()} (Default: \code{0.3}).}
 
-\item{variancefilter}{Numeric. Variance filter threshold used in both \code{run_regression()}
-and \code{run_survival()} modules (Default: \code{0.01}).}
+\item{variance_filter}{Numeric. Variance filter threshold used in both \code{run_regression()} and
+\code{run_survival()} modules (Default: \code{0.01}).}
 
-\item{followup}{Numeric. Maximum followup time.}
+\item{max_follow_up}{Numeric or \code{NULL}. Maximum max_follow_up time used in both \code{run_regression()} and
+\code{run_survival()} modules (Default: \code{NULL}).}
 
-\item{type}{Character. Feature type: either \code{"gene"} (default) or \code{"transcript"} used in \code{run_regression()}.}
+\item{feature_type}{Character. Feature feature_type: either \code{"gene"} (default) or \code{"transcript"} used in \code{run_regression()}.}
 
-\item{min_signature_size}{Integer or NULL. Minimum number of features to
-retain when searching for a smaller prognostic signature. If \code{NULL},
-no minimum-signature search is performed (Default: \code{NULL}).}
+\item{min_signature_size}{Integer or \code{NULL} (disabled). Searches for the smallest signature that still yields
+a significant univariate log-rank test on the same dataset.}
 
-\item{min_signature_cutoff}{Character or NULL. Score cutoff strategy used
-during the minimum-signature search. Must be one of \code{"median"},
-\code{"mean"}, \code{"signal"}, or \code{"roc"}. If
-\code{min_signature_size} is provided and this argument is \code{NULL},
-\code{"median"} is used (Default: \code{NULL}).}
+\item{min_signature_cutoff}{Character or \code{NULL} (default). Strategy used to split scores into low/high
+groups during the minimum signature search.}
 
-\item{multivariate}{Logical. If \code{TRUE}, performs multivariate survival analysis
-in \code{run_survival()} (Default: \code{FALSE}).}
+\item{run_multivariate}{Logical. If \code{TRUE}, performs run_multivariate survival analysis in
+\code{run_survival()} (Default: \code{FALSE}).}
 
-\item{clindata}{Data.frame. A data.frame to a clinical table used for multivariate analysis.}
+\item{clinical_data}{Character or data.frame or \code{NULL}. A data.frame or a path to a tab-separated clinical file used
+for run_multivariate analysis.}
 
-\item{score_cutoff}{Character. Strategy used to determine the cutoff for
-categorizing signature scores. Must be one of \code{"median"},
-\code{"mean"}, \code{"signal"}, or \code{"roc"} (Default:
-\code{"median"}).}
+\item{score_cutoff}{Character. Uses the \code{"median"}, the \code{"mean"}, the \code{"signal"}, or a
+\code{"roc"} curve to define the score cutoff used in \code{run_survival()} (Default: \code{"median"}).}
 
-\item{p.cutoff}{Numeric. Univariate covariate filtering cutoff used for multivariate analysis
-in \code{run_survival()} (Default: \code{0.2}).}
+\item{p_value_cutoff}{Numeric. Univariate covariate filtering cutoff used for run_multivariate analysis in
+\code{run_survival()} (Default: \code{0.2}).}
 
-\item{force}{Logical. If \code{TRUE}, overrides filtering steps related to survival assumptions (Default: \code{FALSE}).}
+\item{skip_survival_checks}{Logical. If \code{TRUE}, overrides filtering steps related to survival assumptions in both
+modules (Default: \code{FALSE}).}
 
-\item{plots}{Logical. If \code{TRUE}, generates a Kaplan-Meier curve, the proportional hazards assumption plot, and
-extra figures, depending on the chosen parameters (Default: \code{FALSE}).
+\item{save_plots}{Logical. If \code{TRUE}, generates plots from both modules (Default: \code{FALSE}).}
 
-These can also be generated later using \code{plot_km()} and \code{plot_ph()}.
-If \code{score_cutoff = "roc"}, a ROC curve can also be generated using \code{plot_roc()}.
-If \code{multivariate = TRUE}, a forest plot can also be generated using \code{plot_forest()}.
-If bootstrap is performed, an extra summary barplot can also be generated using \code{plot_barplot()}.}
+\item{save_table}{Logical. If \code{TRUE}, writes output tables from both modules (Default: \code{FALSE}).}
 
-\item{table}{Logical. If \code{TRUE}, writes output tables from both modules (Default: \code{FALSE}).}
+\item{save_json}{Logical. If \code{TRUE}, saves to disk the metadata in a JSON file (Default: \code{FALSE}).}
 
-\item{saveJSON}{Logical. If \code{TRUE}, saves to disk the metadata in a JSON file (Default: \code{FALSE}).}
+\item{save_rds}{Logical. If \code{TRUE}, saves to disk the R object in a RDS file (Default: \code{FALSE}).}
 
-\item{saveRDS}{Logical. If \code{TRUE}, saves to disk the R object in a RDS file (Default: \code{FALSE}).}
+\item{report_format}{Logical or character. Report generation mode. Use \code{FALSE} (default) to disable report_format generation,
+\code{TRUE} or \code{"PDF"} to generate a PDF report_format, or \code{"HTML"} to generate an HTML report_format.}
 
-\item{report}{Logical or character. Report generation mode. Use \code{FALSE} (default) to disable report generation,
-\code{TRUE} or \code{"PDF"} to generate a PDF report, or \code{"HTML"} to generate an HTML report.}
+\item{verbose}{Integer or Logical. Prints progress messages to the console if \code{1} (or \code{TRUE}) (default).
+On the other hand, if \code{0} (or \code{FALSE}), runs silently (Default: \code{1}).}
 
-\item{log}{Logical. If \code{TRUE}, writes log files for both modules (Default: \code{FALSE}).}
+\item{n_cores}{Integer. Number of CPU cores used for parallel bootstrap regression
+(Default: \code{1}, i.e. sequential execution).}
 
-\item{ncores}{Integer. Number of CPU cores used for parallel bootstrap regression
-in \code{run_regression()} (Default: \code{1}).}
+\item{seed}{Integer or \code{NULL}. Random seed controlling every stochastic step in both \code{run_regression()}
+and \code{run_survival()}, so that results are reproducible across runs for the same input and parameters
+Set to \code{NULL} to disable seeding (Default: \code{123}).}
 
-\item{seed}{Integer. Random seed used for reproducible bootstrap regression
-in \code{run_regression()} (Default: \code{123}).}
+\item{save_log}{Logical. If \code{TRUE}, writes log files for both modules (Default: \code{FALSE}).}
 }
 \value{
 An S3 object of class \code{"clinprog_complete"} containing:
@@ -125,27 +123,31 @@ The molecular signature generated during the regression step is automatically pa
 \dontrun{
 # Example usage
 result <- run_complete(
-  data = expression_data,
-  outprefix = "my_analysis",
+  data = "expression_data.tsv",
+  output_prefix = "my_analysis",
+  norm_exp = FALSE,
   bootstrap = 100,
-  groupsize = 10,
-  percentagefilter = 0.3,
-  variancefilter = 0.01,
-  followup = NULL,
-  type = "gene",
-  multivariate = TRUE,
-  clindata = clinical_data,
+  group_size = 10,
+  percentage_filter = 0.3,
+  variance_filter = 0.01,
+  max_follow_up = NULL,
+  feature_type = "gene",
+  min_signature_size = NULL,
+  min_signature_cutoff = NULL,
+  run_multivariate = TRUE,
+  clinical_data = "clinical_data.tsv",
   score_cutoff = "roc",
-  p.cutoff = 0.2,
-  force = TRUE,
-  plots = TRUE,
-  table = TRUE,
-  saveJSON = TRUE,
-  saveRDS = TRUE,
-  report = TRUE,
-  log = TRUE,
-  ncores = 4,
-  seed = 123
+  p_value_cutoff = 0.2,
+  skip_survival_checks = TRUE,
+  save_plots = TRUE,
+  save_table = TRUE,
+  save_json = TRUE,
+  save_rds = TRUE,
+  report_format = TRUE,
+  verbose = 1,
+  n_cores = 1,
+  seed = 123,
+  save_log = TRUE
 )
 
 # Explore complete analysis results

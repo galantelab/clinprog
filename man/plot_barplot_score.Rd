@@ -7,13 +7,13 @@
 plot_barplot_score(
   data,
   palette = c("#1A9850", "#D73027"),
-  outprefix = NULL,
-  score_cutoff = 0,
+  output_prefix = NULL,
+  score_cutoff_value = 0,
   os_col = "OS",
   score_col = "score",
   theme = theme_clinprog(),
-  xlab = "Patients",
-  ylab = "Score",
+  x_label = "Patients",
+  y_label = "Score",
   width = 8,
   height = 5
 )
@@ -21,11 +21,11 @@ plot_barplot_score(
 \arguments{
 \item{data}{Data.frame containing clinical/survival data.}
 
-\item{palette}{Character vector of length 2. Colors for below and above cutoff (default: \code{c("#1A9850", "#D73027")}).}
+\item{palette}{Character vector of length 2. Colors for below and above score_cutoff_value (default: \code{c("#1A9850", "#D73027")}).}
 
-\item{outprefix}{Character. Output prefix for saving the plot (optional).}
+\item{output_prefix}{Character. Output prefix for saving the plot (optional).}
 
-\item{score_cutoff}{Numeric. Threshold to define low/high score color scheme (default: \code{0}).}
+\item{score_cutoff_value}{Numeric. Threshold to define low/high score color scheme (default: \code{0}).}
 
 \item{os_col}{Character. Column name for OS status (default: \code{"OS"}).}
 
@@ -33,9 +33,9 @@ plot_barplot_score(
 
 \item{theme}{A ggplot2 theme object. Defaults to \code{theme_clinprog()}.}
 
-\item{xlab}{Character. Title for the X-axis (default: \code{"Patients"}).}
+\item{x_label}{Character. Title for the X-axis (default: \code{"Patients"}).}
 
-\item{ylab}{Character. Title for the Y-axis (default: \code{"Score"}).}
+\item{y_label}{Character. Title for the Y-axis (default: \code{"Score"}).}
 
 \item{width}{Numeric. Plot width in inches (default: \code{8}).}
 

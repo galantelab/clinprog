@@ -102,7 +102,7 @@ new_clinprog_signature <- function(signature, plots = NULL, params = NULL, metad
 #'     \item \code{feature}: Feature names (e.g., genes or transcripts)
 #'     \item \code{coefficient}: Numeric coefficients associated with each feature
 #'   }
-#' @param score_cutoff Numeric cutoff used to define low/high clinprog score groups.
+#' @param score_cutoff_value Numeric cutoff used to define low/high clinprog score groups.
 #' @param expression_data A data.frame containing survival variables, scores, and expression data.
 #' @param clinical_data Optional data.frame containing clinical covariates (default: NULL).
 #' @param survival List containing univariate and optionally multivariate survival analysis outputs.
@@ -117,7 +117,7 @@ new_clinprog_signature <- function(signature, plots = NULL, params = NULL, metad
 #' An object of class \code{"clinprog_survival"} containing:
 #' \itemize{
 #'   \item \code{signature}: clinprog molecular signature
-#'   \item \code{score_cutoff}: Numeric score cutoff
+#'   \item \code{score_cutoff_value}: Numeric score cutoff
 #'   \item \code{expression_data}: Expression and survival data
 #'   \item \code{clinical_data}: Clinical data (if available)
 #'   \item \code{survival}: Survival analysis results
@@ -130,8 +130,8 @@ new_clinprog_signature <- function(signature, plots = NULL, params = NULL, metad
 #' }
 #'
 #' @keywords internal
-new_clinprog_survival <- function(signature, score_cutoff, expression_data, survival, ph_result, clinical_data = NULL,
-                                roc_result = NULL, plots = NULL, params = NULL, metadata = NULL, call = NULL) {
+new_clinprog_survival <- function(signature, score_cutoff_value, expression_data, survival, ph_result, clinical_data = NULL,
+                                  roc_result = NULL, plots = NULL, params = NULL, metadata = NULL, call = NULL) {
 
   # Checks if signature is a data frame
   if (!is.data.frame(signature)) {log_stop("'signature' must be a data.frame")}
@@ -143,7 +143,7 @@ new_clinprog_survival <- function(signature, score_cutoff, expression_data, surv
   if (!is.null(clinical_data) && !is.data.frame(clinical_data)) {log_stop("'clinical_data' must be a data.frame or NULL")}
 
   # Checks if score cutoff is valid
-  if (!is.numeric(score_cutoff) || length(score_cutoff) != 1) {log_stop("'score_cutoff' must be a single numeric value")}
+  if (!is.numeric(score_cutoff_value) || length(score_cutoff_value) != 1) {log_stop("'score_cutoff_value' must be a single numeric value")}
 
   # Checks if survival object is valid
   if (!is.list(survival)) {log_stop("'survival' must be a list")}
@@ -155,7 +155,7 @@ new_clinprog_survival <- function(signature, score_cutoff, expression_data, surv
   obj <- structure(
     list(
       signature = signature,
-      score_cutoff = score_cutoff,
+      score_cutoff_value = score_cutoff_value,
       expression_data = expression_data,
       clinical_data = clinical_data,
       survival = survival,

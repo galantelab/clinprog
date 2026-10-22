@@ -4,7 +4,7 @@
 \alias{clinprog_min_signature}
 \title{Search for the minimum signature size with significant univariate survival}
 \usage{
-clinprog_min_signature(signature, data, min_size, score.cutoff)
+clinprog_min_signature(signature, data, min_size, score_cutoff)
 }
 \arguments{
 \item{signature}{A data.frame with columns \code{feature} and \code{coefficient}, as produced by the bootstrap step
@@ -15,7 +15,7 @@ of \code{run_regression()}.}
 
 \item{min_size}{Integer. Minimum signature size to test (must be >= 1 and <= \code{nrow(signature)}).}
 
-\item{score.cutoff}{Character. Strategy used to split scores into low/high groups.
+\item{score_cutoff}{Character. Strategy used to split scores into low/high groups.
 One of \code{"median"}, \code{"mean"}, \code{"signal"}, or \code{"roc"}.}
 }
 \value{
@@ -38,7 +38,7 @@ starting from \code{min_size} up to the full signature size.
 For each cut, the following steps are performed:
 \enumerate{
 \item A clinprog score is computed for the provided survival dataset using only the features in the current cut.
-\item Patients are split into low/high groups using the strategy defined by \code{score.cutoff}.
+\item Patients are split into low/high groups using the strategy defined by \code{score_cutoff}.
 \item A univariate Cox model with log-rank test is fitted via \code{clinprog_uniCox_model()}.
 }
 

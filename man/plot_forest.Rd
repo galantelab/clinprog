@@ -6,7 +6,7 @@
 \usage{
 plot_forest(
   model_object,
-  outprefix = NULL,
+  output_prefix = NULL,
   panels = NULL,
   hr_breaks = c(0.25, 0.5, 1, 2, 4, 8),
   width = 8,
@@ -16,7 +16,7 @@ plot_forest(
 \arguments{
 \item{model_object}{A fitted \code{survival::coxph} model object.}
 
-\item{outprefix}{Character. Output prefix for saving the plot (optional).}
+\item{output_prefix}{Character. Output prefix for saving the plot (optional).}
 
 \item{panels}{List. Custom forestmodel panels. If \code{NULL}, default clinprog panels are used (optional).}
 
