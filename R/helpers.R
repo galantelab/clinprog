@@ -358,7 +358,7 @@ clinprog_bootstrapfun <- function(full_data,
       }
 
       coefs <- run_attempt(
-        seed_val = i,
+        seed_val = attempts,
         retry = TRUE
       )
 
