@@ -7,7 +7,7 @@
 #'   (e.g., OS, OS.time) and expression values (genes or transcripts). Example: \code{"myPATH/myTPM.tsv"}.
 #' @param output_prefix Character. Output prefix used for generated files (Default: \code{"clinprog"}).
 #' @param norm_exp Logical. If \code{TRUE}, log2(exp+1) transforms expression data (Default: \code{FALSE}).
-#' @param bootstrap Integer. Number of bootstrap iterations (Default: \code{1}).
+#' @param bootstrap Positive integer. Number of bootstrap iterations (minimum: \code{1}; default: \code{1}).
 #' @param group_size Integer. Number of genes/transcripts sampled per iteration (Default: \code{10}).
 #' @param percentage_filter Numeric. Correlation filter threshold (0–1; Default: \code{0.3}).
 #' @param variance_filter Numeric. Variance filter threshold (0–1; Default: \code{0.01}).
@@ -255,9 +255,10 @@ run_regression <- function(data,
   # Validates input parameters
   log_message("Validating parameters...")
   if (!feature_type %in% c("gene", "transcript")) {log_stop("Argument 'feature_type' must be either 'gene' or 'transcript'")}
-  if (!is.numeric(bootstrap) || length(bootstrap) != 1 || bootstrap < 0 || bootstrap %% 1 != 0)
+  if (!is.numeric(bootstrap) || length(bootstrap) != 1 || !is.finite(bootstrap) ||
+      bootstrap < 1 || bootstrap %% 1 != 0)
   {
-    log_stop("Argument 'bootstrap' must be an integer")
+    log_stop("Argument 'bootstrap' must be a positive integer")
   }
   if (!is.numeric(group_size) || length(group_size) != 1 || group_size < 0 || group_size %% 1 != 0)
   {
@@ -595,7 +596,7 @@ run_regression <- function(data,
 #' @param max_follow_up Numeric or \code{NULL}. Maximum max_follow_up time (Default: \code{NULL}).
 #' @param p_value_cutoff Numeric. P-value threshold used to select clinical covariates from univariate Cox regression
 #'   for inclusion in run_multivariate analysis (Default: \code{0.2}).
-#' @param bootstrap Integer. Number of bootstrap iterations for run_multivariate Cox regression (Default: \code{1}).
+#' @param bootstrap Positive integer. Number of bootstrap iterations for run_multivariate Cox regression (minimum: \code{1}; default: \code{1}).
 #' @param skip_survival_checks Logical. If \code{TRUE}, overrides filtering steps related to survival assumptions (Default: \code{FALSE}).
 #' @param save_plots Logical. If \code{TRUE}, generates a Kaplan-Meier curve, the proportional hazards assumption plot,
 #'   plots related to the signature created and the derived score, and extra figures,
@@ -928,9 +929,10 @@ run_survival <- function(data,
   {
     log_stop("'p_value_cutoff' must be a numeric value between 0 and 1")
   }
-  if (!is.numeric(bootstrap) || length(bootstrap) != 1 || bootstrap < 0 || bootstrap %% 1 != 0)
+  if (!is.numeric(bootstrap) || length(bootstrap) != 1 || !is.finite(bootstrap) ||
+      bootstrap < 1 || bootstrap %% 1 != 0)
   {
-    log_stop("Argument 'bootstrap' must be an integer")
+    log_stop("Argument 'bootstrap' must be a positive integer")
   }
   score_cutoff <- tolower(score_cutoff)
   if (!is.character(score_cutoff) || length(score_cutoff) != 1 ||
@@ -1371,8 +1373,8 @@ run_survival <- function(data,
 #' @param output_prefix Character. Output prefix used for generated files (Default: \code{"clinprog"}).
 #' @param norm_exp Logical. If \code{TRUE}, log2(exp+1) transforms expression data in both \code{run_regression()}
 #'   and \code{run_survival()} modules (Default: \code{FALSE}).
-#' @param bootstrap Integer. Number of bootstraps iterations used in both \code{run_regression()} and
-#'   \code{run_survival()} modules (Default: \code{1}).
+#' @param bootstrap Positive integer. Number of bootstrap iterations used in both \code{run_regression()} and
+#'   \code{run_survival()} modules (minimum: \code{1}; default: \code{1}).
 #' @param group_size Integer. Number of features per iteration in \code{run_regression()} module (Default: \code{10}).
 #' @param percentage_filter Numeric. Correlation filter threshold used in \code{run_regression()} (Default: \code{0.3}).
 #' @param variance_filter Numeric. Variance filter threshold used in both \code{run_regression()} and
