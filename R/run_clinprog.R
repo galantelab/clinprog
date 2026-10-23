@@ -546,10 +546,11 @@ run_regression <- function(data,
   }
 
   # Generates report_format if requested
+  report_ext <- if (is.character(report_format) && toupper(report_format) == "HTML") ".html" else ".pdf"
   if (!isFALSE(report_format))
   {
     log_message("Writing clinprog report_format...")
-    write_report(object = result, format = report_format, file = paste0(output_prefix, "_report_regression.pdf"))
+    write_report(object = result, format = report_format, file = paste0(output_prefix, "_report_regression", report_ext))
     log_message("Done.")
   }
 
@@ -1338,10 +1339,11 @@ run_survival <- function(data,
   }
 
   # Generates report_format if requested
+  report_ext <- if (is.character(report_format) && toupper(report_format) == "HTML") ".html" else ".pdf"
   if (!isFALSE(report_format))
   {
     log_message("Writing clinprog report_format...")
-    write_report(object = result, format = report_format, file = paste0(output_prefix, "_report_survival.pdf"))
+    write_report(object = result, format = report_format, file = paste0(output_prefix, "_report_survival", report_ext))
     log_message("Done.")
   }
 
@@ -1652,10 +1654,11 @@ run_complete <- function(data,
   }
 
   # Generates report_format if requested
+  report_ext <- if (is.character(report_format) && toupper(report_format) == "HTML") ".html" else ".pdf"
   if (!isFALSE(report_format))
   {
     log_message("Writing clinprog report_format...")
-    write_report(object = result, format = report_format, file = paste0(output_prefix, "_report_complete.pdf"))
+    write_report(object = result, format = report_format, file = paste0(output_prefix, "_report_complete", report_ext))
     log_message("Done.")
   }
 

@@ -300,6 +300,12 @@ write_report <- function(object, format = TRUE, file = NULL,
                    sub("^\\.", "", expected_ext), "' instead."))
     file <- paste0(tools::file_path_sans_ext(file), expected_ext)
   }
+  else if (paste0(".", current_ext) != expected_ext)
+  {
+    log_warning(paste0("File extension '.", current_ext, "' does not match report format '",
+                       format, "'. Using '", sub("^\\.", "", expected_ext), "' instead."))
+    file <- paste0(tools::file_path_sans_ext(file), expected_ext)
+  }
 
   # Extracts output directory and file name
   output_file <- basename(file)
