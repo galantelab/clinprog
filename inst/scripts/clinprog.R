@@ -529,7 +529,7 @@ if (args$sub_name == "regression") {
     save_table = TRUE,
     save_json = TRUE,
     save_rds = TRUE,
-    report_format = args$report_format,
+    report_format = FALSE,
     verbose = args$verbose,
     n_cores = args$n_cores,
     seed = args$seed,
@@ -576,7 +576,7 @@ if (args$sub_name == "survival") {
     save_table = TRUE,
     save_json = TRUE,
     save_rds = TRUE,
-    report_format = args$report_format,
+    report_format = FALSE,
     verbose = args$verbose,
     save_log = TRUE
   )
@@ -624,7 +624,7 @@ if (args$sub_name == "complete") {
     save_table = TRUE,
     save_json = TRUE,
     save_rds = TRUE,
-    report_format = args$report_format,
+    report_format = FALSE,
     verbose = args$verbose,
     n_cores = args$n_cores,
     seed = args$seed,

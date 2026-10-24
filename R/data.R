@@ -1,71 +1,29 @@
-#' Example expression dataset for clinprog
+#' Simulated clinical dataset for clinprog
 #'
 #' @description
-#' A toy expression dataset included in the clinprog package intended for demonstration, testing, and vignette examples.
+#' A small, fully simulated clinical table intended for examples, tests and
+#' vignettes. It mimics the structure of TCGA-LGG clinical annotations but
+#' contains no real patient data.
 #'
 #' @details
-#' The dataset contains expression data along with survival information.
-#' Each row represents a sample (patient), and each column represents a feature (gene/transcript)
-#'
-#' The first two columns correspond to survival data:
-#' \itemize{
-#'   \item \code{OS}: Overall survival status (0 = censored, 1 = event)
-#'   \item \code{OS.time}: Overall survival time
-#' }
-#'
-#' The remaining columns correspond to expression values.
-#'
-#' Row names represent unique sample identifiers (e.g., patient IDs).
+#' Each row is one (fake) patient. Row names match the identifiers in
+#' \code{\link{toy_gene_expression}} and \code{\link{toy_transcript_expression}}.
+#' All clinical variables are categorical and binary.
 #'
 #' @format
-#' A \code{data.frame} with:
-#' \itemize{
-#'   \item Rows: samples (patients)
-#'   \item Columns: survival variables + expression features
+#' A \code{data.frame} with 150 rows and 5 columns (patient IDs are the row names):
+#' \describe{
+#'   \item{(row names)}{Unique, TCGA-like patient identifiers (site code ZZ). In the raw TSV they are the \code{Patient_ID} column.}
+#'   \item{Age}{Character. \code{"Low"} or \code{"High"}.}
+#'   \item{Gender}{Character. \code{"Female"} or \code{"Male"}.}
+#'   \item{Race}{Character. \code{"White"} or \code{"Not white"} (unbalanced on purpose).}
+#'   \item{Histotype}{Character. \code{"Astrocytoma"} or \code{"Oligodendroglioma"}.}
+#'   \item{Grade}{Character. \code{"G2"} or \code{"G3"}.}
 #' }
 #'
 #' @source
-#' Derived from internal dataset (FREDY REF here), reduced for package examples.
-#'
-#' @usage data(toy_expression)
-#'
-#' @examples
-#' data(toy_expression)
-#' dim(toy_expression)
-#' head(toy_expression[, 1:5])
-#'
-#' @keywords datasets
-"toy_expression"
-
-#' Example clinical dataset for clinprog
-#'
-#' @description
-#' A toy clinical dataset of Brain Lower Grade Glioma (TCGA-LGG) patients included in the clinprog package
-#' intended to complement the expression dataset with additional sample annotations.
-#'
-#' @details
-#' Each row represents a sample (patient), matching the expression dataset.
-#'
-#' The dataset includes the following categorical binary clinical variables:
-#' \itemize{
-#'   \item Age group (e.g., Low/High)
-#'   \item Gender
-#'   \item Race (e.g., White/Not white)
-#'   \item Histological type (e.g., Astrocytoma/Oligodendroglioma)
-#'   \item Tumor grade (e.g., G2/G3)
-#' }
-#'
-#' Row names correspond to TCGA patient IDs and are aligned with \code{toy_expression}.
-#'
-#' @format
-#' A \code{data.frame} with:
-#' \itemize{
-#'   \item Rows: samples (patients)
-#'   \item Columns: clinical variables
-#' }
-#'
-#' @source
-#' Derived from internal dataset (FREDY REF here), reduced for package examples.
+#' Simulated with \code{data-raw/toy_dataset.R} (fixed seed).
+#' The raw TSV file is in \code{system.file("extdata", "toy_clinics.tsv", package = "clinprog")}.
 #'
 #' @usage data(toy_clinics)
 #'
@@ -76,3 +34,87 @@
 #'
 #' @keywords datasets
 "toy_clinics"
+
+#' Simulated gene expression dataset with survival data for clinprog
+#'
+#' @description
+#' A small, fully simulated gene expression matrix (RSEM-like, non-integer
+#' values) together with overall survival, for examples, tests and vignettes.
+#'
+#' @details
+#' Each row is one patient, identified by its row name. The first two columns
+#' are the survival variables (\code{OS}, \code{OS.time}) and the remaining
+#' columns are genes (HGNC-style symbols).
+#'
+#' The data contain known, planted structure, so results can be checked:
+#' genes \code{TOYRISK1-8} are higher and \code{TOYPROT1-8} lower in patients
+#' with worse prognosis; \code{TOYHIST1-3}, \code{TOYSEX1} and
+#' \code{TOYGRADE1-2} are associated with histotype, gender and grade,
+#' respectively. All other genes are null background. Edge cases are included
+#' on purpose: a near-zero-variance gene (\code{TOYLOWVAR}, a single non-zero
+#' value), one outlier value, one sample with a higher library size, and one
+#' patient with very short follow-up.
+#'
+#' Expression values are on a raw (not log) scale. For these data, use
+#' \code{norm_exp = TRUE} when running the regression on genes.
+#'
+#' @format
+#' A \code{data.frame} with 150 rows and 55 columns (patient IDs are the row names):
+#' \describe{
+#'   \item{(row names)}{Patient identifiers (raw TSV column \code{Patient_ID}); match \code{\link{toy_clinics}}.}
+#'   \item{OS}{Integer. Overall survival status (0 = alive/censored, 1 = dead).}
+#'   \item{OS.time}{Integer. Overall survival time in days.}
+#'   \item{A1BG, A1CF, ...}{Numeric. Expression values, 53 genes.}
+#' }
+#'
+#' @source
+#' Simulated with \code{data-raw/toy_dataset.R} (fixed seed); not derived from TCGA.
+#' Raw file: \code{system.file("extdata", "toy_gene_expression.tsv", package = "clinprog")}.
+#'
+#' @usage data(toy_gene_expression)
+#'
+#' @examples
+#' data(toy_gene_expression)
+#' dim(toy_gene_expression)
+#' head(toy_gene_expression[, 1:6])
+#'
+#' @keywords datasets
+"toy_gene_expression"
+
+#' Simulated transcript expression dataset with survival data for clinprog
+#'
+#' @description
+#' A small, fully simulated transcript (splicing isoform) expression table
+#' (TPM-like, sparse) together with overall survival.
+#'
+#' @details
+#' Same layout as \code{\link{toy_gene_expression}}, with transcripts named
+#' \code{MSTRG.<gene>.<isoform>}. \code{OS} and \code{OS.time} are identical to
+#' those in \code{toy_gene_expression}. Transcripts \code{MSTRG.9001.*} (risk)
+#' and \code{MSTRG.9002.*} (protective) carry planted prognostic signal;
+#' \code{MSTRG.9003.*} and \code{MSTRG.9004.1} are associated with histotype and
+#' grade. \code{MSTRG.9999.1} has a single non-zero value, and one patient has zero expression
+#' for every transcript.
+#'
+#' @format
+#' A \code{data.frame} with 150 rows and 54 columns (patient IDs are the row names):
+#' \describe{
+#'   \item{(row names)}{Patient identifiers (raw TSV column \code{Patient_ID}); match \code{\link{toy_clinics}}.}
+#'   \item{OS}{Integer. Overall survival status (0 = alive/censored, 1 = dead).}
+#'   \item{OS.time}{Integer. Overall survival time in days.}
+#'   \item{MSTRG.*}{Numeric. Expression values, 52 transcripts.}
+#' }
+#'
+#' @source
+#' Simulated with \code{data-raw/toy_dataset.R} (fixed seed); not derived from TCGA.
+#' Raw file: \code{system.file("extdata", "toy_transcript_expression.tsv", package = "clinprog")}.
+#'
+#' @usage data(toy_transcript_expression)
+#'
+#' @examples
+#' data(toy_transcript_expression)
+#' dim(toy_transcript_expression)
+#' head(toy_transcript_expression[, 1:6])
+#'
+#' @keywords datasets
+"toy_transcript_expression"
