@@ -1,14 +1,14 @@
 Package: clinprog
-Title: Bootstrap-Based Multivariate LASSO Cox Regression for Survival
-       Signature Discovery
-Version: 0.2.0
+Title: Bootstrap-Based Multivariate LASSO Cox Regression for Survival Signature Discovery
+Version: 0.3.0
 Authors@R: c(
     person("Filipe", "Ferreira dos Santos", email = "fferreira@mochsl.org.br", role = c("aut", "cre")),
     person("Felipe", "Rodolfo Camargo dos Santos", email = "fefelrcs@gmail.com", role = "aut"),
     person("Gabriela", "Der Agopian Guardia", email = "gguardia@mochsl.org.br", role = "aut"),
+    person("Matheus", "Pinheiro Moratto de Castro", email = "mcastro@mochsl.org.br", role = "ctb"),
+    person("Thiago Luiz", "Araujo Miller", email = "tmiller@mochsl.org.br", role = "aut"),
     person("Daniel", "Takatori Ohara", email = "dtohara@mochsl.org.br", role = "aut"),
-    person("Pedro Alexandre", "Favoretto Galante", email = "pgalante@mochsl.org.br", role = "aut"),
-    person("Thiago Luiz", "Araujo Miller", email = "tmiller@mochsl.org.br", role = "aut")
+    person("Pedro Alexandre", "Favoretto Galante", email = "pgalante@mochsl.org.br", role = "aut")
   )
 Description:
     Provides a framework to identify and validate gene or transcript expression signatures associated with patient survival.
@@ -20,23 +20,45 @@ URL: https://github.com/galantelab/clinprog
 BugReports: https://github.com/galantelab/clinprog/issues
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
-Imports:  dplyr, forcats, ggplot2, mice, penalized, R.utils, survival,
-          survivalROC, OptimalCutpoints, patchwork, data.table,
-          forestmodel, ggpubr, jsonlite, methods, sjstats, survminer,
-          scales, rlang, ggwordcloud
-Suggests: argparse, knitr, kableExtra, pROC, quarto, rmarkdown, spelling,
-          testthat (>= 3.0.0)
+Imports:
+    data.table (>= 1.18.4),
+    dplyr (>= 1.2.1),
+    forcats (>= 1.0.1),
+    forestmodel (>= 0.6.2),
+    ggplot2 (>= 4.0.3),
+    ggpubr (>= 0.6.3),
+    ggwordcloud (>= 0.6.2),
+    mice (>= 3.19.0),
+    OptimalCutpoints (>= 1.1.5),
+    patchwork (>= 1.3.2),
+    penalized (>= 0.9.53),
+    R.utils (>= 2.13.0),
+    rlang (>= 1.2.0),
+    scales (>= 1.4.0),
+    sjstats (>= 0.19.1),
+    survival (>= 3.8.6),
+    survivalROC (>= 1.0.3.1),
+    survminer (>= 0.5.2)
+Suggests:
+    argparse (>= 2.1.0),
+    base64enc (>= 0.1.6),
+    bslib (>= 0.10.0),
+    DT (>= 0.34.0),
+    jsonlite (>= 2.0.0),
+    kableExtra (>= 1.4.0),
+    knitr (>= 1.51),
+    pROC (>= 1.19.0.1),
+    quarto (>= 1.5.1),
+    rmarkdown (>= 2.31),
+    shiny (>= 1.13.0),
+    spelling (>= 2.3.2),
+    svglite (>= 2.2.2),
+    testthat (>= 3.3.2),
+    withr (>= 3.0.2),
+    zip (>= 2.3.3)
 Config/testthat/edition: 3
 VignetteBuilder: knitr
-Depends: R (>= 3.5.0)
+Depends: R (>= 4.1.0)
 LazyData: true
+LazyDataCompression: xz
 Language: en-US
-NeedsCompilation: no
-Packaged: 2026-06-02 23:16:56 UTC; filipe
-Author: Filipe Ferreira dos Santos [aut, cre],
-  Felipe Rodolfo Camargo dos Santos [aut],
-  Gabriela Der Agopian Guardia [aut],
-  Daniel Takatori Ohara [aut],
-  Pedro Alexandre Favoretto Galante [aut],
-  Thiago Luiz Araujo Miller [aut]
-Maintainer: Filipe Ferreira dos Santos <fferreira@mochsl.org.br>

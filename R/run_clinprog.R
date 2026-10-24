@@ -11,8 +11,8 @@
 #' @param group_size Integer. Number of genes/transcripts sampled per iteration (Default: \code{10}).
 #' @param percentage_filter Numeric. Correlation filter threshold (0–1; Default: \code{0.3}).
 #' @param variance_filter Numeric. Variance filter threshold (0–1; Default: \code{0.01}).
-#' @param max_follow_up Numeric or \code{NULL}. Maximum max_follow_up time (Default: \code{NULL}).
-#' @param feature_type Character. Feature feature_type: either \code{"gene"} (default) or \code{"transcript"}.
+#' @param max_follow_up Numeric or \code{NULL}. Maximum follow up time (Default: \code{NULL}).
+#' @param feature_type Character. Feature type: either \code{"gene"} (default) or \code{"transcript"}.
 #' @param min_signature_size Integer or \code{NULL} (disabled). If provided, after the bootstrap/Cox LASSO regression
 #'   step, searches for the smallest signature (top-ranked features by absolute coefficient) that still yields a
 #'   significant univariate log-rank test on the same dataset. The search starts at \code{min_signature_size} features
@@ -574,7 +574,7 @@ run_regression <- function(data,
 #'
 #' @description
 #' Applies a molecular signature to survival data, generating prognostic scores and performing
-#' survival analyses (univariate and, optionally, run_multivariate Cox regression).
+#' survival analyses (univariate and, optionally, multivariate Cox regression).
 #'
 #' @param data Character or data.frame. A data.frame or a path to a tab-separated file containing survival data
 #'   (e.g., OS, OS.time) and expression values (genes or transcripts). Example: \code{"myPATH/myTPM.tsv"}.
@@ -586,7 +586,7 @@ run_regression <- function(data,
 #'   }
 #' @param output_prefix Character. Output prefix used for generated files (Default: \code{"clinprog"}).
 #' @param norm_exp Logical. If \code{TRUE}, log2(exp+1) transforms expression data (Default: \code{FALSE}).
-#' @param run_multivariate Logical. If \code{TRUE}, performs run_multivariate survival analysis including clinical variables
+#' @param run_multivariate Logical. If \code{TRUE}, performs multivariate survival analysis including clinical variables
 #'   present in \code{clinical_data} (Default: \code{FALSE}).
 #' @param clinical_data Character or data.frame or \code{NULL}. A data.frame or a path to a tab-separated file containing
 #'   binary-categorized clinical data (e.g., Age, Gender, ...) (required if \code{run_multivariate = TRUE}).
@@ -596,8 +596,8 @@ run_regression <- function(data,
 #' @param variance_filter Numeric. Minimum normalized variance for follow-up time (0–1; Default: \code{0.01}).
 #' @param max_follow_up Numeric or \code{NULL}. Maximum max_follow_up time (Default: \code{NULL}).
 #' @param p_value_cutoff Numeric. P-value threshold used to select clinical covariates from univariate Cox regression
-#'   for inclusion in run_multivariate analysis (Default: \code{0.2}).
-#' @param bootstrap Positive integer. Number of bootstrap iterations for run_multivariate Cox regression (minimum: \code{1}; default: \code{1}).
+#'   for inclusion in multivariate analysis (Default: \code{0.2}).
+#' @param bootstrap Positive integer. Number of bootstrap iterations for multivariate Cox regression (minimum: \code{1}; default: \code{1}).
 #' @param skip_survival_checks Logical. If \code{TRUE}, overrides filtering steps related to survival assumptions (Default: \code{FALSE}).
 #' @param save_plots Logical. If \code{TRUE}, generates a Kaplan-Meier curve, the proportional hazards assumption plot,
 #'   plots related to the signature created and the derived score, and extra figures,
@@ -615,7 +615,7 @@ run_regression <- function(data,
 #'   These can also be done later using \code{write_signature()} for an updated signature file,
 #'   \code{write_score()} for a table showing the calculated clinprog scores, \code{write_univariate()}
 #'   for a file containing the univariate survival results, and \code{write_multivariate()}
-#'   for a file containing the run_multivariate survival results.
+#'   for a file containing the multivariate survival results.
 #' @param save_json Logical. If \code{TRUE}, saves to disk the metadata in a JSON file (Default: \code{FALSE}).
 #'
 #'   This can also be done later using \code{write_metadata()} for a JSON with metadata.
@@ -647,7 +647,7 @@ run_regression <- function(data,
 #'   \item Categorizing the scores into low/high groups
 #'   \item Performing the univariate Cox regression for the score
 #'   \item Running multiple univariate Cox regression for other clinical variables
-#'   \item Performing the run_multivariate Cox regression with bootstrap resampling if the requirements are met
+#'   \item Performing the multivariate Cox regression with bootstrap resampling if the requirements are met
 #' }
 #'
 #' The final complete results consist of multiple tables and figures to show the association between the clinprog scores,
@@ -754,7 +754,7 @@ run_regression <- function(data,
 #' # Import clinical data manually
 #' clin <- read_table("clinical_data.tsv", row.names = TRUE)
 #'
-#' # Generate plots later (assuming run_multivariate analysis was performed)
+#' # Generate plots later (assuming multivariate analysis was performed)
 #' plot_roc(x = result$roc_result, output_prefix = "my_analysis_roc")
 #' plot_km(data = result$expression_data, cutoff = result$score_cutoff,
 #'           pval = result$survival$univariate$table$log.rank.pvalue, output_prefix = "my_analysis_km")
@@ -1114,7 +1114,7 @@ run_survival <- function(data,
     log_message("Done.")
   }
 
-  # Performs run_multivariate survival analysis
+  # Performs multivariate survival analysis
   if (run_multivariate)
   {
     log_message("Running multivariate survival analysis...")
