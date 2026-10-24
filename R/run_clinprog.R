@@ -1187,7 +1187,7 @@ run_survival <- function(data,
                                                   use_bootstrap = TRUE, bootstrap = bootstrap, bootstrap_freq = 0.25, multi_p_value_cutoff = 0.1)
       if (multi_cox_initial$bootstrap.used)
       {
-        log_message(paste0("Bootstrap resampling performed (seed = ", seed, ") with ", bootstrap, " iterations."))
+        log_message(paste0("Bootstrap resampling performed with ", bootstrap, " iterations."))
       } else {
         if (bootstrap == 1)
         {
