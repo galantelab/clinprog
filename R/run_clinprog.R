@@ -757,24 +757,24 @@ run_regression <- function(data,
 #' # Generate plots later (assuming multivariate analysis was performed)
 #' plot_roc(x = result$roc_result, output_prefix = "my_analysis_roc")
 #' plot_km(data = result$expression_data, cutoff = result$score_cutoff,
-#'           pval = result$survival$univariate$table$log.rank.pvalue, output_prefix = "my_analysis_km")
+#'         pval = result$survival$univariate$table$log.rank.pvalue, output_prefix = "my_analysis_km")
 #' plot_ph(x = result$ph_result, is_multi = TRUE, output_prefix = "my_analysis_phplot")
 #' plot_forest(model_object = result$survival$multivariate$model, output_prefix = "my_analysis_forest")
 #' plot_clinics(data = result$clinical_data, output_prefix = "my_analysis_clinics-boxplot")
 #' plot_swimmer(data = result$expression_data, cutoff = result$score_cutoff,
-#'                output_prefix = "my_analysis_swimmer", facet_by = "score_group")
+#'              output_prefix = "my_analysis_swimmer", facet_by = "score_group")
 #' plot_barplot(plot_df = result$survival$boot_table, output_prefix = "my_analysis_bar",
-#'                feature_type = "absolute", bootstrap = 100)
+#'              type = "absolute", bootstrap = 100)
 #' plot_scatter(data = result$expression_data, signature = result$signature,
-#'                output_prefix = "my_analysis_scatterplot")
+#'              output_prefix = "my_analysis_scatterplot")
 #' plot_boxplot(data = result$expression_data, signature = result$signature,
-#'                output_prefix = "my_analysis_boxplot")
+#'              output_prefix = "my_analysis_boxplot")
 #' plot_wordcloud(data = result$expression_data, signature = result$signature,
-#'                  output_prefix = "my_analysis_wordcloud")
+#'                output_prefix = "my_analysis_wordcloud")
 #' plot_barplot_score(data = result$clinical_data, score_cutoff = result$score_cutoff,
-#'                      output_prefix = "my_analysis_score-bar")
+#'                    output_prefix = "my_analysis_score-bar")
 #' plot_lineplot_score(data = result$clinical_data, score_cutoff = result$score_cutoff,
-#'                       output_prefix = "my_analysis_lineplot")
+#'                     output_prefix = "my_analysis_lineplot")
 #'
 #' # Export signature manually
 #' write_signature(result, "my_analysis_signature_updated.tsv")
@@ -1259,7 +1259,7 @@ run_survival <- function(data,
       bar_plot = if (!is.null(multi_cox_initial$model) &&
                      isTRUE(multi_cox_initial$bootstrap.used) &&
                      !is.null(multi_cox_initial$bootstrap.table)) plot_barplot(plot_df = multi_cox_initial$bootstrap.table,
-                                                                               output_prefix = output_prefix, feature_type = "absolute",
+                                                                               output_prefix = output_prefix, type = "absolute",
                                                                                bootstrap = bootstrap,
                                                                                frequency_threshold = 25) else NULL)
     log_message("Done.")
