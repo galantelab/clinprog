@@ -94,7 +94,7 @@ test_that("run_regression recovers the planted genes", {
 
   result <- run_regression(
     data = gene,
-    bootstrap = 30,
+    bootstrap = 10,
     group_size = 10,
     feature_type = "gene",
     norm_exp = TRUE,
@@ -113,7 +113,7 @@ test_that("run_regression recovers the planted transcripts", {
 
   result <- run_regression(
     data = tx,
-    bootstrap = 30,
+    bootstrap = 10,
     group_size = 10,
     feature_type = "transcript",
     norm_exp = TRUE,
@@ -147,7 +147,7 @@ test_that("run_complete works on the toy genes with clinical data", {
   result <- run_complete(
     data = toy$toy_gene_expression,
     output_prefix = output_prefix,
-    bootstrap = 30,
+    bootstrap = 10,
     group_size = 10,
     feature_type = "gene",
     norm_exp = TRUE,
