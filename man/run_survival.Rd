@@ -41,7 +41,7 @@ run_survival(
 
 \item{norm_exp}{Logical. If \code{TRUE}, log2(exp+1) transforms expression data (Default: \code{FALSE}).}
 
-\item{run_multivariate}{Logical. If \code{TRUE}, performs run_multivariate survival analysis including clinical variables
+\item{run_multivariate}{Logical. If \code{TRUE}, performs multivariate survival analysis including clinical variables
 present in \code{clinical_data} (Default: \code{FALSE}).}
 
 \item{clinical_data}{Character or data.frame or \code{NULL}. A data.frame or a path to a tab-separated file containing
@@ -56,9 +56,9 @@ curve to define the score cutoff (Default: \code{"median"}).}
 \item{max_follow_up}{Numeric or \code{NULL}. Maximum max_follow_up time (Default: \code{NULL}).}
 
 \item{p_value_cutoff}{Numeric. P-value threshold used to select clinical covariates from univariate Cox regression
-for inclusion in run_multivariate analysis (Default: \code{0.2}).}
+for inclusion in multivariate analysis (Default: \code{0.2}).}
 
-\item{bootstrap}{Integer. Number of bootstrap iterations for run_multivariate Cox regression (Default: \code{1}).}
+\item{bootstrap}{Positive integer. Number of bootstrap iterations for multivariate Cox regression (minimum: \code{1}; default: \code{1}).}
 
 \item{skip_survival_checks}{Logical. If \code{TRUE}, overrides filtering steps related to survival assumptions (Default: \code{FALSE}).}
 
@@ -79,7 +79,7 @@ If bootstrap is performed, an extra summary barplot can also be generated using 
 These can also be done later using \code{write_signature()} for an updated signature file,
 \code{write_score()} for a table showing the calculated clinprog scores, \code{write_univariate()}
 for a file containing the univariate survival results, and \code{write_multivariate()}
-for a file containing the run_multivariate survival results.}
+for a file containing the multivariate survival results.}
 
 \item{save_json}{Logical. If \code{TRUE}, saves to disk the metadata in a JSON file (Default: \code{FALSE}).
 
@@ -123,7 +123,7 @@ An S3 object of class \code{"clinprog_survival"} containing:
 }
 \description{
 Applies a molecular signature to survival data, generating prognostic scores and performing
-survival analyses (univariate and, optionally, run_multivariate Cox regression).
+survival analyses (univariate and, optionally, multivariate Cox regression).
 }
 \details{
 The clinprog pipeline applies a sequence of analyses steps:
@@ -136,7 +136,7 @@ The clinprog pipeline applies a sequence of analyses steps:
 \item Categorizing the scores into low/high groups
 \item Performing the univariate Cox regression for the score
 \item Running multiple univariate Cox regression for other clinical variables
-\item Performing the run_multivariate Cox regression with bootstrap resampling if the requirements are met
+\item Performing the multivariate Cox regression with bootstrap resampling if the requirements are met
 }
 
 The final complete results consist of multiple tables and figures to show the association between the clinprog scores,
@@ -213,27 +213,27 @@ data <- read_table("expression_data.tsv", row.names = TRUE)
 # Import clinical data manually
 clin <- read_table("clinical_data.tsv", row.names = TRUE)
 
-# Generate plots later (assuming run_multivariate analysis was performed)
+# Generate plots later (assuming multivariate analysis was performed)
 plot_roc(x = result$roc_result, output_prefix = "my_analysis_roc")
 plot_km(data = result$expression_data, cutoff = result$score_cutoff,
-          pval = result$survival$univariate$table$log.rank.pvalue, output_prefix = "my_analysis_km")
+        pval = result$survival$univariate$table$log.rank.pvalue, output_prefix = "my_analysis_km")
 plot_ph(x = result$ph_result, is_multi = TRUE, output_prefix = "my_analysis_phplot")
 plot_forest(model_object = result$survival$multivariate$model, output_prefix = "my_analysis_forest")
 plot_clinics(data = result$clinical_data, output_prefix = "my_analysis_clinics-boxplot")
 plot_swimmer(data = result$expression_data, cutoff = result$score_cutoff,
-               output_prefix = "my_analysis_swimmer", facet_by = "score_group")
+             output_prefix = "my_analysis_swimmer", facet_by = "score_group")
 plot_barplot(plot_df = result$survival$boot_table, output_prefix = "my_analysis_bar",
-               feature_type = "absolute", bootstrap = 100)
+             type = "absolute", bootstrap = 100)
 plot_scatter(data = result$expression_data, signature = result$signature,
-               output_prefix = "my_analysis_scatterplot")
+             output_prefix = "my_analysis_scatterplot")
 plot_boxplot(data = result$expression_data, signature = result$signature,
-               output_prefix = "my_analysis_boxplot")
+             output_prefix = "my_analysis_boxplot")
 plot_wordcloud(data = result$expression_data, signature = result$signature,
-                 output_prefix = "my_analysis_wordcloud")
+               output_prefix = "my_analysis_wordcloud")
 plot_barplot_score(data = result$clinical_data, score_cutoff = result$score_cutoff,
-                     output_prefix = "my_analysis_score-bar")
+                   output_prefix = "my_analysis_score-bar")
 plot_lineplot_score(data = result$clinical_data, score_cutoff = result$score_cutoff,
-                      output_prefix = "my_analysis_lineplot")
+                    output_prefix = "my_analysis_lineplot")
 
 # Export signature manually
 write_signature(result, "my_analysis_signature_updated.tsv")

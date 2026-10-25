@@ -40,8 +40,8 @@ run_complete(
 \item{norm_exp}{Logical. If \code{TRUE}, log2(exp+1) transforms expression data in both \code{run_regression()}
 and \code{run_survival()} modules (Default: \code{FALSE}).}
 
-\item{bootstrap}{Integer. Number of bootstraps iterations used in both \code{run_regression()} and
-\code{run_survival()} modules (Default: \code{1}).}
+\item{bootstrap}{Positive integer. Number of bootstrap iterations used in both \code{run_regression()} and
+\code{run_survival()} modules (minimum: \code{1}; default: \code{1}).}
 
 \item{group_size}{Integer. Number of features per iteration in \code{run_regression()} module (Default: \code{10}).}
 

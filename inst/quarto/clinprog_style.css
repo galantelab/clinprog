@@ -14,7 +14,7 @@ h2 {
   margin-top: 1.2em;
 }
 
-table {
+table:not(.table) {
   font-size: 13px;
   width: 100%;
   max-width: 100%;
@@ -40,6 +40,7 @@ caption {
   color: #333;
   width: 100%;
   margin-bottom: 8px;
+  font-size: 13px;
 }
 
 img {

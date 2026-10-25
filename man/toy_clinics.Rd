@@ -3,37 +3,34 @@
 \docType{data}
 \name{toy_clinics}
 \alias{toy_clinics}
-\title{Example clinical dataset for clinprog}
+\title{Simulated clinical dataset for clinprog}
 \format{
-A \code{data.frame} with:
-\itemize{
-\item Rows: samples (patients)
-\item Columns: clinical variables
+A \code{data.frame} with 150 rows and 5 columns (patient IDs are the row names):
+\describe{
+\item{(row names)}{Unique, TCGA-like patient identifiers (site code ZZ). In the raw TSV they are the \code{Patient_ID} column.}
+\item{Age}{Character. \code{"Low"} or \code{"High"}.}
+\item{Gender}{Character. \code{"Female"} or \code{"Male"}.}
+\item{Race}{Character. \code{"White"} or \code{"Not white"} (unbalanced on purpose).}
+\item{Histotype}{Character. \code{"Astrocytoma"} or \code{"Oligodendroglioma"}.}
+\item{Grade}{Character. \code{"G2"} or \code{"G3"}.}
 }
 }
 \source{
-Derived from internal dataset (FREDY REF here), reduced for package examples.
+Simulated with \code{data-raw/toy_dataset.R} (fixed seed).
+The raw TSV file is in \code{system.file("extdata", "toy_clinics.tsv", package = "clinprog")}.
 }
 \usage{
 data(toy_clinics)
 }
 \description{
-A toy clinical dataset of Brain Lower Grade Glioma (TCGA-LGG) patients included in the clinprog package
-intended to complement the expression dataset with additional sample annotations.
+A small, fully simulated clinical table intended for examples, tests and
+vignettes. It mimics the structure of TCGA-LGG clinical annotations but
+contains no real patient data.
 }
 \details{
-Each row represents a sample (patient), matching the expression dataset.
-
-The dataset includes the following categorical binary clinical variables:
-\itemize{
-\item Age group (e.g., Low/High)
-\item Gender
-\item Race (e.g., White/Not white)
-\item Histological type (e.g., Astrocytoma/Oligodendroglioma)
-\item Tumor grade (e.g., G2/G3)
-}
-
-Row names correspond to TCGA patient IDs and are aligned with \code{toy_expression}.
+Each row is one (fake) patient. Row names match the identifiers in
+\code{\link{toy_gene_expression}} and \code{\link{toy_transcript_expression}}.
+All clinical variables are categorical and binary.
 }
 \examples{
 data(toy_clinics)

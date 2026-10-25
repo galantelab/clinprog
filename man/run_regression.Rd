@@ -36,7 +36,7 @@ run_regression(
 
 \item{norm_exp}{Logical. If \code{TRUE}, log2(exp+1) transforms expression data (Default: \code{FALSE}).}
 
-\item{bootstrap}{Integer. Number of bootstrap iterations (Default: \code{1}).}
+\item{bootstrap}{Positive integer. Number of bootstrap iterations (minimum: \code{1}; default: \code{1}).}
 
 \item{group_size}{Integer. Number of genes/transcripts sampled per iteration (Default: \code{10}).}
 
@@ -44,9 +44,9 @@ run_regression(
 
 \item{variance_filter}{Numeric. Variance filter threshold (0–1; Default: \code{0.01}).}
 
-\item{max_follow_up}{Numeric or \code{NULL}. Maximum max_follow_up time (Default: \code{NULL}).}
+\item{max_follow_up}{Numeric or \code{NULL}. Maximum follow up time (Default: \code{NULL}).}
 
-\item{feature_type}{Character. Feature feature_type: either \code{"gene"} (default) or \code{"transcript"}.}
+\item{feature_type}{Character. Feature type: either \code{"gene"} (default) or \code{"transcript"}.}
 
 \item{min_signature_size}{Integer or \code{NULL} (disabled). If provided, after the bootstrap/Cox LASSO regression
 step, searches for the smallest signature (top-ranked features by absolute coefficient) that still yields a

@@ -25,7 +25,7 @@ params:
   author: "clinprog"
 ---
 
-![](logo.jpeg){fig-align="center" width=300px}
+![](logo.jpeg){fig-align="center" width="300px"}
 
 ```{r}
 obj <- readRDS(params$clinprog_object)
@@ -37,10 +37,6 @@ is_complete <- obj_class == "clinprog_complete"
 
 reg <- if (is_complete) obj$regression else if (is_regression) obj else NULL
 surv <- if (is_complete) obj$survival else if (is_survival) obj else NULL
-
-safe_print <- function(x){
-  try(print(x), silent = TRUE)
-}
 
 num_summary <- function(x){
   x <- suppressWarnings(as.numeric(x))
@@ -91,12 +87,17 @@ emit_table <- function(df, caption = NULL, digits = 4, font_size = 12, scale_dow
 
 params_to_df <- function(x)
 {
+  if (is.null(x) || length(x) == 0)
+  {
+    return(data.frame(Parameter = character(0), Value = character(0)))
+  }
+
   data.frame(
     Parameter = names(x),
-    Value = sapply(x, function(v)
+    Value = vapply(x, function(v)
     {
       if (is.null(v)) {"NULL"} else {paste(v, collapse = ", ")}
-    }),
+    }, FUN.VALUE = character(1)),
     row.names = NULL
   )
 }
@@ -108,30 +109,33 @@ call_to_text <- function(x)
 
 status_label <- function(x)
 {
-  ifelse(x == 0, "Alive / censored", ifelse(x == 1, "Dead / event", as.character(x)))
+  dplyr::case_when(
+    x == 0 ~ "Alive / censored",
+    x == 1 ~ "Dead / event",
+    TRUE   ~ as.character(x))
+}
+
+infer_time_unit <- function(x)
+{
+  x <- suppressWarnings(as.numeric(x))
+  if (all(is.na(x))) {return(NA_character_)}
+  max_x <- max(x, na.rm = TRUE)
+  if (max_x > 100) {
+    "days"
+  } else if (max_x > 20) {
+    "months"
+  } else {
+    "years"
+  }
 }
 
 infer_followup_years <- function(x)
 {
   x <- suppressWarnings(as.numeric(x))
-
-  if (all(is.na(x)))
-  {
-    return(x)
-  }
-
-  max_x <- max(x, na.rm = TRUE)
-
-  if (max_x > 100)
-  {
-    return(x / 365.25)
-  }
-
-  if (max_x > 20)
-  {
-    return(x / 12)
-  }
-
+  if (all(is.na(x))) {return(x)}
+  unit <- infer_time_unit(x)
+  if (unit == "days")   return(x / 365.25)
+  if (unit == "months") return(x / 12)
   x
 }
 ```
@@ -161,7 +165,8 @@ if (!is.null(obj$metadata))
 {
   metadata_df <- data.frame(
     Field = names(obj$metadata),
-    Value = sapply(obj$metadata, function(x) paste(as.character(x), collapse = ", ")),
+    Value = vapply(obj$metadata, function(x) paste(as.character(x), collapse = ", "),
+                   FUN.VALUE = character(1)),
     row.names = NULL
   )
 
@@ -220,20 +225,24 @@ if (!is.null(reg)) {
 
 The following plots summarize the distribution and contribution of the features selected for the clinprog signature.
 
+### Histogram
+
 ```{r}
 #| fig-width: 8
 #| fig-height: 5
-#| fig-cap: "Histogram of signature coefficients."
+#| fig-cap: "Signature coefficients distribution."
 
 if (!is.null(reg) && !is.null(reg$plots$hist_plot)) {
   print(reg$plots$hist_plot)
 }
 ```
 
+### Lollipop
+
 ```{r}
 #| fig-width: 9
 #| fig-height: 6
-#| fig-cap: "Lollipop plot showing the selected features and their coefficients."
+#| fig-cap: "Top selected features and their coefficients."
 
 if (!is.null(reg) && !is.null(reg$plots$lolli_plot)) {
   print(reg$plots$lolli_plot)
@@ -282,7 +291,8 @@ if (!is.null(surv)) {
   cat("\n\n## Score cutoff\n\n")
   score_cutoff_df <- data.frame(
     Metric = "Score cutoff",
-    Value = surv$score_cutoff
+    Criteria = surv$params$score_cutoff,
+    Value = surv$score_cutoff_value
   )
 
   emit_table(
@@ -305,26 +315,31 @@ if (!is.null(surv)) {
   )
 
   cat("\n\n## Clinical variables\n\n")
-  clinical_vars <- setdiff(colnames(surv$clinical_data),
-                           c("OS", "OS.time", "score", "score_group"))
 
-  clinical_df <- data.frame(Variable = clinical_vars,
-                            Categories = sapply(surv$clinical_data[, clinical_vars,
-                                                                   drop = FALSE],
-                                                function(x) {length(unique(stats::na.omit(x)))}),
-                            Values = sapply(surv$clinical_data[, clinical_vars,
-                                                                   drop = FALSE],
-                                                function(x)
-                                                {
-                                                  paste(unique(stats::na.omit(x)),
-                                                        collapse = ", ")
-                                                }), row.names = NULL)
+  if (is.null(surv$clinical_data))
+  {
+    cat("*No clinical variables available (multivariate analysis was not performed).*")
+  } else {
+    clinical_vars <- setdiff(colnames(surv$clinical_data),
+                             c("OS", "OS.time", "score", "score_group"))
 
-  emit_table(
-    clinical_df,
-    caption = "Clinical variables available for survival analysis",
-    digits = 4
-  )
+    if (length(clinical_vars) == 0)
+    {
+      cat("*No clinical covariates found in the clinical data.*\n\n")
+    } else {
+      clinical_df <- data.frame(Variable = clinical_vars, Categories = vapply(
+        surv$clinical_data[, clinical_vars, drop = FALSE], function(x)
+          {length(unique(stats::na.omit(x)))},
+        FUN.VALUE = integer(1)),
+        Values = vapply(surv$clinical_data[, clinical_vars, drop = FALSE], function(x)
+          {paste(unique(stats::na.omit(x)), collapse = ", ")},
+          FUN.VALUE = character(1)), row.names = NULL)
+
+      emit_table(clinical_df,
+                 caption = "Clinical variables available for survival analysis",
+                 digits = 4)
+    }
+  }
 
   cat("\n\n## Univariate Cox table\n\n")
   uni_table <- surv$survival$univariate$table
@@ -345,15 +360,17 @@ if (!is.null(surv)) {
   }
 
   cat("\n\n## Proportional hazards table\n\n")
+  ph_table <- surv$ph_result$table
+  rownames(ph_table) <- gsub("^score_group$", "Score", rownames(ph_table))
   emit_table(
-    surv$ph_result$table,
+    ph_table,
     caption = "Proportional hazards test",
     digits = 4
   )
 }
 ```
 
-# Expression Data Summary
+## Expression Data Summary
 
 ```{r}
 #| results: asis
@@ -396,27 +413,37 @@ if (!is.null(surv)) {
 
   expr_values <- unlist(surv$expression_data[, expr_cols, drop = FALSE])
 
-  expr_df <- data.frame(Expression = as.numeric(expr_values))
+  # Checks if expression data needs to be log2-transformed
+  if (surv$params$norm_exp)
+  {
+    expr_df <- data.frame(Expression = as.numeric(expr_values))
+  } else {
+    expr_df <- data.frame(Expression = log2(as.numeric(expr_values) + 1))
+  }
 
   ggplot2::ggplot(expr_df, ggplot2::aes(x = "", y = Expression)) +
-    ggplot2::geom_boxplot(outlier.alpha = 0.35) +
+    ggplot2::geom_jitter(width = 0.1, size = 1.5, alpha = 0.3, color = "gray50") +
+    ggplot2::geom_violin(fill = "#ECE7F2", color = "#A6BDDB", linewidth = 0.5, alpha = 0.7) +
+    ggplot2::geom_boxplot(outlier.shape = NA, width = 0.15, linewidth = 0.7,
+                          fill = "#1C9099", alpha = 0.8, color = "#016C59") +
     ggplot2::theme_minimal() +
-    ggplot2::labs(
-      title = "Expression distribution",
-      x = NULL,
-      y = "Expression"
-    )
+    ggplot2::labs(title = NULL, x = NULL, y = "log2(Expression + 1)")
 }
 ```
 
-# Survival Data Summary
+## Survival Data Summary
 
 ```{r}
 #| results: asis
 
 if (!is.null(surv)) {
+  # informative note about the inferred time unit
+  max_time <- max(surv$expression_data$OS.time, na.rm = TRUE)
+  assumed_unit <- infer_time_unit(surv$expression_data$OS.time)
+  cat(sprintf("*Follow-up time assumed to be in **%s** (max observed value = %s).*\n\n",
+              assumed_unit, round(max_time, 2)))
 
-  os_df <- as.data.frame(table(status_label(surv$clinical_data$OS)))
+  os_df <- as.data.frame(table(status_label(surv$expression_data$OS)))
   colnames(os_df) <- c("Status", "Count")
 
   emit_table(
@@ -425,7 +452,7 @@ if (!is.null(surv)) {
     digits = 4
   )
 
-  followup_years <- infer_followup_years(surv$clinical_data$OS.time)
+  followup_years <- infer_followup_years(surv$expression_data$OS.time)
 
   followup_df <- data.frame(
     Followup = c("<= 1 year", "<= 3 years", "<= 5 years", "<= 10 years"),
@@ -464,7 +491,7 @@ if (!is.null(surv)) {
 
 if (!is.null(surv)) {
 
-  os_df <- as.data.frame(table(status_label(surv$clinical_data$OS)))
+  os_df <- as.data.frame(table(status_label(surv$expression_data$OS)))
   colnames(os_df) <- c("Status", "Count")
 
   os_df$Percent <- round(100 * os_df$Count / sum(os_df$Count), 1)
@@ -473,56 +500,111 @@ if (!is.null(surv)) {
   ggplot2::ggplot(os_df, ggplot2::aes(x = "", y = Count, fill = Status)) +
     ggplot2::geom_col(width = 1, color = "white") +
     ggplot2::coord_polar(theta = "y") +
-    ggplot2::geom_text(ggplot2::aes(label = Label),
+    ggplot2::geom_text(ggplot2::aes(label = Label), color = "white",
                        position = ggplot2::position_stack(vjust = 0.5), size = 4) +
     ggplot2::scale_fill_manual(values = c("#4E79A7", "#E15759")) +
     ggplot2::theme_void() +
-    ggplot2::labs(title = "OS distribution", fill = "Status")
+    ggplot2::labs(title = NULL, fill = "Status")
 }
 ```
 
 ```{r}
 #| fig-width: 7
 #| fig-height: 5
-#| fig-cap: "Distribution of follow-up time."
+#| fig-cap: "Distribution of followup time."
 
 if (!is.null(surv)) {
 
-  followup_years <- infer_followup_years(surv$clinical_data$OS.time)
-
+  followup_years <- infer_followup_years(surv$expression_data$OS.time)
   followup_plot_df <- data.frame(Followup = followup_years)
+  n_obs <- length(na.omit(followup_years))
+  binwidth <- diff(range(followup_years, na.rm = TRUE)) / 30
 
-  ggplot2::ggplot(followup_plot_df, ggplot2::aes(x = Followup)) +
-    ggplot2::geom_histogram(bins = 30) +
+  ggplot2::ggplot(followup_plot_df, ggplot2::aes(x = .data$Followup)) +
+    ggplot2::geom_histogram(bins = 30, fill = "#1C9099", color = "white",
+                            linewidth = 0.3, alpha = 0.7) +
+    ggplot2::geom_density(ggplot2::aes(y = ggplot2::after_stat(.data$density) * n_obs * binwidth), color = "#016C59", linewidth = 1) +
+    ggplot2::scale_y_continuous(expand = c(0, 0)) +
+    ggplot2::labs(title = NULL, x = "Followup time (years)", y = "Patients") +
     ggplot2::theme_minimal() +
-    ggplot2::labs(
-      title = "Follow-up distribution",
-      x = "Follow-up time (years)",
-      y = "Patients"
-    )
+    ggplot2::theme(panel.grid.major.x = ggplot2::element_blank(),
+                   panel.grid.minor.x = ggplot2::element_blank(),
+                   panel.border = ggplot2::element_blank())
 }
 ```
 
-# Kaplan-Meier Curve
+## Score
 
-The Kaplan-Meier curve shows survival differences between patients classified according to the clinprog score.
+The following plots are designed to help users better understand the clinprog score, generated with the intention of helping to interpret the impact of the clinprog signature on the survival prognosis.
+
+### Boxplots
 
 ```{r}
-#| fig-width: 9
+#| fig-width: 8
+#| fig-height: 10
+#| fig-cap: "Individual impact of each signature feature to the score."
+
+if (!is.null(surv) && !is.null(surv$plots$box_plot)) {
+  print(surv$plots$box_plot)
+}
+```
+
+### Scatter plots
+
+```{r}
+#| fig-width: 10
+#| fig-height: 10
+#| fig-cap: "Expression variation of each signature feature over the course of followup."
+
+if (!is.null(surv) && !is.null(surv$plots$scatter_plot)) {
+  print(surv$plots$scatter_plot)
+}
+```
+
+### Word Cloud
+
+```{r}
+#| fig-width: 8
 #| fig-height: 8
-#| fig-cap: "Kaplan-Meier survival curve with risk table."
+#| fig-cap: "Individual contributions of each feature in the signature."
 
-if (!is.null(surv) && !is.null(surv$plots$km_plot)) {
-  print(surv$plots$km_plot)
+if (!is.null(surv) && !is.null(surv$plots$wordcloud_plot)) {
+  print(surv$plots$wordcloud_plot)
 }
 ```
 
-# Proportional Hazards Diagnostics
-
-The proportional hazards diagnostic plot summarizes whether the proportional hazards assumption appears compatible with the fitted Cox model.
+### Barplot
 
 ```{r}
-#| fig-width: 11
+#| fig-width: 8
+#| fig-height: 10
+#| fig-cap: "Score distribution among patients."
+
+if (!is.null(surv) && !is.null(surv$plots$score_bar_plot)) {
+  print(surv$plots$score_bar_plot)
+}
+```
+
+### Line Graph
+
+```{r}
+#| fig-width: 8
+#| fig-height: 8
+#| fig-cap: "Score variation over the course of followup."
+
+if (!is.null(surv) && !is.null(surv$plots$line_plot)) {
+  print(surv$plots$line_plot)
+}
+```
+
+## Prognosis
+
+The following plots are designed to directly assess the clinical relevance of the signature (through the score) in the clinics.
+
+### PH Assumptions
+
+```{r}
+#| fig-width: 10
 #| fig-height: 8
 #| fig-cap: "Proportional hazards diagnostic plot."
 
@@ -531,7 +613,31 @@ if (!is.null(surv) && !is.null(surv$plots$ph_plot)) {
 }
 ```
 
-# ROC Analysis
+### Kaplan-Meier
+
+```{r}
+#| fig-width: 8
+#| fig-height: 8
+#| fig-cap: "Survival curves with risk table."
+
+if (!is.null(surv) && !is.null(surv$plots$km_plot)) {
+  print(surv$plots$km_plot)
+}
+```
+
+### Swimmer plot
+
+```{r}
+#| fig-width: 8
+#| fig-height: 6
+#| fig-cap: "Individual patient follow-up, stratified by score group."
+
+if (!is.null(surv) && !is.null(surv$plots$swim_plot)) {
+  print(surv$plots$swim_plot)
+}
+```
+
+### ROC
 
 ```{r}
 #| results: asis
@@ -553,12 +659,13 @@ if (!is.null(surv) && !is.null(surv$roc_result)) {
 ```
 
 ```{r}
-#| fig-width: 7
-#| fig-height: 6
+#| fig-width: 8
+#| fig-height: 8
 #| fig-cap: "ROC curve."
 
-if (!is.null(surv) && !is.null(surv$roc_result$optimal_cutpoint$data)) {
-
+if (!is.null(surv) && !is.null(surv$roc_result) &&
+    !is.null(surv$roc_result$optimal_cutpoint$data) &&
+    requireNamespace("pROC", quietly = TRUE)) {
   roc_data <- surv$roc_result$optimal_cutpoint$data
 
   roc_obj <- pROC::roc(response = roc_data$OS, predictor = roc_data$score,
@@ -576,7 +683,7 @@ if (!is.null(surv) && !is.null(surv$roc_result$optimal_cutpoint$data)) {
                    axis.ticks = ggplot2::element_line(color = "black")) +
     ggplot2::scale_x_continuous(limits = c(0, 1), breaks = seq(0, 1, by = 0.2)) +
     ggplot2::scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, by = 0.2)) +
-    ggplot2::labs(title = "ROC curve",
+    ggplot2::labs(title = NULL,
                   subtitle = paste0("AUC = ", round(surv$roc_result$auc, 3)),
                   x = "1 - Specificity", y = "Sensitivity")
 
@@ -584,27 +691,91 @@ if (!is.null(surv) && !is.null(surv$roc_result$optimal_cutpoint$data)) {
 }
 ```
 
-# Forest Plot
+```{r}
+#| results: asis
+#| echo: false
 
-The forest plot summarizes the hazard ratio estimates from the multivariate Cox model.
+if (!is.null(surv) && !is.null(surv$roc_result) &&
+    !requireNamespace("pROC", quietly = TRUE)) {
+  cat("*ROC curve skipped: package 'pROC' is not installed.*\n\n")
+}
+```
+
+### Forest Plot
 
 ```{r}
 #| fig-width: 12
-#| fig-height: 8
-#| fig-cap: "Forest plot from multivariate Cox model."
+#| fig-height: 10
+#| fig-cap: "Results from multivariate Cox model."
 
 if (!is.null(surv) && !is.null(surv$plots$forest_plot)) {
   print(surv$plots$forest_plot)
 }
 ```
 
-# Bootstrap Stability
+### Clinics boxplot
+
+```{r}
+#| fig-width: 8
+#| fig-height: 10
+#| fig-cap: "Individual association of each co-variable with the score."
+
+if (!is.null(surv) && !is.null(surv$plots$clinics_box_plot)) {
+  print(surv$plots$clinics_box_plot)
+}
+```
+
+### Bootstrap covariate frequency
 
 ```{r}
 #| results: asis
+
+if (!is.null(surv) && !is.null(surv$survival$boot_table)) {
+  boot_tbl <- surv$survival$boot_table
+  n_boot <- surv$params$bootstrap
+
+  # Cosmetic rename: score_group -> Score
+  boot_tbl$covariate <- gsub("^score_group$", "Score", boot_tbl$covariate)
+
+  # If bootstrap = 1, frequencies are trivial (each selected covariate appears exactly once)
+  # So, show only counts and add an explicit note for the reader.
+  if (is.null(n_boot) || !is.numeric(n_boot) || n_boot < 2) {
+    colnames(boot_tbl) <- c("Covariate", "Frequency (n)")
+    cat(sprintf("*Note: bootstrap was performed with %s iteration(s); ",
+                if (is.null(n_boot)) "an unknown number of" else n_boot))
+    cat("frequencies are not informative and percentages are omitted.*\n\n")
+  } else {
+    boot_tbl$frequency_pct <- round(100 * boot_tbl$frequency / n_boot, 1)
+    boot_tbl <- boot_tbl[, c("covariate", "frequency", "frequency_pct")]
+    colnames(boot_tbl) <- c("Covariate", "Frequency (n)", "Frequency (%)")
+  }
+
+  emit_table(boot_tbl,
+             caption = "Covariate selection frequency across bootstrap iterations",
+             digits = 4)
+
+} else {
+  cat("*No bootstrap frequency table available (multivariate bootstrap was not performed).*\n\n")
+}
+```
+
+### Bootstrap Stability
+
+```{r}
+#| fig-width: 8
+#| fig-height: 6
+#| fig-cap: "Bootstrap stability of clinical covariates."
+
 if (!is.null(surv) && !is.null(surv$plots$bar_plot)) {
   print(surv$plots$bar_plot)
-} else {
+}
+```
+
+```{r}
+#| results: asis
+#| echo: false
+
+if (is.null(surv) || is.null(surv$plots$bar_plot)) {
   cat("*No bootstrap was performed for the multivariate survival analysis.*")
 }
 ```
