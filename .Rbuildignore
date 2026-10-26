@@ -3,3 +3,4 @@
 ^data-raw$
 ^launchers$
 ^lib$
+^cran-comments\.md$
