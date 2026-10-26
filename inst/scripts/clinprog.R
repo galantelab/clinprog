@@ -5,19 +5,19 @@ library(clinprog)
 
 parser <- ArgumentParser(
   prog = "clinprog",
-  description = "Bootstrap-Based Multivariate LASSO Cox Regression for Survival Signature Discovery"
+  description = "Bootstrap-based LASSO Cox regression and survival analysis for molecular signature discovery"
 )
 
 subparsers <- parser$add_subparsers(
   dest = "sub_name",
   metavar = "<subcommand>",
-  help = "choose only one option"
+  help = "select an analysis command"
 )
 
 parser$add_argument(
   "-V", "--version",
   action = "version",
-  version = "clinprog 0.4.0"
+  version = paste("clinprog", as.character(utils::packageVersion("clinprog")))
 )
 
 ########## create the parser for the "REGRESSION" command ##########
@@ -30,12 +30,16 @@ parser_reg <- subparsers$add_parser(
 parser_reg$add_argument(
   "input",
   type = "character",
-  metavar = "<input>",
-  help = "tab separated values (tsv) file containing expression and survival parameters"
+  metavar = "EXPRESSION_TSV",
+  help = paste0(
+    "TSV expression/survival table. The first column contains sample IDs; ",
+    "the next two columns are binary overall-survival status (0/1) and ",
+    "follow-up time; remaining columns contain gene or transcript expression."
+  )
 )
 
 parser_reg$add_argument(
-  "--output-prefix",
+  "-o", "--output-prefix",
   type = "character",
   dest = "output_prefix",
   default = "clinprog",
@@ -44,29 +48,29 @@ parser_reg$add_argument(
 )
 
 parser_reg$add_argument(
-  "--norm-exp",
+  "-n", "--norm-exp",
   action = "store_true",
   dest = "norm_exp",
   default = FALSE,
-  help = "normalize expression to log2(exp+1)"
+  help = "apply the log2(expression + 1) transformation to expression values"
 )
 
 parser_reg$add_argument(
-  "--bootstrap",
+  "-b", "--bootstrap",
   type = "integer",
   dest = "bootstrap",
   default = 1,
   metavar = "INT",
-  help = "number of bootstrap iterations (default: %(default)s)"
+  help = "number of bootstrap iterations; must be a positive integer (default: %(default)s)"
 )
 
 parser_reg$add_argument(
-  "--group-size",
+  "-g", "--group-size",
   type = "integer",
   dest = "group_size",
   default = 10,
   metavar = "INT",
-  help = "number of genes/transcripts sampled per iteration (default: %(default)s)"
+  help = "number of genes/transcripts sampled per regression iteration (default: %(default)s)"
 )
 
 parser_reg$add_argument(
@@ -75,7 +79,7 @@ parser_reg$add_argument(
   dest = "percentage_filter",
   default = 0.3,
   metavar = "DOUBLE",
-  help = "correlation filter threshold (default: %(default)s)"
+  help = "correlation-filter threshold between 0 and 1 (default: %(default)s)"
 )
 
 parser_reg$add_argument(
@@ -84,64 +88,64 @@ parser_reg$add_argument(
   dest = "variance_filter",
   default = 0.01,
   metavar = "DOUBLE",
-  help = "minimum normalized variance for follow-up time (default: %(default)s)"
+  help = "minimum normalized variance threshold for the follow-up-time variable (default: %(default)s)"
 )
 
 parser_reg$add_argument(
   "--max-follow-up",
-  type = "integer",
+  type = "double",
   dest = "max_follow_up",
   default = NULL,
-  metavar = "INT",
-  help = "max follow up time (default: %(default)s)"
+  metavar = "NUMBER",
+  help = "maximum follow-up time to consider, in the time unit used by the input (default: no truncation)"
 )
 
 parser_reg$add_argument(
-  "--feature-type",
+  "-t", "--feature-type",
   type = "character",
   dest = "feature_type",
   choices = c("gene", "transcript"),
   default = "gene",
-  help = "type of transcriptome data: gene or transcript (default: %(default)s)"
+  help = "feature granularity of expression data: gene or transcript (default: %(default)s)"
 )
 
 parser_reg$add_argument(
-  "--min-signature-size",
+  "-m", "--min-signature-size",
   type = "integer",
   dest = "min_signature_size",
   default = NULL,
   metavar = "INT",
-  help = "search for the smallest signature that still yields a significant univariate log-rank test on the same dataset"
+  help = "start searching at this signature size and add features until the univariate log-rank p-value is below 0.05; unset disables the search"
 )
 
 parser_reg$add_argument(
   "--min-signature-cutoff",
-  type = "integer",
+  type = "character",
   dest = "min_signature_cutoff",
   choices = c("median", "mean", "signal", "roc"),
   default = NULL,
-  help = "strategy used to split scores into low/high groups during the minimum signature search"
+  help = "score-cutoff method for the minimum-signature search: median, mean, signal, or roc (default: median when search is enabled)"
 )
 
 parser_reg$add_argument(
-  "--skip-survival-checks",
+  "-f", "--skip-survival-checks",
   action = "store_true",
   dest = "skip_survival_checks",
   default = FALSE,
-  help = "override filtering steps related to survival assumptions"
+  help = "bypass filtering checks related to survival assumptions; use cautiously"
 )
 
 parser_reg$add_argument(
-  "--report-format",
+  "-r", "--report-format",
   type = "character",
   dest = "report_format",
   choices = c("pdf", "html"),
   default = "pdf",
-  help = "report format: pdf or html (default: %(default)s)"
+  help = "report format: pdf or html; the CLI generates a report by default (default: %(default)s)"
 )
 
 parser_reg$add_argument(
-  "--verbose",
+  "-v", "--verbose",
   action = "store_true",
   dest = "verbose",
   default = FALSE,
@@ -149,21 +153,21 @@ parser_reg$add_argument(
 )
 
 parser_reg$add_argument(
-  "--n_cores",
+  "-j", "--n-cores",
   type = "integer",
   dest = "n_cores",
   default = 1,
   metavar = "INT",
-  help = "number of CPU cores used for parallel bootstrap regression (default: %(default)s)"
+  help = "number of parallel workers for bootstrap regression; 1 runs serially (default: %(default)s)"
 )
 
 parser_reg$add_argument(
-  "--seed",
+  "-s", "--seed",
   type = "integer",
   dest = "seed",
   default = 123,
   metavar = "INT",
-  help = "random seed used for reproducible bootstrap regression (default: %(default)s)"
+  help = "random seed for stochastic steps in the regression module (default: %(default)s)"
 )
 
 #####################################################################################################################
@@ -178,19 +182,23 @@ parser_sur <- subparsers$add_parser(
 parser_sur$add_argument(
   "input",
   type = "character",
-  metavar = "<input>",
-  help = "tab separated values (tsv) file containing expression and survival parameters"
+  metavar = "EXPRESSION_TSV",
+  help = paste0(
+    "TSV expression/survival table. The first column contains sample IDs; ",
+    "the next two columns are binary overall-survival status (0/1) and ",
+    "follow-up time; remaining columns contain gene or transcript expression."
+  )
 )
 
 parser_sur$add_argument(
   "signature",
   type = "character",
-  metavar = "<signature>",
-  help = "tab separated values (tsv) file containing a set of features and corresponding regression coefficients"
+  metavar = "SIGNATURE_TSV",
+  help = "TSV signature table with columns named feature and coefficient"
 )
 
 parser_sur$add_argument(
-  "--output-prefix",
+  "-o", "--output-prefix",
   type = "character",
   dest = "output_prefix",
   metavar = "STR",
@@ -199,11 +207,11 @@ parser_sur$add_argument(
 )
 
 parser_sur$add_argument(
-  "--norm-exp",
+  "-n", "--norm-exp",
   action = "store_true",
   dest = "norm_exp",
   default = FALSE,
-  help = "normalize expression to log2(exp+1)"
+  help = "apply the log2(expression + 1) transformation to expression values"
 )
 
 parser_sur$add_argument(
@@ -211,7 +219,7 @@ parser_sur$add_argument(
   action = "store_true",
   dest = "run_multivariate",
   default = FALSE,
-  help = "if clinical variables should be included. This option is tied with --clinical-data option"
+  help = "include clinical covariates in multivariate Cox analysis; requires --clinical-file"
 )
 
 parser_sur$add_argument(
@@ -220,16 +228,16 @@ parser_sur$add_argument(
   dest = "clinical_file",
   default = NULL,
   metavar = "FILE",
-  help = "tab separated values (tsv) file containing binary categorical variables only. Required if --run-multivariate option is chosen"
+  help = "TSV clinical table: first column contains sample IDs and remaining columns contain binary categorical covariates; required with --run-multivariate"
 )
 
 parser_sur$add_argument(
-  "--score-cutoff",
+  "-c", "--score-cutoff",
   type = "character",
   dest = "score_cutoff",
   choices = c("median", "mean", "signal", "roc"),
   default = "median",
-  help = "curve to define the score cutoff: median, mean, signal, roc (default: %(default)s)"
+  help = "method used to define the low/high score cutoff: median, mean, signal, or roc (default: %(default)s)"
 )
 
 parser_sur$add_argument(
@@ -238,20 +246,20 @@ parser_sur$add_argument(
   dest = "variance_filter",
   default = 0.01,
   metavar = "DOUBLE",
-  help = "minimum normalized variance for follow-up time (default: %(default)s)"
+  help = "minimum normalized variance threshold for the follow-up-time variable (default: %(default)s)"
 )
 
 parser_sur$add_argument(
   "--max-follow-up",
-  type = "integer",
+  type = "double",
   dest = "max_follow_up",
   default = NULL,
-  metavar = "INT",
-  help = "max follow up time"
+  metavar = "NUMBER",
+  help = "maximum follow-up time to consider, in the time unit used by the input (default: no truncation)"
 )
 
 parser_sur$add_argument(
-  "--p-value-cutoff",
+  "-p", "--p-value-cutoff",
   type = "double",
   dest = "p_value_cutoff",
   default = 0.2,
@@ -260,33 +268,33 @@ parser_sur$add_argument(
 )
 
 parser_sur$add_argument(
-  "--bootstrap",
+  "-b", "--bootstrap",
   type = "integer",
   dest = "bootstrap",
   default = 1,
   metavar = "INT",
-  help = "number of bootstrap iterations (default: %(default)s)"
+  help = "number of bootstrap iterations for multivariate Cox resampling; must be positive (default: %(default)s)"
 )
 
 parser_sur$add_argument(
-  "--skip-survival-checks",
+  "-f", "--skip-survival-checks",
   action = "store_true",
   dest = "skip_survival_checks",
   default = FALSE,
-  help = "override filtering steps related to survival assumptions"
+  help = "bypass filtering checks related to survival assumptions; use cautiously"
 )
 
 parser_sur$add_argument(
-  "--report-format",
+  "-r", "--report-format",
   type = "character",
   dest = "report_format",
   choices = c("pdf", "html"),
   default = "pdf",
-  help = "report format: pdf or html (default: %(default)s)"
+  help = "report format: pdf or html; the CLI generates a report by default (default: %(default)s)"
 )
 
 parser_sur$add_argument(
-  "--verbose",
+  "-v", "--verbose",
   action = "store_true",
   dest = "verbose",
   default = FALSE,
@@ -305,12 +313,16 @@ parser_all <- subparsers$add_parser(
 parser_all$add_argument(
   "input",
   type = "character",
-  metavar = "<input>",
-  help = "tab separated values (tsv) file containing expression and survival parameters"
+  metavar = "EXPRESSION_TSV",
+  help = paste0(
+    "TSV expression/survival table. The first column contains sample IDs; ",
+    "the next two columns are binary overall-survival status (0/1) and ",
+    "follow-up time; remaining columns contain gene or transcript expression."
+  )
 )
 
 parser_all$add_argument(
-  "--output-prefix",
+  "-o", "--output-prefix",
   type = "character",
   dest = "output_prefix",
   default = "clinprog",
@@ -319,29 +331,29 @@ parser_all$add_argument(
 )
 
 parser_all$add_argument(
-  "--norm-exp",
+  "-n", "--norm-exp",
   action = "store_true",
   dest = "norm_exp",
   default = FALSE,
-  help = "normalize expression to log2(exp+1)"
+  help = "apply the log2(expression + 1) transformation to expression values"
 )
 
 parser_all$add_argument(
-  "--bootstrap",
+  "-b", "--bootstrap",
   type = "integer",
   dest = "bootstrap",
   default = 1,
   metavar = "INT",
-  help = "number of bootstrap iterations (default: %(default)s)"
+  help = "number of bootstrap iterations; must be a positive integer (default: %(default)s)"
 )
 
 parser_all$add_argument(
-  "--group-size",
+  "-g", "--group-size",
   type = "integer",
   dest = "group_size",
   default = 10,
   metavar = "INT",
-  help = "number of genes/transcripts sampled per iteration (default: %(default)s)"
+  help = "number of genes/transcripts sampled per regression iteration (default: %(default)s)"
 )
 
 parser_all$add_argument(
@@ -350,7 +362,7 @@ parser_all$add_argument(
   dest = "percentage_filter",
   default = 0.3,
   metavar = "DOUBLE",
-  help = "correlation filter threshold (default: %(default)s)"
+  help = "correlation-filter threshold between 0 and 1 (default: %(default)s)"
 )
 
 parser_all$add_argument(
@@ -359,43 +371,43 @@ parser_all$add_argument(
   dest = "variance_filter",
   default = 0.01,
   metavar = "DOUBLE",
-  help = "minimum normalized variance for follow-up time (default: %(default)s)"
+  help = "minimum normalized variance threshold for the follow-up-time variable (default: %(default)s)"
 )
 
 parser_all$add_argument(
   "--max-follow-up",
-  type = "integer",
+  type = "double",
   dest = "max_follow_up",
   default = NULL,
-  metavar = "INT",
-  help = "max follow up time (default: %(default)s)"
+  metavar = "NUMBER",
+  help = "maximum follow-up time to consider, in the time unit used by the input (default: no truncation)"
 )
 
 parser_all$add_argument(
-  "--feature-type",
+  "-t", "--feature-type",
   type = "character",
   dest = "feature_type",
   choices = c("gene", "transcript"),
   default = "gene",
-  help = "type of transcriptome data: gene or transcript (default: %(default)s)"
+  help = "feature granularity of expression data: gene or transcript (default: %(default)s)"
 )
 
 parser_all$add_argument(
-  "--min-signature-size",
+  "-m", "--min-signature-size",
   type = "integer",
   dest = "min_signature_size",
   default = NULL,
   metavar = "INT",
-  help = "search for the smallest signature that still yields a significant univariate log-rank test on the same dataset"
+  help = "start searching at this signature size and add features until the univariate log-rank p-value is below 0.05; unset disables the search"
 )
 
 parser_all$add_argument(
   "--min-signature-cutoff",
-  type = "integer",
+  type = "character",
   dest = "min_signature_cutoff",
   choices = c("median", "mean", "signal", "roc"),
   default = NULL,
-  help = "strategy used to split scores into low/high groups during the minimum signature search"
+  help = "score-cutoff method for the minimum-signature search: median, mean, signal, or roc (default: median when search is enabled)"
 )
 
 parser_all$add_argument(
@@ -403,7 +415,7 @@ parser_all$add_argument(
   action = "store_true",
   dest = "run_multivariate",
   default = FALSE,
-  help = "if clinical variables should be included. This option is tied with --clinical-data option"
+  help = "include clinical covariates in multivariate Cox analysis; requires --clinical-file"
 )
 
 parser_all$add_argument(
@@ -412,46 +424,46 @@ parser_all$add_argument(
   dest = "clinical_file",
   default = NULL,
   metavar = "FILE",
-  help = "tab separated values (tsv) file containing binary categorical variables only. Required if --run-multivariate option is chosen"
+  help = "TSV clinical table: first column contains sample IDs and remaining columns contain binary categorical covariates; required with --run-multivariate"
 )
 
 parser_all$add_argument(
-  "--score-cutoff",
+  "-c", "--score-cutoff",
   type = "character",
   dest = "score_cutoff",
   choices = c("median", "mean", "signal", "roc"),
   default = "median",
-  help = "curve to define the score cutoff: median, mean, signal, roc (default: %(default)s)"
+  help = "method used to define the low/high score cutoff: median, mean, signal, or roc (default: %(default)s)"
 )
 
 parser_all$add_argument(
-  "--p-value-cutoff",
+  "-p", "--p-value-cutoff",
   type = "double",
   dest = "p_value_cutoff",
   default = 0.2,
   metavar = "DOUBLE",
-  help = "p-value threshold used to select clinical covariates from univariate Cox allression (default: %(default)s)"
+  help = "p-value threshold used to select clinical covariates from univariate Cox regression (default: %(default)s)"
 )
 
 parser_all$add_argument(
-  "--skip-survival-checks",
+  "-f", "--skip-survival-checks",
   action = "store_true",
   dest = "skip_survival_checks",
   default = FALSE,
-  help = "override filtering steps related to survival assumptions"
+  help = "bypass filtering checks related to survival assumptions; use cautiously"
 )
 
 parser_all$add_argument(
-  "--report-format",
+  "-r", "--report-format",
   type = "character",
   dest = "report_format",
   choices = c("pdf", "html"),
   default = "pdf",
-  help = "report format: pdf or html (default: %(default)s)"
+  help = "report format: pdf or html; the CLI generates a report by default (default: %(default)s)"
 )
 
 parser_all$add_argument(
-  "--verbose",
+  "-v", "--verbose",
   action = "store_true",
   dest = "verbose",
   default = FALSE,
@@ -459,21 +471,21 @@ parser_all$add_argument(
 )
 
 parser_all$add_argument(
-  "--n_cores",
+  "-j", "--n-cores",
   type = "integer",
   dest = "n_cores",
   default = 1,
   metavar = "INT",
-  help = "number of CPU cores used for parallel bootstrap allression (default: %(default)s)"
+  help = "number of parallel workers for bootstrap regression; 1 runs serially (default: %(default)s)"
 )
 
 parser_all$add_argument(
-  "--seed",
+  "-s", "--seed",
   type = "integer",
   dest = "seed",
   default = 123,
   metavar = "INT",
-  help = "random seed used for reproducible bootstrap allression (default: %(default)s)"
+  help = "random seed for stochastic steps in the regression module (default: %(default)s)"
 )
 
 #####################################################################################################################
@@ -529,7 +541,7 @@ if (args$sub_name == "regression") {
     save_table = TRUE,
     save_json = TRUE,
     save_rds = TRUE,
-    report_format = FALSE,
+    report_format = args$report_format,
     verbose = args$verbose,
     n_cores = args$n_cores,
     seed = args$seed,
@@ -541,7 +553,7 @@ if (args$sub_name == "regression") {
 ########## SURVIVAL ##########
 if (args$sub_name == "survival") {
   validate_cli_file(args$input, "input")
-  require_nonempty(args$signature, "signature")
+  validate_cli_file(args$signature, "signature")
 
   if (args$run_multivariate) {
     validate_cli_file(args$clinical_file, "--clinical-file")
@@ -557,7 +569,7 @@ if (args$sub_name == "survival") {
     NULL
   }
 
-  signature <- read_table(args$signature, sep = "\t", row.names = FALSE)
+  signature <- read_table(args$signature, sep = "\t", row_names = FALSE)
 
   run_survival(
     data = data,
@@ -576,7 +588,7 @@ if (args$sub_name == "survival") {
     save_table = TRUE,
     save_json = TRUE,
     save_rds = TRUE,
-    report_format = FALSE,
+    report_format = args$report_format,
     verbose = args$verbose,
     save_log = TRUE
   )
@@ -624,7 +636,7 @@ if (args$sub_name == "complete") {
     save_table = TRUE,
     save_json = TRUE,
     save_rds = TRUE,
-    report_format = FALSE,
+    report_format = args$report_format,
     verbose = args$verbose,
     n_cores = args$n_cores,
     seed = args$seed,
