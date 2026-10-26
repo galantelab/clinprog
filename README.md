@@ -7,7 +7,7 @@
 
 The workflow combines feature filtering, bootstrap resampling, penalized Cox regression (LASSO), and survival analysis. It supports analyses at the gene and transcript (splicing-isoform) levels.
 
-> **Rebrand:** `clinprog` is the successor to the package formerly known as [Reboot (v1.2.0)](https://github.com/galantelab/reboot), with a redesigned R API (snake_case arguments), reproducible bootstrap settings, parallel execution, a command-line interface (CLI), report generation, and a Shiny application. See [Migrating from Reboot](#migrating-from-reboot) if you used the old functions.
+> **Rebrand:** `clinprog` is the successor to the package formerly known as [Reboot (v1.2.0)](https://github.com/galantelab/reboot), with a redesigned R API (snake_case arguments), reproducible bootstrap settings, parallel execution, a command-line interface (CLI), report generation, and a Shiny application.
 
 ## Overview
 
