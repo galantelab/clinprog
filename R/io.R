@@ -320,25 +320,92 @@ write_report <- function(object, format = TRUE, file = NULL,
   if (is.null(quarto_path) || !nzchar(quarto_path)) {log_stop("Quarto executable was not found in the system")}
 
   # Retrieves report template
-  template <- system.file("quarto/clinprog_report.qmd", package = "clinprog")
-  if (!file.exists(template)) {log_stop("Report template file 'clinprog_report.qmd' was not found")}
+  template <- system.file(
+    "quarto/clinprog_report.qmd",
+    package = "clinprog"
+  )
+
+  if (!file.exists(template)) {
+    log_stop("Report template file 'clinprog_report.qmd' was not found")
+  }
+
+  # Creates a writable staging directory for Quarto
+  render_dir <- tempfile("clinprog-quarto-")
+
+  if (!dir.create(render_dir, recursive = TRUE)) {
+    log_stop("Could not create temporary directory for Quarto rendering")
+  }
+
+  on.exit(
+    unlink(render_dir, recursive = TRUE, force = TRUE),
+    add = TRUE
+  )
+
+  # Copies the template and its associated resources
+  template_dir <- dirname(template)
+
+  template_files <- list.files(
+    template_dir,
+    full.names = TRUE,
+    all.files = TRUE,
+    no.. = TRUE
+  )
+
+  copied <- file.copy(
+    from = template_files,
+    to = render_dir,
+    recursive = TRUE,
+    overwrite = TRUE
+  )
+
+  if (length(copied) == 0L || !all(copied)) {
+    log_stop("Failed to copy Quarto template resources")
+  }
+
+  render_template <- file.path(
+    render_dir,
+    basename(template)
+  )
 
   # Creates temporary RDS object
   temp_rds <- tempfile(fileext = ".rds")
   saveRDS(object, temp_rds)
   on.exit(unlink(temp_rds), add = TRUE)
 
-  # Defines quarto format
-  quarto_format <- ifelse(format == "PDF", "pdf", "html")
+  # Defines Quarto format
+  quarto_format <- if (format == "PDF") "pdf" else "html"
 
-  # Renders report
-  quarto::quarto_render(input = template, output_file = output_file, output_format = quarto_format,
-                        execute_dir = output_dir, quiet = FALSE,
-                        execute_params = list(clinprog_object = temp_rds, title = title, author = author))
+  # Renders in the writable directory
+  quarto::quarto_render(
+    input = render_template,
+    output_file = output_file,
+    output_format = quarto_format,
+    execute_dir = render_dir,
+    quiet = FALSE,
+    execute_params = list(
+      clinprog_object = temp_rds,
+      title = title,
+      author = author
+    )
+  )
 
-  # Moves generated report to user-defined directory
-  success <- file.rename(from = file.path(dirname(template), output_file), to = file)
-  if (!success) {log_stop("Failed to move generated report to destination directory")}
+  # Checks the rendered report
+  rendered_file <- file.path(render_dir, output_file)
+
+  if (!file.exists(rendered_file)) {
+    log_stop("Quarto finished without producing the expected report")
+  }
+
+  # Copies the report to the requested destination
+  success <- file.copy(
+    from = rendered_file,
+    to = file,
+    overwrite = TRUE
+  )
+
+  if (!success) {
+    log_stop("Failed to copy the generated report to the destination")
+  }
 
   return(invisible(normalizePath(file, mustWork = FALSE)))
 }
