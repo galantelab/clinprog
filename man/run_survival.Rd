@@ -2,7 +2,7 @@
 % Please edit documentation in R/run_clinprog.R
 \name{run_survival}
 \alias{run_survival}
-\title{Run clinprog pipeline - module 2 (survival analysis)}
+\title{Evaluate a molecular signature with survival analysis (module II)}
 \usage{
 run_survival(
   data,
@@ -27,251 +27,98 @@ run_survival(
 )
 }
 \arguments{
-\item{data}{Character or data.frame. A data.frame or a path to a tab-separated file containing survival data
-(e.g., OS, OS.time) and expression values (genes or transcripts). Example: \code{"myPATH/myTPM.tsv"}.}
+\item{data}{A data.frame with one row per sample and sample identifiers as row names.
+The first two columns contain the overall-survival event indicator and follow-up time, respectively;
+subsequent columns contain numeric expression values for the features used by the signature.}
 
-\item{signature}{A molecular signature. Can be:
-\itemize{
-\item An object of class \code{"clinprog_signature"} from the \code{run_regression()} clinprog function (regression - module I)
-\item A data.frame with columns \code{feature} and \code{coefficient}
-\item A path to a .tsv file containing the signature
-}}
+\item{signature}{Either an object returned by \code{run_regression()} or a data.frame containing at least
+\code{feature} and \code{coefficient} columns.}
 
-\item{output_prefix}{Character. Output prefix used for generated files (Default: \code{"clinprog"}).}
+\item{output_prefix}{Character string used as the prefix for output files (default: \code{"clinprog"}).}
 
-\item{norm_exp}{Logical. If \code{TRUE}, log2(exp+1) transforms expression data (Default: \code{FALSE}).}
+\item{norm_exp}{Logical. If \code{TRUE}, applies \code{log2(expression + 1)} to expression columns
+before score calculation (default: \code{FALSE}). Use the same setting used when deriving a signature
+from raw expression data.}
 
-\item{run_multivariate}{Logical. If \code{TRUE}, performs multivariate survival analysis including clinical variables
-present in \code{clinical_data} (Default: \code{FALSE}).}
+\item{run_multivariate}{Logical. If \code{TRUE}, attempts multivariate Cox analysis with clinical covariates
+(default: \code{FALSE}).}
 
-\item{clinical_data}{Character or data.frame or \code{NULL}. A data.frame or a path to a tab-separated file containing
-binary-categorized clinical data (e.g., Age, Gender, ...) (required if \code{run_multivariate = TRUE}).
-Example: \code{"myPATH/myClinics.tsv"}.}
+\item{clinical_data}{A data.frame of clinical covariates, or \code{NULL}. Required when
+\code{run_multivariate = TRUE}. Row names must match the sample identifiers in \code{data}; each
+clinical variable must have exactly two categories.}
 
-\item{score_cutoff}{Character. Uses the \code{"median"}, the \code{"mean"}, the \code{"signal"}, or a \code{"roc"}
-curve to define the score cutoff (Default: \code{"median"}).}
+\item{score_cutoff}{Character string used to divide samples into low- and high-score groups. Accepted values
+are \code{"median"}, \code{"mean"}, \code{"signal"}, and \code{"roc"} (default: \code{"median"}).}
 
-\item{variance_filter}{Numeric. Minimum normalized variance for follow-up time (0–1; Default: \code{0.01}).}
+\item{variance_filter}{Numeric variance-filter threshold in the interval \code{(0, 1]}
+(default: \code{0.01}).}
 
-\item{max_follow_up}{Numeric or \code{NULL}. Maximum max_follow_up time (Default: \code{NULL}).}
+\item{max_follow_up}{Positive numeric maximum follow-up time, or \code{NULL} to disable follow-up truncation
+(default: \code{NULL}). Its units must match the time column in \code{data}.}
 
-\item{p_value_cutoff}{Numeric. P-value threshold used to select clinical covariates from univariate Cox regression
-for inclusion in multivariate analysis (Default: \code{0.2}).}
+\item{p_value_cutoff}{Numeric univariate p-value threshold used to select clinical covariates for multivariate
+analysis, strictly between 0 and 1 (default: \code{0.2}).}
 
-\item{bootstrap}{Positive integer. Number of bootstrap iterations for multivariate Cox regression (minimum: \code{1}; default: \code{1}).}
+\item{bootstrap}{Positive integer number of bootstrap iterations used during the multivariate Cox procedure
+(default: \code{1}).}
 
-\item{skip_survival_checks}{Logical. If \code{TRUE}, overrides filtering steps related to survival assumptions (Default: \code{FALSE}).}
+\item{skip_survival_checks}{Logical. If \code{TRUE}, relaxes/skips survival-related filtering steps
+(default: \code{FALSE}). Use with care.}
 
-\item{save_plots}{Logical. If \code{TRUE}, generates a Kaplan-Meier curve, the proportional hazards assumption plot,
-plots related to the signature created and the derived score, and extra figures,
-depending on the chosen parameters (Default: \code{FALSE}).
+\item{save_plots}{Logical. If \code{TRUE}, saves available survival and score plots (default: \code{FALSE}).}
 
-These can also be generated later using \code{plot_km()}, \code{plot_ph()}, \code{plot_swimmer()},
-\code{plot_boxplot()}, \code{plot_scatter()}, \code{plot_wordcloud()},
-\code{plot_barplot_score()}, and \code{plot_lineplot_score()}.
-If \code{score_cutoff = "roc"}, a ROC curve can also be generated using \code{plot_roc()}.
-If \code{run_multivariate = TRUE}, a forest plot can also be generated using \code{plot_forest()} and
-a boxplot of clinical variables with \code{plot_clinics()}.
-If bootstrap is performed, an extra summary barplot can also be generated using \code{plot_barplot()}.}
+\item{save_table}{Logical. If \code{TRUE}, writes score and survival-analysis tables (default: \code{FALSE}).}
 
-\item{save_table}{Logical. If \code{TRUE}, writes output tables to disk (Default: \code{FALSE}).
+\item{save_json}{Logical. If \code{TRUE}, writes execution parameters and session metadata to JSON (default: \code{FALSE}).}
 
-These can also be done later using \code{write_signature()} for an updated signature file,
-\code{write_score()} for a table showing the calculated clinprog scores, \code{write_univariate()}
-for a file containing the univariate survival results, and \code{write_multivariate()}
-for a file containing the multivariate survival results.}
+\item{save_rds}{Logical. If \code{TRUE}, saves the result object as an RDS file (default: \code{FALSE}).}
 
-\item{save_json}{Logical. If \code{TRUE}, saves to disk the metadata in a JSON file (Default: \code{FALSE}).
+\item{report_format}{Logical or character. Use \code{FALSE} to disable report generation,
+\code{TRUE} or \code{"PDF"} for PDF, or \code{"HTML"} for HTML (default: \code{FALSE}).
+Report rendering requires the package's Quarto template and a working Quarto installation.}
 
-This can also be done later using \code{write_metadata()} for a JSON with metadata.}
+\item{verbose}{Logical or 0/1. If \code{TRUE} or \code{1}, prints progress messages; if \code{FALSE}
+or \code{0}, suppresses them (default: \code{1}).}
 
-\item{save_rds}{Logical. If \code{TRUE}, saves to disk the R object in a RDS file (Default: \code{FALSE}).
-
-This can also be done later using \code{write_rds()} for a RDS object.}
-
-\item{report_format}{Logical or character. Whether to generate a final analysis report_format. Accepted values are:
-\itemize{
-\item \code{FALSE}: Do not generate a report_format (default).
-\item \code{TRUE}: Generate a PDF report_format.
-\item \code{"PDF"}: Generate a PDF report_format.
-\item \code{"HTML"}: Generate an HTML report_format.
-}
-
-This can also be done later using \code{write_report()}.}
-
-\item{verbose}{Integer or Logical. If \code{1} (or \code{TRUE}), prints progress messages to the console. On the
-other hand, if \code{0} (or \code{FALSE}), runs silently (Default: \code{1}).}
-
-\item{save_log}{Logical. If \code{TRUE}, writes a minimalist log file tracking the pipeline execution (Default: \code{FALSE}).
-This can also be done later using \code{write_log()}.}
+\item{save_log}{Logical. If \code{TRUE}, writes a log file (default: \code{FALSE}).}
 }
 \value{
-An S3 object of class \code{"clinprog_survival"} containing:
-\itemize{
-\item \code{signature}: data.frame with selected features, coefficients, and extra information
-\item \code{score_cutoff}: cutoff used to create the low/high score groups
-\item \code{expression_data}: data.frame with scores and survival information for all patients/samples
-\item \code{clinical_data}: data.frame with score groups and clinical variables for all patients/samples (if requested)
-\item \code{survival}: survival analysis outputs
-\item \code{roc_result}: ROC analysis outputs (if requested)
-\item \code{ph_result}: proportional hazards analysis outputs
-\item \code{plots}: list of generated plots (if requested)
-\item \code{params}: list of parameters used in the analysis
-\item \code{metadata}: list of metadata information such as timestamp, R version, and clinprog package version
-\item \code{call}: original function call
-}
+An object of class \code{"clinprog_survival"}, containing the normalized signature, numeric score
+cutoff, sample-level expression/survival data, survival results, optional clinical and ROC results,
+proportional-hazards results, plots (if requested), parameters, metadata, and the original call.
 }
 \description{
-Applies a molecular signature to survival data, generating prognostic scores and performing
-survival analyses (univariate and, optionally, multivariate Cox regression).
+Calculates sample-level signature scores and evaluates their association with overall survival.
+Optionally adjusts for binary clinical covariates using multivariate Cox regression.
 }
 \details{
-The clinprog pipeline applies a sequence of analyses steps:
-\enumerate{
-\item Checking minimum requirements in input datasets and parameters
-\item Max max_follow_up definition to control for survival analysis
-\item Updating the molecular signature
-\item Creating the signature scores for each patient/sample
-\item Proportional hazards assumption testing (Schoenfeld residuals)
-\item Categorizing the scores into low/high groups
-\item Performing the univariate Cox regression for the score
-\item Running multiple univariate Cox regression for other clinical variables
-\item Performing the multivariate Cox regression with bootstrap resampling if the requirements are met
-}
-
-The final complete results consist of multiple tables and figures to show the association between the clinprog scores,
-created based on the molecular signature, and survival parameters, optionally correcting for clinical variables.
-}
-\note{
-Runtime may increase substantially with larger values of \code{bootstrap} (e.g., >1000 iterations) and
-large dataset sizes (samples and/or features and clinical variables).
-
-For exploratory analyses, smaller values are recommended.
-Input data must be properly formatted and free of missing or infinite values after preprocessing steps to avoid errors.
-
-Users are allowed and encouraged to further investigate the clinprog \code{signature} provided. One possibility is to
-test smaller signatures (e.g., establishing a coefficient cutoff) and even to find a minimum signature related to
-patient survival.
-
-Set \code{norm_exp} parameter to \code{TRUE} if a log2(expression + 1) transformation on expression data is required.
-Otherwise, keep it \code{FALSE}. Log2-transformed expression data are highly recommended for survival analyses.
-
-Change \code{score_cutoff} to adjust the cutoff applied to the score for the survival analyses. Options include
-simpler ones, such as \code{"median"} and \code{"mean"}. Also, \code{"signal"} can be used to split patients into
-positive and negative scores to facilitate interpretation. For a more complex and robust metric, choose \code{"roc"}
-to use a cutoff based on the ROC curve, which adopts the Nearest Neighbour Estimate (NNE) method and the
-J's Youden statistics (sensitivity + (specificity -1) strategy)
-
-Change \code{max_follow_up} to adjust the maximum max_follow_up. Ideal when time-specific survival analyses are needed.
-For instance, 1-year OS, or 3-year OS, or 5-year OS or even 10-year OS.
-
-Keeping \code{skip_survival_checks = FALSE} parameter is recommended, especially if other endpoints can be evaluated.
-In case an error occurs, it is recommended to experiment changing \code{variance_filter} and \code{p_value_cutoff}
-parameters first to make the follow up variance and variable selection filters more flexible.
+The function calculates a score from the supplied signature, defines low/high score groups according to
+\code{score_cutoff}, and evaluates the score's association with survival. When requested, clinical
+variables are screened using univariate Cox models before multivariate analysis. A ROC-based cutoff is
+calculated when \code{score_cutoff = "roc"}.
 }
 \examples{
 \dontrun{
-# Example usage
-result <- run_survival(
-  data = "expression_data.tsv",
-  signature = "signature_data.tsv",
-  output_prefix = "my_analysis",
-  norm_exp = TRUE,
-  run_multivariate = TRUE,
-  clinical_data = "clinical_data.tsv",
-  score_cutoff = "roc",
-  variance_filter = 0.01,
-  max_follow_up = NULL,
-  p_value_cutoff = 0.2,
-  bootstrap = 100,
-  skip_survival_checks = TRUE,
-  save_plots = TRUE,
-  save_table = TRUE,
-  save_json = TRUE,
-  save_rds = TRUE,
-  report_format = TRUE,
-  verbose = 1,
-  save_log = TRUE
+data("toy_gene_expression", package = "clinprog")
+data("toy_clinics", package = "clinprog")
+fit <- run_regression(
+  data = toy_gene_expression, feature_type = "gene", norm_exp = TRUE,
+  bootstrap = 10, group_size = 5, n_cores = 1, seed = 123
 )
-
-# Access signature through custom clinprog S3 methods
-as.data.frame(result)
-summary(result)
-print(result)
-coef(result)
-plot(result)
-
-# Load previous result saved in RDS
-read_rds(file = "my_analysis.rds")
-
-# Import signature data manually
-raw_sig_df <- read_table("signature_data.tsv", row.names = FALSE)
-
-# Import expression and survival data manually
-data <- read_table("expression_data.tsv", row.names = TRUE)
-
-# Import clinical data manually
-clin <- read_table("clinical_data.tsv", row.names = TRUE)
-
-# Generate plots later (assuming multivariate analysis was performed)
-plot_roc(x = result$roc_result, output_prefix = "my_analysis_roc")
-plot_km(data = result$expression_data, cutoff = result$score_cutoff,
-        pval = result$survival$univariate$table$log.rank.pvalue, output_prefix = "my_analysis_km")
-plot_ph(x = result$ph_result, is_multi = TRUE, output_prefix = "my_analysis_phplot")
-plot_forest(model_object = result$survival$multivariate$model, output_prefix = "my_analysis_forest")
-plot_clinics(data = result$clinical_data, output_prefix = "my_analysis_clinics-boxplot")
-plot_swimmer(data = result$expression_data, cutoff = result$score_cutoff,
-             output_prefix = "my_analysis_swimmer", facet_by = "score_group")
-plot_barplot(plot_df = result$survival$boot_table, output_prefix = "my_analysis_bar",
-             type = "absolute", bootstrap = 100)
-plot_scatter(data = result$expression_data, signature = result$signature,
-             output_prefix = "my_analysis_scatterplot")
-plot_boxplot(data = result$expression_data, signature = result$signature,
-             output_prefix = "my_analysis_boxplot")
-plot_wordcloud(data = result$expression_data, signature = result$signature,
-               output_prefix = "my_analysis_wordcloud")
-plot_barplot_score(data = result$clinical_data, score_cutoff = result$score_cutoff,
-                   output_prefix = "my_analysis_score-bar")
-plot_lineplot_score(data = result$clinical_data, score_cutoff = result$score_cutoff,
-                    output_prefix = "my_analysis_lineplot")
-
-# Export signature manually
-write_signature(result, "my_analysis_signature_updated.tsv")
-
-# Export scores manually
-write_score(result, "my_analysis_scoreCont.tsv") # for univariate mode only
-write_score(result, "my_analysis_scoreCat.tsv", include_clinical = TRUE) # if run_multivariate mode is on
-
-# Export survival results manually
-write_univariate(result, "my_analysis_uniCox.txt") # for univariate mode only
-write_multivariate(result, "my_analysis_multiCox.txt") # if run_multivariate mode is on
-
-# Export metadata manually
-write_metadata(module = "run_survival", output_prefix = output_prefix,
-               parameters = list(...), command = "none")
-
-# Save result in RDS
-write_rds(object = result, file = "my_analysis.rds")
-
-# Save LOG file
-write_log(file = "my_analysis.log")
-
-# Generate final report_format
-write_report(object = result, format = report_format, file = "my_analysis_report.pdf")
+surv <- run_survival(
+  data = toy_gene_expression, signature = fit, norm_exp = TRUE,
+  run_multivariate = TRUE, clinical_data = toy_clinics,
+  score_cutoff = "median", bootstrap = 10
+)
+print(surv)
+summary(surv)
+plot(surv, type = "km")
 }
 
 }
 \seealso{
-Project Github repository: \url{https://github.com/galantelab/clinprog} \cr
-
-Documentation and tutorials: \url{https://galantelab.github.io/clinprog/} \cr
-
-Other functions: \code{\link{plot_km}}, \code{\link{plot_ph}}, \code{\link{plot_roc}},
-\code{\link{plot_swimmer}}, \code{\link{plot_forest}}, \code{\link{plot_barplot}},
-\code{\link{plot_clinics}}, \code{\link{plot_boxplot}}, \code{\link{plot_scatter}},
-\code{\link{plot_wordcloud}}, \code{\link{plot_barplot_score}}, \code{\link{plot_lineplot_score}},
-\code{\link{read_table}}, \code{\link{read_rds}}, \code{\link{write_rds}},
-\code{\link{write_signature}}, \code{\link{write_score}}, \code{write_metadata()},
-\code{\link{write_univariate}}, \code{\link{write_multivariate}},
-\code{\link{write_report}}, and \code{\link{write_log}}
+\code{\link{run_regression}}, \code{\link{run_complete}}, \code{\link{plot_km}},
+\code{\link{plot_ph}}, \code{\link{plot_roc}}, \code{\link{plot_forest}},
+\code{\link{plot_swimmer}}, \code{\link{write_score}}, \code{\link{write_univariate}},
+\code{\link{write_multivariate}}, \code{\link{write_report}}.
 }
